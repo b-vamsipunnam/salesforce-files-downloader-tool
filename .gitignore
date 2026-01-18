@@ -1,0 +1,54 @@
+# Python / Robot Framework
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Robot Framework / Pabot output
+output.xml
+log.html
+report.html
+pabot_results/
+*.png
+*diagnosis.json
+.robotframework/
+
+# Salesforce CLI
+.sf/
+.sfdx/
+org_info.json
+deploy-options.json
+
+# Downloads & temp
+downloads/*
+!downloads/.gitkeep
+output/*
+!output/.gitkeep
+chromedriver.exe
+chromedriver
+PIPE
+.pabotsuitenames
+
+# Editors / IDE
+.vscode/
+.idea/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# OS junk
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Misc
+*.bak
+*.swp
+*.swo
