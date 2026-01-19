@@ -1,11 +1,11 @@
-
 [![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.0.1-orange)](https://robotframework.org/)
-[![SeleniumLibrary](https://img.shields.io/badge/SeleniumLibrary-6.8.0-blue)](https://github.com/robotframework/SeleniumLibrary)
-[![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![SeleniumLibrary](https://img.shields.io/badge/SeleniumLibrary-6.8.0-green)](https://github.com/robotframework/SeleniumLibrary)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # Salesforce Files Downloader Tool
 
+---
 ## Overview
 
 This project provides a **parallel, browser-based automation solution** to bulk download Salesforce files using ContentDocument IDs from Excel input files.
@@ -165,7 +165,7 @@ Run the tests using:
 ```
   pabot --pabotlib --processes 4 --outputdir results src/robot/tests/Test.robot
 ```
-# Adjust --processes based on your machine (e.g., 4-8 recommended)
+* Note: Adjust --processes based on your machine (e.g., 4-8 recommended)
 
 ## Execution details:
 
@@ -174,6 +174,22 @@ Run the tests using:
 * Results are consolidated under the `results/` directory
 * Failed records are logged in `output/Failed Records_<timestamp>.txt`
 
+
+## Running a Single Test Case (One Process)
+
+If you want to execute **only one batch** (e.g., just one Excel file) without parallel execution, or if you're debugging/troubleshooting, use the standard `robot` command instead of `pabot`.
+
+## Command for Single Run
+
+```
+   robot robot/tests/Test.robot
+```
+
+* Or, to run a specific test case (e.g., only Batch 1):
+
+```
+robot --test Download_Files_Batch_1 robot/tests/Test.robot
+```
 ---
 
 ## Execution Flow
@@ -193,12 +209,11 @@ Run the tests using:
 ## Generated Excel Files for Bulk Insert
 
 The tool automatically creates **two Excel files** in the `output/` folder for every run. These files are designed to make it easy to **re-upload** or **associate** the downloaded files back into Salesforce (e.g., using Data Loader, Workbench, or Salesforce Flow).
-
 Both files are generated **per test case / batch** (named using the test name + timestamp), so each run produces isolated, traceable files.
 
 The generated Excel files are ready for bulk insert using tools like **Data Loader**, **Salesforce Import Wizard**, or **Workbench**. Below are the column details:
 
-### 1. ContentVersion Input File    (`<test_name>_ContentVersion_Inputfile.xlsx`)
+## 1. ContentVersion Input File
 
 **Purpose**  
 Prepare a Excel file to perform bulk insert into the **ContentVersion** object (to upload files into Salesforce).
@@ -216,7 +231,7 @@ Prepare a Excel file to perform bulk insert into the **ContentVersion** object (
 - Use Data Loader / Salesforce Import Wizard / External Tools to insert into **ContentVersion**
 - After insert, you will get new **ContentVersion IDs** (needed for linking)
 
-### 2. ContentDocumentLink Input File  (`<test_name>_ContentDocumentLink_Inputfile.xlsx`)
+## 2. ContentDocumentLink Input File
 
 **Purpose**  
 Prepare a Excel file to perform bulk insert into the **ContentDocumentLink** object (to associate uploaded files with records).
@@ -246,7 +261,7 @@ Example generated files in `output/`:
 - `Download_Files_Batch_1_ContentDocumentLink_Inputfile.xlsx`
 
 ---
-### Output Files Generated
+## Output Files Generated
 
 | File Type                          | Location                              | Purpose                              |
 |------------------------------------|---------------------------------------|--------------------------------------|
@@ -259,7 +274,7 @@ Example generated files in `output/`:
 ---
 ## Error Handling and Logging
 
-* Failed downloads are logged to a timestamped file under `Output/` (e.g., `Failed Records_2026-01-04 13-26-46.txt`)
+* Failed downloads are logged to a timestamped file under `Output/` (e.g., `<test_name>_Failed IDs_List.xlsx`)
 * Partial, corrupted, or mismatched downloads are automatically cleaned
 * File size validation is performed post-download
 * Execution reports are generated in HTML and XML formats
