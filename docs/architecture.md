@@ -107,7 +107,7 @@ salesforce-files-downloader-tool/
 └── requirements.txt
 ```
 
-### Folder Responsibilities
+## Folder Responsibilities
 
 * **docs/**       – Architecture, design decisions, and technical documentation
 * **src/robot/**  – Core Robot Framework test suites & support keywords (Robot + Python)
@@ -185,4 +185,5 @@ salesforce-files-downloader-tool/
 ---
 
 **Author:** Bhimeswara Vamsi Punnam
+
 **Role:** Lead SDET / Automation Architect
