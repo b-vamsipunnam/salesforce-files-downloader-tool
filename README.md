@@ -6,9 +6,10 @@
 # Salesforce Files Downloader Tool
 
 ---
-## Overview
 
-This project provides a **parallel, browser-based automation solution** to bulk download Salesforce files using ContentDocument IDs from Excel input files.
+## Introduction
+
+Salesforce files Downloader tool is an open-source, parallel processing automation framework built with **Robot Framework** and **Python** that enables fast, reliable bulk downloading of Salesforce files using ContentDocument IDs. It ingests IDs from Excel input files, validates metadata via SOQL queries, downloads files through secure Shepherd endpoints in headless Chrome sessions, preserves original filenames, and organizes them into per-ID folders. Parallel execution is powered by **Pabot** with deterministic isolation to avoid collisions. The tool also automatically generates two Data Loader-ready Excel files (ContentVersion and ContentDocumentLink) for easy re-upload or re-linking. Designed for SDETs, Salesforce admins, and migration engineers, it achieves ~40× speedup over manual methods (tested on 10,000+ files with 99.2% success rate) and is fully MIT-licensed on GitHub.
 
 Key features:
 - Works with **any Salesforce org** (authenticated via Salesforce CLI)
@@ -324,11 +325,10 @@ Please open an issue or submit a pull request!
 
 **Bhimeswara Vamsi Punnam**
 
-Lead Software Development Engineer in Test (Lead SDET)
+Lead Software Development Engineer in Test
 
-**Contact**  
-* Email: [b.vamsipunnam@gmail.com](mailto:b.vamsipunnam@gmail.com)  
-* LinkedIn: [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/bvamsipunnam)
+**Contact**   
+* LinkedIn:  [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/bvamsipunnam)
 ---
 
 ## License
