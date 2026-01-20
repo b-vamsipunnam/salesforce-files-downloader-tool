@@ -21,16 +21,16 @@ Key features:
 
 ## Quick Start
 
-1. Authenticate to your Salesforce org:
+1. Authenticate to your Salesforce org: (`Replace <org_name> with your org alias`)
    ```powershell
-   sf org display --json --target-org DeveloperOrg | Out-File -Encoding utf8 org_info.json
+   sf org display --json --target-org <org_name> | Out-File -Encoding utf8 org_info.json
 
 2. Run parallel downloads:
    ```powershell
    pabot --pabotlib --processes 2 --outputdir results robot/tests/Test.robot
 
 3. Check results
-   ```bash
+   ```powershell
    Downloaded files: downloads/<test_name>_<uuid>/069.../<filename>
    
    Generated Excels & logs: output/
@@ -38,7 +38,6 @@ Key features:
 ## Project Structure
 
 ```
-
 salesforce-files-downloader-tool/
 ├── .github/
 │   └── PULL_REQUEST_TEMPLATE.md                               # GitHub Actions CI
@@ -102,7 +101,7 @@ salesforce-files-downloader-tool/
    git clone https://github.com/b-vamsipunnam/salesforce-files-downloader-tool.git
    cd salesforce-files-downloader-tool
    
-2. Create and activate a virtual environment:
+2. Create and activate a virtual environment
    ```bash
    python -m venv venv
    source venv/bin/activate  # Linux/macOS
@@ -120,7 +119,7 @@ salesforce-files-downloader-tool/
    ```bash
    sf org list
    
-### Connected Salesforce Org
+## Connected Salesforce Org
 
 | Alias     | Username                  | Org Id           | Status    |
 |-----------|---------------------------|------------------|-----------|
@@ -131,7 +130,7 @@ salesforce-files-downloader-tool/
 Authenticate to your Salesforce org using Salesforce CLI and generate the org information file:
 
 ```
-sf org display --json --target-org <OrgAlias> | Out-File -Encoding utf8 org_info.json
+   sf org display --json --target-org <OrgAlias> | Out-File -Encoding utf8 org_info.json
 ```
 
 This generates `org_info.json`, which is used by the automation for:
@@ -161,25 +160,15 @@ Example:
 
 The automation supports parallel execution using pabot.
 
-Run the tests using:
+Run the mutlple tests using below pabot command:
 ```
-  pabot --pabotlib --processes 4 --outputdir results src/robot/tests/Test.robot
+   pabot --pabotlib --processes 4 --outputdir results src/robot/tests/Test.robot
 ```
 * Note: Adjust --processes based on your machine (e.g., 4-8 recommended)
 
-## Execution details:
-
-* Each pabot process creates a unique download folder under `downloads/`
-* Files are downloaded in headless Chrome sessions
-* Results are consolidated under the `results/` directory
-* Failed records are logged in `output/Failed Records_<timestamp>.txt`
-
-
-## Running a Single Test Case (One Process)
+Running a Single Test Case (One Process)
 
 If you want to execute **only one batch** (e.g., just one Excel file) without parallel execution, or if you're debugging/troubleshooting, use the standard `robot` command instead of `pabot`.
-
-## Command for Single Run
 
 ```
    robot robot/tests/Test.robot
@@ -188,9 +177,17 @@ If you want to execute **only one batch** (e.g., just one Excel file) without pa
 * Or, to run a specific test case (e.g., only Batch 1):
 
 ```
-robot --test Download_Files_Batch_1 robot/tests/Test.robot
+   robot --test Download_Files_Batch_1 robot/tests/Test.robot
 ```
 ---
+
+## Execution details:
+
+* Each pabot process creates a unique download folder under `downloads/`
+* Files are downloaded in headless Chrome sessions
+* Results are consolidated under the `results/` directory
+* Failed records are logged in `output/Failed Records_<timestamp>.txt`
+
 
 ## Execution Flow
 
@@ -304,7 +301,7 @@ Example generated files in `output/`:
 * SeleniumLibrary 6.8.0 (with built-in Selenium Manager support)
 * webdriver-manager 4.0.2 (automatic ChromeDriver handling)
 * pabot 2.18.0 (parallel test execution)
-* robotframework-excellib (Excel input reading)
+* robotframework-excellib (Excel input reading and Excel files genaration)
 
 ---
 
@@ -326,6 +323,7 @@ Please open an issue or submit a pull request!
 ## Author
 
 **Bhimeswara Vamsi Punnam**
+
 Lead Software Development Engineer in Test (Lead SDET)
 
 **Contact**  
