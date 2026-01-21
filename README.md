@@ -1,24 +1,40 @@
-[![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.0.1-orange)](https://robotframework.org/)
-[![SeleniumLibrary](https://img.shields.io/badge/SeleniumLibrary-6.8.0-green)](https://github.com/robotframework/SeleniumLibrary)
-[![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=blue)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 # Salesforce Files Downloader Tool
+
+---
+
+## Built With
+
+[![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.0.1-orange?style=flat&logo=robotframework&logoColor=white)](https://robotframework.org/) 
+[![Pabot](https://img.shields.io/badge/Pabot-2.18.0-blue?style=flat)](https://github.com/mkorpela/pabot) 
+[![SeleniumLibrary](https://img.shields.io/badge/SeleniumLibrary-6.8.0-green?style=flat)](https://github.com/robotframework/SeleniumLibrary) 
+[![ExcelLibrary](https://img.shields.io/badge/ExcelLibrary-2.0.1-blue?style=flat)](https://pypi.org/project/robotframework-excellib/) 
+[![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/) 
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)](https://opensource.org/licenses/MIT)
 
 ---
 
 ## Introduction
 
-Salesforce files Downloader tool is an open-source, parallel processing automation framework built with **Robot Framework** and **Python** that enables fast, reliable bulk downloading of Salesforce files using ContentDocument IDs. It ingests IDs from Excel input files, validates metadata via SOQL queries, downloads files through secure Shepherd endpoints in headless Chrome sessions, preserves original filenames, and organizes them into per-ID folders. Parallel execution is powered by **Pabot** with deterministic isolation to avoid collisions. The tool also automatically generates two Data Loader-ready Excel files (ContentVersion and ContentDocumentLink) for easy re-upload or re-linking. Designed for SDETs, Salesforce admins, and migration engineers, it achieves ~40× speedup over manual methods (tested on 10,000+ files with 99.2% success rate) and is fully MIT-licensed on GitHub.
+The Salesforce Files Downloader Tool is an open-source, parallel-processing automation framework built with **Robot Framework** and **Python** for fast, reliable bulk downloads of Salesforce files using ContentDocument IDs.
 
 Key features:
-- Works with **any Salesforce org** (authenticated via Salesforce CLI)
-- Downloads files using the secure **Shepherd endpoint** (`/sfc/servlet.shepherd/document/download/`)
-- Runs **multiple browsers in parallel** with Pabot
-- Preserves original file names and organizes into per-ContentDocumentID folders
-- Generates **two Excel files** ready for bulk re-upload (ContentVersion & ContentDocumentLink)
-- Tracks failed downloads and creates a separate failed IDs list
-- Fully isolated per-test output folders for traceability
+- ✅ Works with **any Salesforce org** (authenticated via Salesforce CLI)
+- ✅ Downloads files using the secure **Shepherd endpoint**
+- ✅ Runs **multiple browsers in parallel** with Pabot
+- ✅ Preserves original filenames and organizes per ContentDocumentId
+- ✅ Generates **Data Loader–ready Excel files** (ContentVersion & ContentDocumentLink)
+- ✅ Tracks failed downloads with retry-safe logs
+- ✅ Fully isolated per-test output folders
+
+
+## When to Use This Tool
+
+Use this tool when you need to:
+- Migrate or back up thousands of Salesforce files
+- Re-upload files after org refresh or data loss
+- Perform controlled file migrations between Salesforce orgs
+- Generate Data Loader–ready input files automatically
+
 
 ## Quick Start
 
@@ -150,10 +166,11 @@ This generates `org_info.json`, which is used by the automation for:
 
 Example:
 
-| ContentDocumentId |
-| ----------------- |
-| 069xxxxxxxxxxxx   |
-| 069yyyyyyyyyyyy   |
+| ContentDocumentId  |
+|--------------------|
+| 069XXXXXXXXXXXXXXX |
+| 069YYYYYYYYYYYYYYY |
+| 069ZZZZZZZZZZZZZZZ |
 
 ---
 
@@ -161,7 +178,7 @@ Example:
 
 The automation supports parallel execution using pabot.
 
-Run the mutlple tests using below pabot command:
+Run the multiple tests using below pabot command:
 ```
    pabot --pabotlib --processes 4 --outputdir results src/robot/tests/Test.robot
 ```
@@ -192,6 +209,8 @@ If you want to execute **only one batch** (e.g., just one Excel file) without pa
 
 ## Execution Flow
 
+📌 See [Architecture Overview](docs/architecture.md) for a visual execution flow and component breakdown.
+
 1. Initialize Salesforce REST session using access token
 2. Read ContentDocument IDs from Excel input
 3. Create a unique download directory per process
@@ -214,7 +233,7 @@ The generated Excel files are ready for bulk insert using tools like **Data Load
 ## 1. ContentVersion Input File
 
 **Purpose**  
-Prepare a Excel file to perform bulk insert into the **ContentVersion** object (to upload files into Salesforce).
+Prepare an Excel file to perform bulk insert into the **ContentVersion** object (to upload files into Salesforce).
 
 **ContentVersion Input File Columns**
 
@@ -288,6 +307,14 @@ Example generated files in `output/`:
 
 ---
 
+## CI/CD Compatibility
+
+- Designed for headless execution
+- Suitable for GitHub Actions, Jenkins, Azure DevOps
+- No manual browser or driver setup required
+
+---
+
 ## Troubleshooting
 
 * If you see ChromeDriver errors → ensure you're using SeleniumLibrary ≥6.0 (included in requirements.txt)
@@ -302,7 +329,7 @@ Example generated files in `output/`:
 * SeleniumLibrary 6.8.0 (with built-in Selenium Manager support)
 * webdriver-manager 4.0.2 (automatic ChromeDriver handling)
 * pabot 2.18.0 (parallel test execution)
-* robotframework-excellib (Excel input reading and Excel files genaration)
+* robotframework-excellib (Excel input reading and Excel files generation)
 
 ---
 
@@ -316,8 +343,8 @@ Example generated files in `output/`:
 
 ## Contributing
 
-Found a bug or have an improvement?  
-Please open an issue or submit a pull request!
+* Found a bug or have an improvement?  
+* Please open an issue or submit a pull request!
 
 ---
 
@@ -326,9 +353,9 @@ Please open an issue or submit a pull request!
 **Bhimeswara Vamsi Punnam**
 
 Lead Software Development Engineer in Test
+ 
+**Contact:** [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/bvamsipunnam)
 
-**Contact**   
-* LinkedIn:  [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/bvamsipunnam)
 ---
 
 ## License
