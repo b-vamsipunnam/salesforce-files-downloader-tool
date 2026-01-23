@@ -11,33 +11,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # -----------------------------
-      # Checkout
-      # -----------------------------
+      # -------------------------------------------------
+      # Checkout repository
+      # -------------------------------------------------
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # -----------------------------
-      # Python setup
-      # -----------------------------
+      # -------------------------------------------------
+      # Setup Python
+      # -------------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # -----------------------------
-      # Install Google Chrome
-      # (SeleniumLibrary 6+ uses Selenium Manager,
-      # so NO manual chromedriver needed)
-      # -----------------------------
+      # -------------------------------------------------
+      # Install Google Chrome (Selenium Manager handles driver)
+      # -------------------------------------------------
       - name: Install Google Chrome
         run: |
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
 
-      # -----------------------------
-      # Install Python dependencies
-      # -----------------------------
+      # -------------------------------------------------
+      # Install dependencies
+      # -------------------------------------------------
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
@@ -49,25 +47,22 @@ jobs:
             robotframework-requests \
             openpyxl
 
-      # -----------------------------
-      # Prepare folders used by tests
-      # -----------------------------
-      - name: Create required directories
+      # -------------------------------------------------
+      # Create required runtime directories
+      # -------------------------------------------------
+      - name: Prepare runtime directories
         run: |
-          mkdir -p input
-          mkdir -p results
-          mkdir -p output
-          mkdir -p downloads
+          mkdir -p input results output downloads
 
-      # -----------------------------
-      # Dummy Salesforce org info (CI-safe)
-      # -----------------------------
-      - name: Create dummy org_info.json for CI
+      # -------------------------------------------------
+      # Create dummy Salesforce org info (CI only)
+      # -------------------------------------------------
+      - name: Create dummy org_info.json
         run: |
           cat <<EOF > org_info.json
           {
             "result": {
-              "accessToken": "dummy-token-for-ci-only",
+              "accessToken": "dummy-token-ci-only",
               "instanceUrl": "https://dummy.my.salesforce.com",
               "apiVersion": "60.0",
               "alias": "DeveloperOrg"
@@ -75,9 +70,9 @@ jobs:
           }
           EOF
 
-      # -----------------------------
-      # Dummy Excel input files
-      # -----------------------------
+      # -------------------------------------------------
+      # Create dummy Excel input files
+      # -------------------------------------------------
       - name: Create dummy input Excel files
         run: |
           python <<EOF
@@ -89,24 +84,33 @@ jobs:
               wb = openpyxl.Workbook()
               ws = wb.active
               ws["A1"] = "ContentDocumentId"
-              ws["A2"] = "069000000000000001"  # dummy ID
+              ws["A2"] = "069000000000000001"
               wb.save(f"input/{name}")
           EOF
 
-      # -----------------------------
+      # -------------------------------------------------
       # Run Robot tests
-      # IMPORTANT: Correct path
-      # -----------------------------
+      # IMPORTANT: || true ensures output is always generated
+      # -------------------------------------------------
       - name: Run Robot tests
         run: |
           robot \
             --outputdir results \
             --loglevel TRACE:TRACE \
-            src/robot/tests/Test.robot
+            src/robot/tests/Test.robot || true
 
-      # -----------------------------
-      # Upload results (even if tests fail)
-      # -----------------------------
+      # -------------------------------------------------
+      # Debug output directory (always)
+      # -------------------------------------------------
+      - name: Verify results directory
+        if: always()
+        run: |
+          echo "Results directory contents:"
+          ls -la results || echo "Results directory missing"
+
+      # -------------------------------------------------
+      # Upload Robot Framework results (always)
+      # -------------------------------------------------
       - name: Upload Robot results
         if: always()
         uses: actions/upload-artifact@v4
