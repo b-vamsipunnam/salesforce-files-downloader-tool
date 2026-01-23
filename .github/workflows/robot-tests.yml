@@ -19,18 +19,41 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
+    - name: Install Chrome and Chromedriver
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
+        CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+        wget -N https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip
+        unzip chromedriver_linux64.zip
+        sudo mv chromedriver /usr/bin/chromedriver
+        sudo chmod +x /usr/bin/chromedriver
+
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install robotframework robotframework-seleniumlibrary robotframework-pabot robotframework-requests openpyxl
+        pip install robotframework robotframework-seleniumlibrary robotframework-pabot robotframework-requests openpyxl boto3
 
-    - name: Run Robot tests (single process)
-      run: robot --outputdir results robot/tests/Test.robot
+    - name: Create dummy org_info.json for CI
+      run: |
+        echo '{
+          "result": {
+            "accessToken": "dummy-token-for-ci",
+            "instanceUrl": "https://dummy.my.salesforce.com",
+            "apiVersion": "60.0",
+            "alias": "DeveloperOrg"
+          }
+        }' > org_info.json
 
-    - name: Upload test results
+    - name: Run Robot tests (single process for debugging)
+      run: robot --outputdir results --loglevel TRACE robot/tests/Test.robot
+
+    - name: Upload test results (even on failure)
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: robot-test-results
         path: results/
+        retention-days: 7
