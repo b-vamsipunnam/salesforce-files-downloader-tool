@@ -22,35 +22,48 @@ jobs:
     - name: Install Chrome and Chromedriver
       run: |
         sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
-        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
-        CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
-        wget -N https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip
-        unzip chromedriver_linux64.zip
-        sudo mv chromedriver /usr/bin/chromedriver
+        sudo apt-get install -y google-chrome-stable unzip
+        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+' | head -1)
+        CHROMEDRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/$CHROME_VERSION/linux64/chromedriver-linux64.zip"
+        wget -N $CHROMEDRIVER_URL
+        unzip chromedriver-linux64.zip
+        sudo mv chromedriver-linux64/chromedriver /usr/bin/chromedriver
         sudo chmod +x /usr/bin/chromedriver
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install robotframework robotframework-seleniumlibrary robotframework-pabot robotframework-requests openpyxl boto3
+        pip install robotframework robotframework-seleniumlibrary robotframework-pabot robotframework-requests openpyxl
 
     - name: Create dummy org_info.json for CI
       run: |
+        mkdir -p input
         echo '{
           "result": {
-            "accessToken": "dummy-token-for-ci",
+            "accessToken": "dummy-token-for-ci-only",
             "instanceUrl": "https://dummy.my.salesforce.com",
             "apiVersion": "60.0",
             "alias": "DeveloperOrg"
           }
         }' > org_info.json
 
-    - name: Run Robot tests (single process for debugging)
-      run: robot --outputdir results --loglevel TRACE robot/tests/Test.robot
+    - name: Create dummy input Excel files for CI
+      run: |
+        python -c "
+import openpyxl
+wb = openpyxl.Workbook()
+ws = wb.active
+ws['A1'] = 'ContentDocumentId'
+ws['A2'] = '069xxxxxxxxxxxxxxx'  # dummy ID
+wb.save('input/Inputfile_1.xlsx')
+wb.save('input/Inputfile_2.xlsx')
+        "
 
-    - name: Upload test results (even on failure)
+    - name: Run Robot tests (single process + trace logging)
+      run: robot --outputdir results --loglevel TRACE:TRACE robot/tests/Test.robot
+
+    - name: Upload test results (always, even on failure)
       if: always()
       uses: actions/upload-artifact@v4
       with:
