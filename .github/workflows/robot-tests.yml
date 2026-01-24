@@ -11,15 +11,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ---------------------------------------------
-      # Checkout
-      # ---------------------------------------------
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ---------------------------------------------
-      # Python + pip cache
-      # ---------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -27,50 +21,32 @@ jobs:
           cache: "pip"
           cache-dependency-path: requirements.txt
 
-      # ---------------------------------------------
-      # Chrome (Selenium Manager handles driver)
-      # ---------------------------------------------
       - name: Install Chrome
         run: |
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable || true
           google-chrome --version || true
 
-      # ---------------------------------------------
-      # Install dependencies (DO NOT IGNORE FAILURES)
-      # ---------------------------------------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      # ---------------------------------------------
-      # Verify required Python modules (fast fail)
-      # ---------------------------------------------
-      - name: Verify Python dependencies
+      # ✅ Correct module names for python -c import checks
+      - name: Verify Python deps (safe)
         run: |
           python -c "import pabot; print('pabot OK')"
-          python -c "import RequestsLibrary; print('RequestsLibrary OK')"
           python -c "import webdriver_manager; print('webdriver_manager OK')"
+          python -c "import robotframework_requests; print('robotframework_requests OK')"
 
-      # ---------------------------------------------
-      # Make local Robot Python libs importable
-      # (ExcelLibrary wrapper + WebdriverManager.py)
-      # ---------------------------------------------
       - name: Set PYTHONPATH
         run: |
           echo "PYTHONPATH=${GITHUB_WORKSPACE}/src/robot/library:${GITHUB_WORKSPACE}" >> $GITHUB_ENV
 
-      # ---------------------------------------------
-      # Prepare folders
-      # ---------------------------------------------
       - name: Prepare directories
         run: |
           mkdir -p results input output downloads
 
-      # ---------------------------------------------
-      # Dummy Salesforce org (CI-safe)
-      # ---------------------------------------------
       - name: Create dummy org_info.json
         run: |
           cat <<EOF > org_info.json
@@ -84,26 +60,17 @@ jobs:
           }
           EOF
 
-      # ---------------------------------------------
-      # Run Robot tests (tests may fail, pipeline won't)
-      # ---------------------------------------------
       - name: Run Robot tests
         run: |
           robot --outputdir results --loglevel TRACE src/robot/tests
         continue-on-error: true
 
-      # ---------------------------------------------
-      # Debug output
-      # ---------------------------------------------
       - name: List results
         if: always()
         run: |
           echo "Results content:"
           ls -la results || true
 
-      # ---------------------------------------------
-      # Upload artifacts (never fail)
-      # ---------------------------------------------
       - name: Upload Robot results
         if: always()
         uses: actions/upload-artifact@v4
