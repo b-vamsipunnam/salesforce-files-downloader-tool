@@ -3,7 +3,6 @@ robotframework==7.0.1
 robotframework-seleniumlibrary==6.8.0
 robotframework-pabot==2.18.0
 robotframework-requests==0.9.7
-robotframework-excellib==2.0.1
 robotframework-pythonlibcore==4.4.1
 
 # Selenium and browser automation
