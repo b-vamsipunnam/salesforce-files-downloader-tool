@@ -10,6 +10,7 @@
 [![Pabot](https://img.shields.io/badge/Pabot-2.18.0-blue?style=flat)](https://github.com/mkorpela/pabot) 
 [![webdriver-manager](https://img.shields.io/badge/webdriver--manager-4.0.2-blue?style=flat)](https://pypi.org/project/webdriver-manager/)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/) 
+[![CI](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions/workflows/robot-tests.yml/badge.svg)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)](https://opensource.org/licenses/MIT)
 
 ---

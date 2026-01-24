@@ -130,7 +130,7 @@ Build ContentDocument Download URL
     ${download_url}=                       Set Variable                     https://${org_domain}.my.salesforce.com/sfc/servlet.shepherd/document/download/${documentId}
     RETURN                                 ${download_url}
 
-Create Folder with name ContentDocument ID
+Create Folder with name ContentDocumentID
     [Documentation]                        Creates a dedicated subfolder inside the current download directory, named exactly after the ContentDocument ID (e.g., `069xxxxxxxxxxxxxxx`).
     ...                                    This folder serves as the permanent location for the successfully downloaded file, providing clear organization and traceability.
     [Arguments]                            ${content_id}
@@ -247,7 +247,7 @@ Download the SFDC files using the ContentDocumentIDs
     Log    ${content_ids_Working}
     Log    ${content_ids_NotWorking}
     @{unique_IDslist_NotWorking}=          Remove Duplicates                ${content_ids_NotWorking}
-    Log Failed ContentDocument IDs to Excel                                 ${unique_IDslist_NotWorking}                ${output_directory}
+    Log Failed ContentDocumentIDs to Excel                                  ${unique_IDslist_NotWorking}                ${output_directory}
     Close All Excel Documents
 
 Get ContentDocumentID Details and Launch the URL
@@ -269,7 +269,7 @@ Get ContentDocumentID Details and Launch the URL
     Set Suite Variable                     ${file_name}
     ${download_url}                        Build ContentDocument Download URL                                           ${org_domain}                                ${content_id}
     Set Suite Variable                     ${download_url}                  ${download_url}
-    ${content_id_folder}=                  Create Folder with name ContentDocument ID                                   ${content_id}
+    ${content_id_folder}=                  Create Folder with name ContentDocumentID                                    ${content_id}
     Set Suite Variable                     ${content_id_folder}
     Run Keyword If    '${file_extension}' == '${EMPTY}' or '${file_extension}' == '${None}'                             Set Suite Variable                           ${file_name}            ${file_title}
     ${download_result}=                    Run Keyword And Ignore Error     Download And Validate Content File          ${download_url}                              ${cv_row}               ${cdl_row}
@@ -308,7 +308,7 @@ Download And Validate Content File
     FOR    ${FinalMatchingFilename}    IN    @{MatchingFileNames}
            Set Suite Variable              ${downloaded_filename}           ${FinalMatchingFilename}
            ${IsNameMatch}=                 Run Keyword And Return Status    Should Contain                              ${downloaded_filename}                       ${file_title}
-           Run Keyword If    '${IsNameMatch}' == 'True'                     Downloaded File name is a Match             500                                          ${cv_row}       ${cdl_row}
+           Run Keyword If    '${IsNameMatch}' == 'True'                     Validate And Move Downloaded File           500                                          ${cv_row}       ${cdl_row}
     END
     FOR    ${NotMatchingFilename}    IN    @{NotMatchingFileNames}
            Set Suite Variable              ${downloaded_filename_notmatched}                                            ${NotMatchingFilename}
@@ -342,9 +342,9 @@ Remove Content Folder And Temp Files
     ...                                    This keeps the workspace clean and prevents partial/corrupted files from accumulating.
     Append To List	                       ${content_ids_NotWorking}	    ${content_id}
     Run Keyword And Ignore Error           Remove Directory                 ${content_id_folder}
-    Remove Unnecessary files in the directory
+    Cleanup the download directory
 
-Downloaded File name is a Match
+Validate And Move Downloaded File
     [Documentation]                        Checks if the downloaded file has the expected name and size stability.
     ...                                    If valid, moves the file to the ContentDocument-specific folder, logs success, and writes metadata to the ContentVersion and ContentDocumentLink Excel files.
     ...                                    If invalid (size mismatch or file missing), marks the ID as failed.
@@ -382,9 +382,9 @@ Downloaded File name is a Match
     Run Keyword If    '${actual_file_size}' != '${expected_file_size}'      Append To List	                            ${content_ids_NotWorking}	                 ${content_id}
     ${source_still_exists}=                Run Keyword And Return Status    File Should Exist                           ${download_directory}${/}${downloaded_filename}
     Run Keyword If    '${source_still_exists}' == 'True'                    Run Keyword And Ignore Error                Remove File                                  ${download_directory}${/}${downloaded_filename}
-    Remove Unnecessary files in the directory
+    Cleanup the download directory
 
-Remove Unnecessary files in the directory
+Cleanup the download directory
     [Documentation]                        Deletes temporary Content ID folder and cleans leftover/unnecessary files in download directory.
     ${download_dir_path}                   Normalize Path                   ${download_directory}
     Directory Should Exist                 ${download_dir_path}
@@ -399,7 +399,7 @@ Remove Unnecessary files in the directory
            Run Keyword If    '${IsFileDeleted}' == 'FAIL'                   Remove File                                 ${full_path}
     END
 
-Log Failed ContentDocument IDs to Excel
+Log Failed ContentDocumentIDs to Excel
     [Documentation]                        Checks if there were any failed downloads and, if so, logs the unique list of failed ContentDocument IDs by calling the `Write the ContentDocumentIDs` keyword to create a dedicated Excel file.
     ...                                    This provides a quick, traceable record of failures for later review or retry.
     [Arguments]                            ${unique_IDslist_NotWorking}     ${output_directory}
