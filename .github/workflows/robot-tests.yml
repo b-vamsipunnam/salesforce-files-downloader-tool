@@ -21,33 +21,36 @@ jobs:
           cache: "pip"
           cache-dependency-path: requirements.txt
 
-      # Single step that NEVER fails the workflow (always exits 0),
-      # but prints exactly what failed and still produces artifacts.
-      - name: CI Run (never fail)
-        shell: bash
+      - name: Install Google Chrome
         run: |
-          set +e
-          echo "=== CI START ==="
+          set -e
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-linux-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          google-chrome --version
+
+      - name: Install dependencies
+        run: |
+          set -e
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          # Safety net (ensures robot CLI exists even if requirements.txt misses it)
+          python -m pip install robotframework robotframework-seleniumlibrary
+          python -m pip freeze | sort
+
+      - name: Prepare directories
+        run: |
           mkdir -p results input output downloads
 
-          echo "=== Install Chrome (best-effort) ==="
-          sudo apt-get update || true
-          sudo apt-get install -y wget gnupg || true
-          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-linux-keyring.gpg || true
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list || true
-          sudo apt-get update || true
-          sudo apt-get install -y google-chrome-stable || true
-          google-chrome --version || true
+      - name: Verify ExcelLibrary wrapper loads
+        run: |
+          python -c "import sys; sys.path.insert(0,'src/robot/library'); import ExcelLibrary; print('ExcelLibrary OK ->', ExcelLibrary.__file__)"
 
-          echo "=== Install Python dependencies (best-effort) ==="
-          python -m pip install --upgrade pip || true
-          python -m pip install -r requirements.txt || true
-          python -m pip freeze | sort || true
-
-          echo "=== Verify ExcelLibrary wrapper import (best-effort) ==="
-          python -c "import sys; sys.path.insert(0,'src/robot/library'); import ExcelLibrary; print('ExcelLibrary OK ->', ExcelLibrary.__file__)" || true
-
-          echo "=== Create dummy org_info.json (CI-safe) ==="
+      - name: Create dummy org_info.json (CI-safe)
+        run: |
           cat > org_info.json <<'EOF'
           {
             "result": {
@@ -59,17 +62,28 @@ jobs:
           }
           EOF
 
-          echo "=== Run Robot (best-effort) ==="
-          robot --outputdir results --loglevel TRACE src/robot/tests || true
+      - name: Run Robot tests (always produce logs)
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          echo "robot location:" > results/ci_debug.txt
+          which robot >> results/ci_debug.txt 2>&1
+          robot --version >> results/ci_debug.txt 2>&1
 
-          echo "=== Results listing ==="
-          ls -la results || true
+          echo "Repo tree check:" >> results/ci_debug.txt
+          ls -la src/robot/tests >> results/ci_debug.txt 2>&1
 
-          # Ensure at least one artifact file exists
-          echo "CI finished" > results/ci_summary.txt
+          # Run robot and capture console output
+          robot --outputdir results --loglevel TRACE src/robot/tests 2>&1 | tee results/robot_console.log
 
-          echo "=== CI END (forcing success) ==="
-          exit 0
+          echo "Results files:" >> results/ci_debug.txt
+          ls -la results >> results/ci_debug.txt 2>&1
+
+          # If Robot produced nothing, write a clear reason file
+          if [ ! -f results/output.xml ]; then
+            echo "Robot did not generate output.xml. Check results/robot_console.log and results/ci_debug.txt" > results/ci_summary.txt
+          fi
 
       - name: Upload artifacts
         if: always()
