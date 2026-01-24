@@ -19,7 +19,12 @@ CI Smoke – Excel Wrapper Works
     Close All Excel Documents
 
 *** Keywords ***
+*** Keywords ***
 Open Browser For Smoke
-    ${options}=    Create Dictionary
-    ...    args=--headless=new,--no-sandbox,--disable-dev-shm-usage,--disable-gpu,--window-size=1920,1080
-    Open Browser    ${URL}    chrome    options=${options}
+    ${chrome_options}=    Evaluate    sys.modules['selenium.webdriver'].ChromeOptions()    sys, selenium.webdriver
+    Call Method    ${chrome_options}    add_argument    --headless=new
+    Call Method    ${chrome_options}    add_argument    --no-sandbox
+    Call Method    ${chrome_options}    add_argument    --disable-dev-shm-usage
+    Call Method    ${chrome_options}    add_argument    --disable-gpu
+    Call Method    ${chrome_options}    add_argument    --window-size=1920,1080
+    Open Browser    ${URL}    chrome    options=${chrome_options}
