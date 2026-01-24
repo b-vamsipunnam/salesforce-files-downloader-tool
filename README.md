@@ -4,10 +4,11 @@
 
 ## Built With
 
-[![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.0.1-orange?style=flat&logo=robotframework&logoColor=white)](https://robotframework.org/) 
-[![Pabot](https://img.shields.io/badge/Pabot-2.18.0-blue?style=flat)](https://github.com/mkorpela/pabot) 
-[![SeleniumLibrary](https://img.shields.io/badge/SeleniumLibrary-6.8.0-green?style=flat)](https://github.com/robotframework/SeleniumLibrary) 
+[![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.0.1-orange?style=flat&logo=robotframework&logoColor=white)](https://robotframework.org/)
+[![SeleniumLibrary](https://img.shields.io/badge/SeleniumLibrary-6.8.0-green?style=flat&logo=selenium&logoColor=white)](https://github.com/robotframework/SeleniumLibrary) 
 [![ExcelLibrary](https://img.shields.io/badge/ExcelLibrary-2.0.1-blue?style=flat)](https://pypi.org/project/robotframework-excellib/) 
+[![Pabot](https://img.shields.io/badge/Pabot-2.18.0-blue?style=flat)](https://github.com/mkorpela/pabot) 
+[![webdriver-manager](https://img.shields.io/badge/webdriver--manager-4.0.2-blue?style=flat)](https://pypi.org/project/webdriver-manager/)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/) 
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)](https://opensource.org/licenses/MIT)
 
@@ -35,6 +36,7 @@ Use this tool when you need to:
 - Perform controlled file migrations between Salesforce orgs
 - Generate Data Loader–ready input files automatically
 
+---
 
 ## Quick Start
 
@@ -51,6 +53,8 @@ Use this tool when you need to:
    Downloaded files: downloads/<test_name>_<uuid>/069.../<filename>
    
    Generated Excels & logs: output/
+
+---
 
 ## Project Structure
 
@@ -100,7 +104,6 @@ salesforce-files-downloader-tool/
 └── requirements.txt                                           # Python dependencies
 
 ```
-
 ---
 
 ## Prerequisites
@@ -180,9 +183,9 @@ The automation supports parallel execution using pabot.
 
 Run the multiple tests using below pabot command:
 ```
-   pabot --pabotlib --processes 4 --outputdir results src/robot/tests/Test.robot
+   pabot --pabotlib --processes 2 --outputdir results src/robot/tests/Test.robot
 ```
-* Note: Adjust --processes based on your machine (e.g., 4-8 recommended)
+* Note: Adjust --processes based on your machine (e.g., 2-8 recommended)
 
 Running a Single Test Case (One Process)
 
@@ -204,7 +207,7 @@ If you want to execute **only one batch** (e.g., just one Excel file) without pa
 * Each pabot process creates a unique download folder under `downloads/`
 * Files are downloaded in headless Chrome sessions
 * Results are consolidated under the `results/` directory
-* Failed records are logged in `output/Failed Records_<timestamp>.txt`
+* Failed records are logged in `output/<test_name>_Failed IDs_List.xlsx`
 
 
 ## Execution Flow
@@ -237,11 +240,11 @@ Prepare an Excel file to perform bulk insert into the **ContentVersion** object 
 
 **ContentVersion Input File Columns**
 
-| Column       | Description                                                                 | Example Value                                      |
-|--------------|-----------------------------------------------------------------------------|----------------------------------------------------|
-| Title        | The title/name of the file (from original file metadata)                    | Invoice_2025.pdf                                   |
-| VersionData  | Full local path to the downloaded file (ready for upload)                   | C:\...\downloads\process_...\069.../Invoice_2025.pdf |
-| PathOnClient | Original filename (used as the client-side path during upload)              | Invoice_2025.pdf                                   |
+| Column       | Description                                                    | Example Value                                        |
+|--------------|----------------------------------------------------------------|------------------------------------------------------|
+| Title        | The title/name of the file (from original file metadata)       | Invoice_2025.pdf                                     |
+| VersionData  | Full local path to the downloaded file (ready for upload)      | C:\...\downloads\process_...\069...\Invoice_2025.pdf |
+| PathOnClient | Original filename (used as the client-side path during upload) | Invoice_2025.pdf                                     |
 
 **Usage**  
 - Open the file in Excel → Save As → CSV (UTF-8)
@@ -251,7 +254,8 @@ Prepare an Excel file to perform bulk insert into the **ContentVersion** object 
 ## 2. ContentDocumentLink Input File
 
 **Purpose**  
-Prepare a Excel file to perform bulk insert into the **ContentDocumentLink** object (to associate uploaded files with records).
+
+Prepare an Excel file to perform bulk insert into the **ContentDocumentLink** object (to associate uploaded files with records).
 
 **ContentDocumentLink Input File Columns**
 

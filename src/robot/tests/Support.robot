@@ -5,7 +5,6 @@ Library                                    OperatingSystem
 Library                                    Collections
 Library                                    String
 Library                                    DateTime
-Library                                    ExcelLibrary
 Library                                    pabot.PabotLib
 Library                                    RequestsLibrary
 Library                                    BuiltIn
@@ -13,6 +12,9 @@ Library                                    json
 Library                                    urllib.parse
 Library                                    ../library/SalesforceSupport.py
 Library                                    ../library/WebdriverManager.py
+Library                                    ../library/ExcelLibrary.py
+
+
 
 *** Variables ***
 @{TEMP_FILE_MARKERS}                       .crdownload    .tmp    .part    unconfirmed    downloading
