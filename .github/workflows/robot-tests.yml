@@ -45,6 +45,12 @@ jobs:
           pip install -r requirements.txt || true
           pip install robotframework robotframework-seleniumlibrary openpyxl
 
+      - name: Verify ExcelLibrary is installed
+        run: |
+          python - <<EOF
+          import ExcelLibrary
+          print("ExcelLibrary loaded OK")
+          EOF
       # ---------------------------------------------
       # Create folders
       # ---------------------------------------------
