@@ -6,7 +6,6 @@
 
 [![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.0.1-orange?style=flat&logo=robotframework&logoColor=white)](https://robotframework.org/)
 [![SeleniumLibrary](https://img.shields.io/badge/SeleniumLibrary-6.8.0-green?style=flat&logo=selenium&logoColor=white)](https://github.com/robotframework/SeleniumLibrary) 
-[![ExcelLibrary](https://img.shields.io/badge/ExcelLibrary-2.0.1-blue?style=flat)](https://pypi.org/project/robotframework-excellib/) 
 [![Pabot](https://img.shields.io/badge/Pabot-2.18.0-blue?style=flat)](https://github.com/mkorpela/pabot) 
 [![webdriver-manager](https://img.shields.io/badge/webdriver--manager-4.0.2-blue?style=flat)](https://pypi.org/project/webdriver-manager/)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/) 
@@ -20,13 +19,13 @@
 The Salesforce Files Downloader Tool is an open-source, parallel-processing automation framework built with **Robot Framework** and **Python** for fast, reliable bulk downloads of Salesforce files using ContentDocument IDs.
 
 Key features:
-- ✅ Works with **any Salesforce org** (authenticated via Salesforce CLI)
-- ✅ Downloads files using the secure **Shepherd endpoint**
-- ✅ Runs **multiple browsers in parallel** with Pabot
-- ✅ Preserves original filenames and organizes per ContentDocumentId
-- ✅ Generates **Data Loader–ready Excel files** (ContentVersion & ContentDocumentLink)
-- ✅ Tracks failed downloads with retry-safe logs
-- ✅ Fully isolated per-test output folders
+- Works with **any Salesforce org** (authenticated via Salesforce CLI)
+- Downloads files using the secure **Shepherd endpoint**
+- Runs **multiple browsers in parallel** with Pabot
+- Preserves original filenames and organizes per ContentDocumentId
+- Generates **Data Loader–ready Excel files** (ContentVersion & ContentDocumentLink)
+- Tracks failed downloads with retry-safe logs
+- Fully isolated per-test output folders
 
 
 ## When to Use This Tool
@@ -211,7 +210,7 @@ If you want to execute **only one batch** (e.g., just one Excel file) without pa
 
 ## Execution details:
 
-* Each pabot process creates a unique download folder under `downloads/`
+Each pabot process creates a unique download folder under `downloads/`
 * Files are downloaded in headless Chrome sessions
 * Results are consolidated under the `results/` directory
 * Failed records are logged in `output/<test_name>_Failed IDs_List.xlsx`
@@ -221,15 +220,15 @@ If you want to execute **only one batch** (e.g., just one Excel file) without pa
 
 📌 See [Architecture Overview](docs/architecture.md) for a visual execution flow and component breakdown.
 
-1. Initialize Salesforce REST session using access token
-2. Read ContentDocument IDs from Excel input
-3. Create a unique download directory per process
-4. Launch headless Chrome and authenticate via frontdoor URL
-5. Build download URL for each ContentDocument
-6. Download file and validate completion
-7. Move file into a ContentDocument-specific folder
-8. Log failures and size mismatches
-9. Clean up temporary and partial files
+* Initialize Salesforce REST session using access token
+* Read ContentDocument IDs from Excel input
+* Create a unique download directory per process
+* Launch headless Chrome and authenticate via frontdoor URL
+* Build download URL for each ContentDocument
+* Download file and validate completion
+* Move file into a ContentDocument-specific folder
+* Log failures and size mismatches
+* Clean up temporary and partial files
 
 ---
 
@@ -254,9 +253,9 @@ Prepare an Excel file to perform bulk insert into the **ContentVersion** object 
 | PathOnClient | Original filename (used as the client-side path during upload) | Invoice_2025.pdf                                     |
 
 **Usage**  
-- Open the file in Excel → Save As → CSV (UTF-8)
-- Use Data Loader / Salesforce Import Wizard / External Tools to insert into **ContentVersion**
-- After insert, you will get new **ContentVersion IDs** (needed for linking)
+* Open the file in Excel → Save As → CSV (UTF-8)
+* Use Data Loader / Salesforce Import Wizard / External Tools to insert into **ContentVersion**
+* After insert, you will get new **ContentVersion IDs** (needed for linking)
 
 ## 2. ContentDocumentLink Input File
 
@@ -274,19 +273,19 @@ Prepare an Excel file to perform bulk insert into the **ContentDocumentLink** ob
 | Visibility        | Visibility (AllUsers, InternalUsers, SharedUsers)                           | AllUsers                               |
 
 **Usage**  
-- After successful ContentVersion insert, copy the new **ContentDocumentId** values
-- Fill in **LinkedEntityId** (the record IDs where files should appear)
-- Save As CSV → Use Data Loader / Bulk API to insert into **ContentDocumentLink**
+* After successful ContentVersion insert, copy the new **ContentDocumentId** values
+* Fill in **LinkedEntityId** (the record IDs where files should appear)
+* Save As CSV → Use Data Loader / Bulk API to insert into **ContentDocumentLink**
 
 **Important Notes**  
-- These files are **generated automatically** during each run.
-- They contain **only successful downloads** (failed ones are logged separately).
-- Use them for **recovery / re-upload** scenarios or to associate files with records after migration.
-- File names include the test/batch name for easy identification.
+* These files are **generated automatically** during each run.
+* They contain **only successful downloads** (failed ones are logged separately).
+* Use them for **recovery / re-upload** scenarios or to associate files with records after migration.
+* File names include the test/batch name for easy identification.
 
 Example generated files in `output/`:
-- `Download_Files_Batch_1_ContentVersion_Inputfile.xlsx`
-- `Download_Files_Batch_1_ContentDocumentLink_Inputfile.xlsx`
+* `Download_Files_Batch_1_ContentVersion_Inputfile.xlsx`
+* `Download_Files_Batch_1_ContentDocumentLink_Inputfile.xlsx`
 
 ---
 ## Output Files Generated
@@ -318,17 +317,17 @@ Example generated files in `output/`:
 
 ## CI/CD Compatibility
 
-- Designed for headless execution
-- Suitable for GitHub Actions, Jenkins, Azure DevOps
-- No manual browser or driver setup required
+* Designed for headless execution
+* Suitable for GitHub Actions, Jenkins, Azure DevOps
+* No manual browser or driver setup required
 
 ---
 
 ### CI Smoke Test
 The CI pipeline runs a dedicated smoke test (ci/robot/Smoke.robot) to validate:
-- Robot Framework startup
-- Selenium + Chrome in headless CI
-- Custom ExcelLibrary keywords
+* Robot Framework startup
+* Selenium + Chrome in headless CI
+* Custom ExcelLibrary keywords
 
 This test is isolated from Salesforce authentication to ensure deterministic CI runs.
 
