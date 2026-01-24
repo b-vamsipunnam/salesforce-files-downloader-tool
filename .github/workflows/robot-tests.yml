@@ -14,22 +14,21 @@ jobs:
       # ---------------------------------------------
       # Checkout
       # ---------------------------------------------
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       # ---------------------------------------------
-      # Python
+      # Python + pip cache (fast)
       # ---------------------------------------------
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-          cache: 'pip'
+          python-version: "3.10"
+          cache: "pip"
           cache-dependency-path: requirements.txt
+
       # ---------------------------------------------
-      # Chrome (Selenium Manager handles driver)
+      # Chrome (Chromedriver handled by Selenium Manager)
       # ---------------------------------------------
       - name: Install Chrome
         run: |
@@ -37,37 +36,34 @@ jobs:
           sudo apt-get install -y google-chrome-stable
 
       # ---------------------------------------------
-      # Dependencies
+      # Dependencies (DO NOT ignore failures)
       # ---------------------------------------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt || true
-          pip install robotframework robotframework-seleniumlibrary openpyxl
-
-      - name: Verify ExcelLibrary is installed
-        run: python -c "import ExcelLibrary; print('ExcelLibrary loaded OK')"
+          python -m pip install -r requirements.txt
 
       # ---------------------------------------------
-      # Create folders
+      # Ensure Robot can import local Python libraries (ExcelLibrary wrapper etc.)
+      # ---------------------------------------------
+      - name: Set PYTHONPATH for Robot
+        run: |
+          echo "PYTHONPATH=${GITHUB_WORKSPACE}/src/robot/library:${GITHUB_WORKSPACE}" >> $GITHUB_ENV
+
+      - name: Verify ExcelLibrary wrapper loads
+        run: |
+          python -c "import ExcelLibrary; print('ExcelLibrary wrapper loaded OK')"
+
+      # ---------------------------------------------
+      # Prepare folders + dummy org auth
       # ---------------------------------------------
       - name: Prepare directories
         run: |
           mkdir -p results input output downloads
 
-      # ---------------------------------------------
-      # 🔥 FORCE at least one artifact file
-      # ---------------------------------------------
-      - name: Create placeholder artifact
+      - name: Create dummy org_info.json (CI-safe)
         run: |
-          echo "CI placeholder" > results/.keep
-
-      # ---------------------------------------------
-      # Dummy Salesforce org (CI-safe)
-      # ---------------------------------------------
-      - name: Create dummy org_info.json
-        run: |
-          cat <<EOF > org_info.json
+          cat > org_info.json <<'EOF'
           {
             "result": {
               "accessToken": "ci-dummy",
@@ -79,14 +75,12 @@ jobs:
           EOF
 
       # ---------------------------------------------
-      # Run Robot (DO NOT FAIL PIPELINE)
+      # Run Robot (allow failures but still upload artifacts)
       # ---------------------------------------------
       - name: Run Robot tests
         run: |
-          robot \
-            --outputdir results \
-            --loglevel TRACE \
-            src/robot/tests || true
+          robot --outputdir results --loglevel TRACE src/robot/tests
+        continue-on-error: true
 
       # ---------------------------------------------
       # Debug output
@@ -95,16 +89,16 @@ jobs:
         if: always()
         run: |
           echo "Results content:"
-          ls -la results
+          ls -la results || true
 
       # ---------------------------------------------
-      # Upload artifacts (NEVER FAIL)
+      # Upload artifacts (never fail)
       # ---------------------------------------------
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: robot-results
-          path: results/
-          if-no-files-found: warn
+          path: results
+          if-no-files-found: ignore
           retention-days: 7
