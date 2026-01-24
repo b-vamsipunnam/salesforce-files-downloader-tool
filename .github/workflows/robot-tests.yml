@@ -11,9 +11,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ---------------------------------------------
+      # Checkout
+      # ---------------------------------------------
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ---------------------------------------------
+      # Python + pip cache
+      # ---------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -26,6 +32,7 @@ jobs:
       # ---------------------------------------------
       - name: Install Google Chrome
         run: |
+          set -x
           sudo apt-get update
           sudo apt-get install -y wget gnupg
           wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-linux-keyring.gpg
@@ -35,32 +42,30 @@ jobs:
           google-chrome --version
 
       # ---------------------------------------------
-      # Dependencies
+      # Install dependencies (do not ignore failures)
       # ---------------------------------------------
       - name: Install dependencies
         run: |
+          set -x
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip freeze
+          python -m pip freeze | sort
 
       # ---------------------------------------------
-      # Ensure local Robot Python libs (ExcelLibrary wrapper etc.) are importable
+      # Ensure local Robot Python libs are importable
+      # (so ExcelLibrary.py wrapper works on Linux)
       # ---------------------------------------------
-      - name: Set PYTHONPATH
-        run: |
-          echo "PYTHONPATH=${GITHUB_WORKSPACE}/src/robot/library:${GITHUB_WORKSPACE}" >> $GITHUB_ENV
-          echo "PYTHONPATH set to: ${GITHUB_WORKSPACE}/src/robot/library:${GITHUB_WORKSPACE}"
-
       - name: Verify ExcelLibrary wrapper loads
         run: |
-          python -c "import sys; print(sys.path)"
-          python -c "import ExcelLibrary; print('ExcelLibrary wrapper loaded OK:', ExcelLibrary.__file__)"
+          set -x
+          python -c "import sys; sys.path.insert(0,'src/robot/library'); import ExcelLibrary; print('ExcelLibrary OK ->', ExcelLibrary.__file__)"
 
       # ---------------------------------------------
       # Prepare folders + dummy org auth
       # ---------------------------------------------
       - name: Prepare directories
         run: |
+          set -x
           mkdir -p results input output downloads
           ls -la src/robot/library || true
 
@@ -82,8 +87,16 @@ jobs:
       # ---------------------------------------------
       - name: Run Robot tests
         run: |
+          set -x
           robot --outputdir results --loglevel TRACE src/robot/tests
         continue-on-error: true
+
+      # ---------------------------------------------
+      # Ensure results exists + debug listing
+      # ---------------------------------------------
+      - name: Ensure results exists
+        if: always()
+        run: mkdir -p results
 
       - name: List results
         if: always()
@@ -91,6 +104,9 @@ jobs:
           echo "Results content:"
           ls -la results || true
 
+      # ---------------------------------------------
+      # Upload artifacts (never fail if empty)
+      # ---------------------------------------------
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
