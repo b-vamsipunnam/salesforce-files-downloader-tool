@@ -20,4 +20,10 @@ CI Smoke – Excel Wrapper Works
 
 *** Keywords ***
 Open Browser For Smoke
-    Open Browser    ${URL}    chrome
+    ${opts}=    Evaluate    sys.modules['selenium.webdriver'].ChromeOptions()    sys, selenium.webdriver
+    Call Method    ${opts}    add_argument    --headless=new
+    Call Method    ${opts}    add_argument    --no-sandbox
+    Call Method    ${opts}    add_argument    --disable-dev-shm-usage
+    Call Method    ${opts}    add_argument    --disable-gpu
+    Call Method    ${opts}    add_argument    --window-size=1920,1080
+    Open Browser    ${URL}    chrome    options=${opts}
