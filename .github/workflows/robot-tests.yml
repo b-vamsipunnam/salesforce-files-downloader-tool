@@ -11,32 +11,51 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ---------------------------------------------
+      # Checkout
+      # ---------------------------------------------
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python (pip cache)
+      # ---------------------------------------------
+      # Python + pip cache
+      # ---------------------------------------------
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
           cache: "pip"
           cache-dependency-path: requirements.txt
 
+      # ---------------------------------------------
+      # Prepare folders early (so artifacts always exist)
+      # ---------------------------------------------
       - name: Prepare directories
         run: |
           mkdir -p results input output downloads
 
-      - name: Install dependencies
+      # ---------------------------------------------
+      # Dependencies (DEBUG MODE: show exact failure)
+      # ---------------------------------------------
+      - name: Install dependencies (debug)
         run: |
+          set -x
+          python --version
+          python -m pip --version
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip freeze | sort > results/pip_freeze.txt
 
-      # Make local Robot Python libs importable (ExcelLibrary wrapper etc.)
+      # ---------------------------------------------
+      # Make local Robot Python libs importable (wrapper, WebdriverManager.py)
+      # ---------------------------------------------
       - name: Set PYTHONPATH
         run: |
           echo "PYTHONPATH=${GITHUB_WORKSPACE}/src/robot/library:${GITHUB_WORKSPACE}" >> $GITHUB_ENV
 
-      - name: Create dummy org_info.json (CI-safe)
+      # ---------------------------------------------
+      # Dummy Salesforce org (CI-safe)
+      # ---------------------------------------------
+      - name: Create dummy org_info.json
         run: |
           cat <<EOF > org_info.json
           {
@@ -49,17 +68,26 @@ jobs:
           }
           EOF
 
+      # ---------------------------------------------
+      # Run Robot (tests can fail, pipeline won't)
+      # ---------------------------------------------
       - name: Run Robot tests
         continue-on-error: true
         run: |
           robot --outputdir results --loglevel TRACE src/robot/tests
 
+      # ---------------------------------------------
+      # Debug output
+      # ---------------------------------------------
       - name: List results
         if: always()
         run: |
           echo "Results content:"
           ls -la results || true
 
+      # ---------------------------------------------
+      # Upload artifacts (never fail)
+      # ---------------------------------------------
       - name: Upload Robot results
         if: always()
         uses: actions/upload-artifact@v4
