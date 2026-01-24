@@ -32,14 +32,22 @@ jobs:
       # ---------------------------------------------
       - name: Prepare directories
         run: |
-          mkdir -p results input output downloads
+          mkdir -p results/smoke results/full input output downloads
 
       # ---------------------------------------------
-      # Dependencies (DEBUG MODE: show exact failure)
+      # Chrome (needed for Selenium smoke test)
       # ---------------------------------------------
-      - name: Install dependencies (debug)
+      - name: Install Chrome
         run: |
-          set -x
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable || true
+          google-chrome --version || true
+
+      # ---------------------------------------------
+      # Dependencies (no longer debug; fail fast if install breaks)
+      # ---------------------------------------------
+      - name: Install dependencies
+        run: |
           python --version
           python -m pip --version
           python -m pip install --upgrade pip
@@ -53,7 +61,15 @@ jobs:
           echo "PYTHONPATH=${GITHUB_WORKSPACE}/src/robot/library:${GITHUB_WORKSPACE}" >> $GITHUB_ENV
 
       # ---------------------------------------------
-      # Dummy Salesforce org (CI-safe)
+      # ✅ CI Smoke Test (NO Salesforce auth)
+      # Keep this strict: if smoke fails, job fails.
+      # ---------------------------------------------
+      - name: Run CI Smoke Test
+        run: |
+          robot --outputdir results/smoke --loglevel INFO ci/robot/Smoke.robot
+
+      # ---------------------------------------------
+      # Dummy Salesforce org (CI-safe) for full tests
       # ---------------------------------------------
       - name: Create dummy org_info.json
         run: |
@@ -69,12 +85,12 @@ jobs:
           EOF
 
       # ---------------------------------------------
-      # Run Robot (tests can fail, pipeline won't)
+      # Full suite (allowed to fail; smoke already validated env)
       # ---------------------------------------------
-      - name: Run Robot tests
+      - name: Run Full Robot Tests
         continue-on-error: true
         run: |
-          robot --outputdir results --loglevel TRACE src/robot/tests
+          robot --outputdir results/full --loglevel TRACE src/robot/tests
 
       # ---------------------------------------------
       # Debug output
@@ -84,6 +100,10 @@ jobs:
         run: |
           echo "Results content:"
           ls -la results || true
+          echo "Smoke results:"
+          ls -la results/smoke || true
+          echo "Full results:"
+          ls -la results/full || true
 
       # ---------------------------------------------
       # Upload artifacts (never fail)
