@@ -11,15 +11,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ---------------------------------------------
-      # Checkout
-      # ---------------------------------------------
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ---------------------------------------------
-      # Python + pip cache (fast)
-      # ---------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -28,31 +22,39 @@ jobs:
           cache-dependency-path: requirements.txt
 
       # ---------------------------------------------
-      # Chrome (Chromedriver handled by Selenium Manager)
+      # Chrome (reliable install)
       # ---------------------------------------------
-      - name: Install Chrome
+      - name: Install Google Chrome
         run: |
           sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-linux-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
           sudo apt-get install -y google-chrome-stable
+          google-chrome --version
 
       # ---------------------------------------------
-      # Dependencies (DO NOT ignore failures)
+      # Dependencies
       # ---------------------------------------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
+          python -m pip freeze
 
       # ---------------------------------------------
-      # Ensure Robot can import local Python libraries (ExcelLibrary wrapper etc.)
+      # Ensure local Robot Python libs (ExcelLibrary wrapper etc.) are importable
       # ---------------------------------------------
-      - name: Set PYTHONPATH for Robot
+      - name: Set PYTHONPATH
         run: |
           echo "PYTHONPATH=${GITHUB_WORKSPACE}/src/robot/library:${GITHUB_WORKSPACE}" >> $GITHUB_ENV
+          echo "PYTHONPATH set to: ${GITHUB_WORKSPACE}/src/robot/library:${GITHUB_WORKSPACE}"
 
       - name: Verify ExcelLibrary wrapper loads
         run: |
-          python -c "import ExcelLibrary; print('ExcelLibrary wrapper loaded OK')"
+          python -c "import sys; print(sys.path)"
+          python -c "import ExcelLibrary; print('ExcelLibrary wrapper loaded OK:', ExcelLibrary.__file__)"
 
       # ---------------------------------------------
       # Prepare folders + dummy org auth
@@ -60,6 +62,7 @@ jobs:
       - name: Prepare directories
         run: |
           mkdir -p results input output downloads
+          ls -la src/robot/library || true
 
       - name: Create dummy org_info.json (CI-safe)
         run: |
@@ -82,18 +85,12 @@ jobs:
           robot --outputdir results --loglevel TRACE src/robot/tests
         continue-on-error: true
 
-      # ---------------------------------------------
-      # Debug output
-      # ---------------------------------------------
       - name: List results
         if: always()
         run: |
           echo "Results content:"
           ls -la results || true
 
-      # ---------------------------------------------
-      # Upload artifacts (never fail)
-      # ---------------------------------------------
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
