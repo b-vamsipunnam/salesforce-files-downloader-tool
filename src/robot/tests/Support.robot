@@ -14,8 +14,6 @@ Library                                    ../library/SalesforceSupport.py
 Library                                    ../library/WebdriverManager.py
 Library                                    ../library/ExcelLibrary.py
 
-
-
 *** Variables ***
 @{TEMP_FILE_MARKERS}                       .crdownload    .tmp    .part    unconfirmed    downloading
 ${org_info_file}                           org_info.json
