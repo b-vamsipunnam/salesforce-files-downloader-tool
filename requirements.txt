@@ -17,5 +17,5 @@ simple-salesforce==1.11.4      # Optional – keep if you use direct API calls
 salesforce-bulk==2.2.0         # Optional – keep if you use bulk API
 
 # HTTP and utility libraries
-requests==2.29.0
+requests==2.32.3
 PyYAML==6.0.1
