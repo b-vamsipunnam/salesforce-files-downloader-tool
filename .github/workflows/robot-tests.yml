@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       # ---------------------------------------------
-      # Python (single setup + pip cache)
+      # Python + pip cache
       # ---------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,7 +28,7 @@ jobs:
           cache-dependency-path: requirements.txt
 
       # ---------------------------------------------
-      # Chrome (keep your approach, but show version)
+      # Chrome (Selenium Manager handles driver)
       # ---------------------------------------------
       - name: Install Chrome
         run: |
@@ -37,35 +37,36 @@ jobs:
           google-chrome --version || true
 
       # ---------------------------------------------
-      # Dependencies (keep CI running, but log failures)
+      # Install dependencies (DO NOT IGNORE FAILURES)
       # ---------------------------------------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt || echo "WARNING: requirements.txt install failed"
-          pip install robotframework robotframework-seleniumlibrary openpyxl
-          python -m pip freeze | sort || true
+          python -m pip install -r requirements.txt
 
       # ---------------------------------------------
-      # Make local Robot Python libs importable (ExcelLibrary wrapper)
+      # Verify required Python modules (fast fail)
       # ---------------------------------------------
-      - name: Set PYTHONPATH for local libraries
+      - name: Verify Python dependencies
+        run: |
+          python -c "import pabot; print('pabot OK')"
+          python -c "import RequestsLibrary; print('RequestsLibrary OK')"
+          python -c "import webdriver_manager; print('webdriver_manager OK')"
+
+      # ---------------------------------------------
+      # Make local Robot Python libs importable
+      # (ExcelLibrary wrapper + WebdriverManager.py)
+      # ---------------------------------------------
+      - name: Set PYTHONPATH
         run: |
           echo "PYTHONPATH=${GITHUB_WORKSPACE}/src/robot/library:${GITHUB_WORKSPACE}" >> $GITHUB_ENV
 
       # ---------------------------------------------
-      # Create folders
+      # Prepare folders
       # ---------------------------------------------
       - name: Prepare directories
         run: |
           mkdir -p results input output downloads
-
-      # ---------------------------------------------
-      # Force at least one artifact file
-      # ---------------------------------------------
-      - name: Create placeholder artifact
-        run: |
-          echo "CI placeholder" > results/.keep
 
       # ---------------------------------------------
       # Dummy Salesforce org (CI-safe)
@@ -84,11 +85,12 @@ jobs:
           EOF
 
       # ---------------------------------------------
-      # Run Robot (DO NOT FAIL PIPELINE)
+      # Run Robot tests (tests may fail, pipeline won't)
       # ---------------------------------------------
       - name: Run Robot tests
         run: |
-          robot --outputdir results --loglevel TRACE src/robot/tests || true
+          robot --outputdir results --loglevel TRACE src/robot/tests
+        continue-on-error: true
 
       # ---------------------------------------------
       # Debug output
@@ -100,13 +102,13 @@ jobs:
           ls -la results || true
 
       # ---------------------------------------------
-      # Upload artifacts (NEVER FAIL)
+      # Upload artifacts (never fail)
       # ---------------------------------------------
-      - name: Upload artifacts
+      - name: Upload Robot results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: robot-results
-          path: results/
+          path: results
           if-no-files-found: ignore
           retention-days: 7
