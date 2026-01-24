@@ -64,20 +64,25 @@ The solution combines:
 ```
 salesforce-files-downloader-tool/
 ├── .github/
-│   └── PULL_REQUEST_TEMPLATE.md
+│   └── workflows/
+│        ├── robot-test.yml
+│   └── PULL_REQUEST_TEMPLATE.md                               # GitHub Actions CI
+├── ci/
+│   └──  robot/
+│        └── Smoke.robot
 ├── docs/
-│   └── architecture.md
-├── downloads/                      # Runtime: downloaded Salesforce files
-│   └── <test_name>_<uuid>/         # One folder per pabot process
+│   └── architecture.md                                        # High-level design documentation
+├── downloads/                                                 # Runtime: downloaded Salesforce files
+│   └── <test_name>_<uuid>/                                    # One folder per pabot process
 │        ├── 069xxxxxxxxxxxx
 │        └── 069yyyyyyyyyyyy 
-│   └── <test_name>_<uuid>/         # One folder per pabot process
+│   └── <test_name>_<uuid>/                                    # One folder per pabot process
 │        ├── 069xxxxxxxxxxxx
 │        └── 069yyyyyyyyyyyy 
-├── input/                          # Input Excel files
+├── input/                                                     # Input Excel files
 │   ├── Inputfile_1.xlsx
 │   └── Inputfile_2.xlsx
-├── output/                         # Failed record logs & generated Excels
+├── output/                                                    # Failed record logs & generated Excels
 │   └── <test_name>__<uuid>/
 │        ├── <test_name>_Failed IDs_List.xlsx
 │        ├── <test_name>_ContentVersion_Inputfile.xlsx
@@ -86,7 +91,7 @@ salesforce-files-downloader-tool/
 │        ├── <test_name>_Failed IDs_List.xlsx
 │        ├── <test_name>_ContentVersion_Inputfile.xlsx
 │        └── <test_name>_ContentDocumentLink_Inputfile.xlsx
-├── results/                    # Robot execution results
+├── results/                                                   # Robot execution results
 │   ├── pabot_results/
 │   ├── log.html
 │   ├── output.xml
@@ -94,17 +99,19 @@ salesforce-files-downloader-tool/
 ├── src/
 │   └──  robot/
 │        └── Library/
+│            ├── ExcelLibrary.py
 │            ├── SalesforceSupport.py
 │            └── WebdriverManager.py
 │        └── tests/
 │            ├── Support.robot
 │            └── Test.robot
 ├── .gitignore
-├── .pabotsuitenames
-├── org_info.json               # Salesforce org auth (generated)
+├── .pabotsuitenames                                           # Generated auth file
+├── org_info.json                                              # Salesforce org auth (generated)
 ├── PIPE
-├── README.md
-└── requirements.txt
+├── README.md                                                  # Read this file
+└── requirements.txt                                           # Python dependencies
+
 ```
 
 ## Folder Responsibilities

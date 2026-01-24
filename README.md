@@ -61,7 +61,12 @@ Use this tool when you need to:
 ```
 salesforce-files-downloader-tool/
 ├── .github/
+│   └── workflows/
+│        ├── robot-test.yml
 │   └── PULL_REQUEST_TEMPLATE.md                               # GitHub Actions CI
+├── ci/
+│   └──  robot/
+│        └── Smoke.robot
 ├── docs/
 │   └── architecture.md                                        # High-level design documentation
 ├── downloads/                                                 # Runtime: downloaded Salesforce files
@@ -91,6 +96,7 @@ salesforce-files-downloader-tool/
 ├── src/
 │   └──  robot/
 │        └── Library/
+│            ├── ExcelLibrary.py
 │            ├── SalesforceSupport.py
 │            └── WebdriverManager.py
 │        └── tests/
@@ -290,8 +296,6 @@ Example generated files in `output/`:
 | ContentVersion Insert Ready        | `output/*_ContentVersion_*.xlsx`      | Prepare bulk upload of files         |
 | ContentDocumentLink Insert Ready   | `output/*_ContentDocumentLink_*.xlsx` | Prepare linking files to records     |
 
-
-
 ---
 ## Error Handling and Logging
 
@@ -316,6 +320,16 @@ Example generated files in `output/`:
 - Designed for headless execution
 - Suitable for GitHub Actions, Jenkins, Azure DevOps
 - No manual browser or driver setup required
+
+---
+
+### CI Smoke Test
+The CI pipeline runs a dedicated smoke test (ci/robot/Smoke.robot) to validate:
+- Robot Framework startup
+- Selenium + Chrome in headless CI
+- Custom ExcelLibrary keywords
+
+This test is isolated from Salesforce authentication to ensure deterministic CI runs.
 
 ---
 
