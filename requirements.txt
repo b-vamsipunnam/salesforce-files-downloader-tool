@@ -19,6 +19,3 @@ salesforce-bulk==2.2.0         # Optional – keep if you use bulk API
 # HTTP and utility libraries
 requests==2.29.0
 PyYAML==6.0.1
-
-# recommended for stability
-#urllib3==2.6.2
