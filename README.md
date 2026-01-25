@@ -5,12 +5,12 @@
 ## Built With
 
 [![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.0.1-orange?style=flat&logo=robotframework&logoColor=white)](https://robotframework.org/)
-[![SeleniumLibrary](https://img.shields.io/badge/SeleniumLibrary-6.8.0-green?style=flat&logo=selenium&logoColor=white)](https://github.com/robotframework/SeleniumLibrary) 
-[![Pabot](https://img.shields.io/badge/Pabot-2.18.0-blue?style=flat)](https://github.com/mkorpela/pabot) 
-[![webdriver-manager](https://img.shields.io/badge/webdriver--manager-4.0.2-blue?style=flat)](https://pypi.org/project/webdriver-manager/)
-[![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/) 
+[![Pabot](https://img.shields.io/badge/Pabot-2.18.0-blue?style=flat&logo=github&logoColor=white)](https://github.com/mkorpela/pabot)
+[![SeleniumLibrary](https://img.shields.io/badge/SeleniumLibrary-6.8.0-green?style=flat&logo=selenium&logoColor=white)](https://github.com/robotframework/SeleniumLibrary)
+[![webdriver-manager](https://img.shields.io/badge/webdriver--manager-4.0.2-blue?style=flat&logo=googlechrome&logoColor=white)](https://pypi.org/project/webdriver-manager/)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![CI](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions/workflows/robot-tests.yml/badge.svg)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat&logo=open-source-initiative&logoColor=white)](https://opensource.org/licenses/MIT)
 
 ---
 
@@ -19,22 +19,33 @@
 The Salesforce Files Downloader Tool is an open-source, parallel-processing automation framework built with **Robot Framework** and **Python** for fast, reliable bulk downloads of Salesforce files using ContentDocument IDs.
 
 Key features:
-- Works with **any Salesforce org** (authenticated via Salesforce CLI)
-- Downloads files using the secure **Shepherd endpoint**
-- Runs **multiple browsers in parallel** with Pabot
-- Preserves original filenames and organizes per ContentDocumentId
-- Generates **Data Loader–ready Excel files** (ContentVersion & ContentDocumentLink)
-- Tracks failed downloads with retry-safe logs
-- Fully isolated per-test output folders
+* Works with **any Salesforce org** (authenticated via Salesforce CLI)
+* Downloads files using the secure **Shepherd endpoint**
+* Runs **multiple browsers in parallel** with Pabot
+* Preserves original filenames and organizes per ContentDocumentId
+* Generates **Data Loader–ready Excel files** (ContentVersion & ContentDocumentLink)
+* Tracks failed downloads with retry-safe logs
+* Fully isolated per-test output folders
 
 
 ## When to Use This Tool
 
 Use this tool when you need to:
-- Migrate or back up thousands of Salesforce files
-- Re-upload files after org refresh or data loss
-- Perform controlled file migrations between Salesforce orgs
-- Generate Data Loader–ready input files automatically
+* Migrate or back up thousands of Salesforce files
+* Re-upload files after org refresh or data loss
+* Perform controlled file migrations between Salesforce orgs
+* Generate Data Loader–ready input files automatically
+* Execute large downloads in parallel
+
+## Why This Exists
+
+Traditional tools such as Data Loader and Workbench have limitations:
+
+* No reliable bulk download support
+* UI-based downloads are slow and unstable
+* No parallel execution
+
+This tool provides deterministic, resumable, and scalable downloads optimized for enterprise environments.
 
 ---
 
@@ -51,8 +62,9 @@ Use this tool when you need to:
 3. Check results
    ```powershell
    Downloaded files: downloads/<test_name>_<uuid>/069.../<filename>
-   
-   Generated Excels & logs: output/
+   Generated Excel files: output/
+   Execution logs: results/
+
 
 ---
 
@@ -141,7 +153,7 @@ salesforce-files-downloader-tool/
     ```bash
    sf org login web --alias <org_name>
    
-5. check the org connection status
+5. Check the org connection status
    ```bash
    sf org list
    
@@ -165,6 +177,9 @@ This generates `org_info.json`, which is used by the automation for:
 * API version
 * Org alias
 
+⚠️ Never commit org_info.json containing real tokens.
+Add it to .gitignore.
+
 ---
 
 ## Input Data Format
@@ -187,24 +202,26 @@ Example:
 
 The automation supports parallel execution using pabot.
 
-Run the multiple tests using below pabot command:
+### Run the multiple tests using below pabot command: (Recommended)
 ```
    pabot --pabotlib --processes 2 --outputdir results src/robot/tests/Test.robot
 ```
 * Note: Adjust --processes based on your machine (e.g., 2-8 recommended)
 
-Running a Single Test Case (One Process)
+### Run a single Test (One Batch)  using below robot command
 
 If you want to execute **only one batch** (e.g., just one Excel file) without parallel execution, or if you're debugging/troubleshooting, use the standard `robot` command instead of `pabot`.
 
-```
-   robot robot/tests/Test.robot
-```
-
-* Or, to run a specific test case (e.g., only Batch 1):
+* Note: Make sure to have only one batch under Test cases section in Test.robot file
 
 ```
-   robot --test Download_Files_Batch_1 robot/tests/Test.robot
+   robot src/robot/tests/Test.robot
+```
+
+* To run a specific test case out of multiple batches:(e.g., only Batch 1):
+
+```
+   robot --test Download_Files_Batch_1 src/robot/tests/Test.robot
 ```
 ---
 
@@ -227,6 +244,7 @@ Each pabot process creates a unique download folder under `downloads/`
 * Build download URL for each ContentDocument
 * Download file and validate completion
 * Move file into a ContentDocument-specific folder
+* Generate upload-ready Excel files
 * Log failures and size mismatches
 * Clean up temporary and partial files
 
@@ -246,11 +264,11 @@ Prepare an Excel file to perform bulk insert into the **ContentVersion** object 
 
 **ContentVersion Input File Columns**
 
-| Column       | Description                                                    | Example Value                                        |
-|--------------|----------------------------------------------------------------|------------------------------------------------------|
-| Title        | The title/name of the file (from original file metadata)       | Invoice_2025.pdf                                     |
-| VersionData  | Full local path to the downloaded file (ready for upload)      | C:\...\downloads\process_...\069...\Invoice_2025.pdf |
-| PathOnClient | Original filename (used as the client-side path during upload) | Invoice_2025.pdf                                     |
+| Column       | Description                                                    | Example Value                                           |
+|--------------|----------------------------------------------------------------|---------------------------------------------------------|
+| Title        | The title/name of the file (from original file metadata)       | Invoice_2025.pdf                                        |
+| VersionData  | Full local path to the downloaded file (ready for upload)      | C:\...\downloads\<test_name>_..\069...\Invoice_2025.pdf |
+| PathOnClient | Original filename (used as the client-side path during upload) | Invoice_2025.pdf                                        |
 
 **Usage**  
 * Open the file in Excel → Save As → CSV (UTF-8)
@@ -328,6 +346,7 @@ The CI pipeline runs a dedicated smoke test (ci/robot/Smoke.robot) to validate:
 * Robot Framework startup
 * Selenium + Chrome in headless CI
 * Custom ExcelLibrary keywords
+* The smoke test does not authenticate to Salesforce or download files
 
 This test is isolated from Salesforce authentication to ensure deterministic CI runs.
 
@@ -341,13 +360,13 @@ This test is isolated from Salesforce authentication to ensure deterministic CI 
 
 ---
 
-##  Key Technologies
+##  Technology Stack
 
 * Robot Framework 7.0.1
 * SeleniumLibrary 6.8.0 (with built-in Selenium Manager support)
 * webdriver-manager 4.0.2 (automatic ChromeDriver handling)
 * pabot 2.18.0 (parallel test execution)
-* robotframework-excellib (Excel input reading and Excel files generation)
+* Custom ExcelLibrary wrapper based on openpyxl (Excel input reading and Excel files generation)
 
 ---
 
@@ -361,8 +380,11 @@ This test is isolated from Salesforce authentication to ensure deterministic CI 
 
 ## Contributing
 
-* Found a bug or have an improvement?  
-* Please open an issue or submit a pull request!
+Contributions are welcome!
+
+* Open issues for bugs
+* Submit pull requests for improvements
+* Follow existing coding patterns
 
 ---
 
@@ -370,7 +392,7 @@ This test is isolated from Salesforce authentication to ensure deterministic CI 
 
 **Bhimeswara Vamsi Punnam**
 
-Lead Software Development Engineer in Test
+Lead Software Development Engineer in Test (SDET)
  
 **Contact:** [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/bvamsipunnam)
 
@@ -378,4 +400,6 @@ Lead Software Development Engineer in Test
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License.  
+See the [LICENSE](LICENSE) file for full terms and conditions.
+
