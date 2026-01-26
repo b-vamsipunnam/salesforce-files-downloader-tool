@@ -78,8 +78,7 @@ If you find a bug:
 
 ### Suggesting Enhancements
 
-We welcome feature ideas!
-Open an issue with:
+We welcome feature ideas! Open an issue with:
 
 * Problem statement
 * Proposed solution
@@ -97,9 +96,9 @@ git checkout -b feature/your-feature-name
 
 Examples:
 
-* `fix/download-timeout`
+* `feature/download-timeout`
 * `feature/batch-retry`
-* `docs/update-readme`
+* `feature/update-readme`
 
 ---
 
@@ -166,16 +165,6 @@ Download Salesforce File
     [Arguments]    ${content_id}
     Log    Downloading ${content_id}
 ```
-
----
-
-### Python
-
-* Follow PEP8
-* Add docstrings
-* Handle exceptions properly
-* Avoid hardcoding credentials
-
 ---
 
 ## Security
@@ -226,6 +215,6 @@ Maintainer: **Bhimeswara Vamsi Punnam**
 
 ---
 
-Thank you for contributing!
+###   Thank you for contributing!
 
-```
+---
