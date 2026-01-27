@@ -1,5 +1,8 @@
 # Salesforce Files Downloader Tool
 
+> Enterprise-grade Salesforce file migration and backup tool built with Robot Framework and Python.  
+> Supports bulk ContentDocumentId downloads, parallel execution, CI/CD, and Data Loader integration.
+
 ---
 
 ## Built With
@@ -9,6 +12,8 @@
 [![SeleniumLibrary](https://img.shields.io/badge/SeleniumLibrary-6.8.0-green?style=flat&logo=selenium&logoColor=white)](https://github.com/robotframework/SeleniumLibrary)
 [![webdriver-manager](https://img.shields.io/badge/webdriver--manager-4.0.2-blue?style=flat&logo=googlechrome&logoColor=white)](https://pypi.org/project/webdriver-manager/)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![Salesforce CLI](https://img.shields.io/badge/Salesforce%20CLI-2.116.6-00A1E0?style=flat&logo=salesforce&logoColor=white)](https://developer.salesforce.com/tools/sfdxcli)
+[![Node.js](https://img.shields.io/badge/Node.js-18.20.4-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![CI](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions/workflows/robot-tests.yml/badge.svg)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions)
 [![Release](https://img.shields.io/github/v/release/b-vamsipunnam/salesforce-files-downloader-tool?style=flat&color=orange&logo=github&logoColor=white)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/releases)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat&logo=open-source-initiative&logoColor=white)](https://opensource.org/licenses/MIT)
@@ -20,33 +25,44 @@
 The Salesforce Files Downloader Tool is an open-source, parallel-processing automation framework built with **Robot Framework** and **Python** for fast, reliable bulk downloads of Salesforce files using ContentDocument IDs.
 
 Key features:
-* Works with **any Salesforce org** (authenticated via Salesforce CLI)
+
+* Supports **any Salesforce org** (via Salesforce CLI authentication)
 * Downloads files using the secure **Shepherd endpoint**
-* Runs **multiple browsers in parallel** with Pabot
-* Preserves original filenames and organizes per ContentDocumentId
-* Generates **Data Loader–ready Excel files** (ContentVersion & ContentDocumentLink)
-* Tracks failed downloads with retry-safe logs
-* Fully isolated per-test output folders
+* Parallel execution using **Pabot**
+* Preserves original filenames and directory structure
+* Generates **Data Loader–ready Excel files**
+* Tracks failures with detailed logs
+* Fully isolated execution folders
+* CI/CD compatible
+
+## Keywords
+
+Salesforce automation, Salesforce file download, ContentDocumentId export,  
+Salesforce migration tool, Robot Framework automation, Salesforce backup,  
+Bulk file downloader, Salesforce DevOps, Salesforce data migration
 
 
 ## When to Use This Tool
 
-Use this tool when you need to:
-* Migrate or back up thousands of Salesforce files
-* Re-upload files after org refresh or data loss
-* Perform controlled file migrations between Salesforce orgs
-* Generate Data Loader–ready input files automatically
+This tool is ideal when you need to:
+
+* Migrate large volumes of Salesforce files
+* Perform org-to-org file migrations
+* Back up attachments and documents
+* Recover files after org refresh
+* Generate upload-ready datasets
 * Execute large downloads in parallel
 
 ## Why This Exists
 
-Traditional tools such as Data Loader and Workbench have limitations:
+Traditional Salesforce tools (Data Loader, Workbench, UI downloads) have limitations:
 
 * No reliable bulk download support
-* UI-based downloads are slow and unstable
 * No parallel execution
+* Slow UI-based downloads
+* Limited retry and tracking
 
-This tool provides deterministic, resumable, and scalable downloads optimized for enterprise environments.
+This framework provides **deterministic, scalable, and resumable downloads** optimized for enterprise environments.
 
 ---
 
@@ -65,7 +81,6 @@ This tool provides deterministic, resumable, and scalable downloads optimized fo
    Downloaded files: downloads/<test_name>_<uuid>/069.../<filename>
    Generated Excel files: output/
    Execution logs: results/
-
 
 ---
 
@@ -128,9 +143,16 @@ salesforce-files-downloader-tool/
 ## Prerequisites
 
 * Python 3.10 or higher
+* Node LTS (18 or higher)
 * Salesforce CLI (`sf`)
 * Google Chrome browser
 * Virtual environment (recommended)
+
+
+#### Note: Install Salesforce CLI using npm command:
+```
+   npm install -g @salesforce/cli
+```
 
 ---
 ## Setup
@@ -209,22 +231,38 @@ The automation supports parallel execution using pabot.
 ```
 * Note: Adjust --processes based on your machine (e.g., 2-8 recommended)
 
-### Run a single Test (One Batch)  using below robot command
+Here’s a more polished, professional, and README-ready version of your section:
 
-If you want to execute **only one batch** (e.g., just one Excel file) without parallel execution, or if you're debugging/troubleshooting, use the standard `robot` command instead of `pabot`.
-
-* Note: Make sure to have only one batch under Test cases section in Test.robot file
-
-```
-   robot src/robot/tests/Test.robot
-```
-
-* To run a specific test case out of multiple batches:(e.g., only Batch 1):
-
-```
-   robot --test Download_Files_Batch_1 src/robot/tests/Test.robot
-```
 ---
+
+### Run a Single Test (One Batch)
+
+To execute **only one batch** (for example, a single Excel input file) without parallel processing, or when debugging and troubleshooting, use the standard `robot` command instead of `pabot`.
+
+#### Prerequisite
+
+Ensure that only **one batch** is enabled under the **Test Cases** section in `Test.robot` when running in single-test mode.
+
+#### Run All Batches Sequentially (Single Process)
+
+```bash
+robot src/robot/tests/Test.robot
+```
+
+This command runs all defined test cases sequentially in a single browser session.
+
+#### Run a Specific Batch (Example: Batch 1)
+
+To execute only a specific test case from multiple batches, use the `--test` option:
+
+```bash
+robot --test Download_Files_Batch_1 src/robot/tests/Test.robot
+```
+
+This is useful when validating a single input file or isolating failures.
+
+---
+
 
 ## Execution details:
 
