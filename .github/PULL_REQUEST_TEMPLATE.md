@@ -45,8 +45,8 @@ Provide details:
 ```
 
 Commands run:
-* robot tests/
-* pabot --pabotlib tests/
+* robot --test Download_Files_Batch_1 src/robot/tests/Test.robot
+* pabot --pabotlib --processes 2 --outputdir results src/robot/tests/Test.robot
 
 ```
 
