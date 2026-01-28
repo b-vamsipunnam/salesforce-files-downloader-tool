@@ -64,47 +64,48 @@ The solution combines:
 ```
 salesforce-files-downloader-tool/
 ├── .github/
-│   └── workflows/
-│        ├── robot-tests.yml
-│   └── PULL_REQUEST_TEMPLATE.md                               # GitHub Actions CI
+│   ├── workflows/
+│   │   └── robot-tests.yml                                # GitHub Actions CI
+│   └── PULL_REQUEST_TEMPLATE.md                           # Pull request template
 ├── ci/
-│   └──  robot/
-│        └── Smoke.robot
+│   └── robot/
+│       └── Smoke.robot
 ├── docs/
-│   └── architecture.md                                        # High-level design documentation
-├── downloads/                                                 # Runtime: downloaded Salesforce files
-│   └── <test_name>_<uuid>/                                    # One folder per pabot process
-│        ├── 069xxxxxxxxxxxx
-│        └── 069yyyyyyyyyyyy 
-├── input/                                                     # Input Excel files
+│   └── architecture.md                                    # High-level design documentation
+├── downloads/                                             # Runtime: downloaded Salesforce files
+│   └── <test_name>_<uuid>/                                # One folder per pabot process
+│       ├── 069xxxxxxxxxxxx/                               # ContentDocumentId folder
+│       │   └── <original_filename>
+│       └── 069yyyyyyyyyyyy/                               # ContentDocumentId folder
+│           └── <original_filename>
+├── input/                                                 # Input Excel files
 │   ├── Inputfile_1.xlsx
 │   └── Inputfile_2.xlsx
-├── output/                                                    # Runtime: Failed record & Data Loader ready Excels
-│   └── <test_name>__<uuid>/                                   # One folder per pabot process
-│        ├── <test_name>_Failed IDs_List.xlsx
-│        ├── <test_name>_ContentVersion_Inputfile.xlsx
-│        └── <test_name>_ContentDocumentLink_Inputfile.xlsx
-├── results/                                                   # Robot execution results
+├── output/                                                # Runtime: Failed records + Data Loader-ready Excels
+│   └── <test_name>__<uuid>/                               # One folder per test case
+│       ├── <test_name>_Failed_IDs_List.xlsx
+│       ├── <test_name>_ContentVersion_Inputfile.xlsx
+│       └── <test_name>_ContentDocumentLink_Inputfile.xlsx
+├── results/                                               # Robot execution results
 │   ├── pabot_results/
 │   ├── log.html
 │   ├── output.xml
 │   └── report.html
 ├── src/
-│   └──  robot/
-│        └── library/
-│            ├── ExcelLibrary.py
-│            ├── SalesforceSupport.py
-│            └── WebdriverManager.py
-│        └── tests/
-│            ├── Support.robot
-│            └── Test.robot
+│   └── robot/
+│       ├── library/
+│       │   ├── ExcelLibrary.py
+│       │   ├── SalesforceSupport.py
+│       │   └── WebdriverManager.py
+│       └── tests/
+│           ├── Support.robot
+│           └── Test.robot
 ├── .gitignore
-├── .pabotsuitenames                                           # Pabot suite cache file
+├── .pabotsuitenames                                       # Pabot suite cache file
 ├── CODE_OF_CONDUCT.md
 ├── CONTRIBUTING.md
-├── org_info.json                                              # Salesforce org auth (generated)
-├── README.md                                                  # Read this file
-├── requirements.txt                                           # Python dependencies
+├── README.md
+├── requirements.txt
 └── SECURITY.md
 
 ```

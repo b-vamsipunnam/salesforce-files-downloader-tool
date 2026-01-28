@@ -118,48 +118,50 @@ Local Storage + Excel Generator
 ```
 salesforce-files-downloader-tool/
 ├── .github/
-│   └── workflows/
-│        ├── robot-tests.yml
-│   └── PULL_REQUEST_TEMPLATE.md                               # GitHub Actions CI
+│   ├── workflows/
+│   │   └── robot-tests.yml                                # GitHub Actions CI
+│   └── PULL_REQUEST_TEMPLATE.md                           # Pull request template
 ├── ci/
-│   └──  robot/
-│        └── Smoke.robot
+│   └── robot/
+│       └── Smoke.robot
 ├── docs/
-│   └── architecture.md                                        # High-level design documentation
-├── downloads/                                                 # Runtime: downloaded Salesforce files
-│   └── <test_name>_<uuid>/                                    # One folder per pabot process
-│        ├── 069xxxxxxxxxxxx
-│        └── 069yyyyyyyyyyyy 
-├── input/                                                     # Input Excel files
+│   └── architecture.md                                    # High-level design documentation
+├── downloads/                                             # Runtime: downloaded Salesforce files
+│   └── <test_name>_<uuid>/                                # One folder per pabot process
+│       ├── 069xxxxxxxxxxxx/                               # ContentDocumentId folder
+│       │   └── <original_filename>
+│       └── 069yyyyyyyyyyyy/                               # ContentDocumentId folder
+│           └── <original_filename>
+├── input/                                                 # Input Excel files
 │   ├── Inputfile_1.xlsx
 │   └── Inputfile_2.xlsx
-├── output/                                                    # Runtime: Failed record & Data Loader ready Excels
-│   └── <test_name>__<uuid>/                                   # One folder per pabot process
-│        ├── <test_name>_Failed IDs_List.xlsx
-│        ├── <test_name>_ContentVersion_Inputfile.xlsx
-│        └── <test_name>_ContentDocumentLink_Inputfile.xlsx
-├── results/                                                   # Robot execution results
+├── output/                                                # Runtime: Failed records + Data Loader-ready Excels
+│   └── <test_name>__<uuid>/                               # One folder per test case
+│       ├── <test_name>_Failed_IDs_List.xlsx
+│       ├── <test_name>_ContentVersion_Inputfile.xlsx
+│       └── <test_name>_ContentDocumentLink_Inputfile.xlsx
+├── results/                                               # Robot execution results
 │   ├── pabot_results/
 │   ├── log.html
 │   ├── output.xml
 │   └── report.html
 ├── src/
-│   └──  robot/
-│        └── library/
-│            ├── ExcelLibrary.py
-│            ├── SalesforceSupport.py
-│            └── WebdriverManager.py
-│        └── tests/
-│            ├── Support.robot
-│            └── Test.robot
+│   └── robot/
+│       ├── library/
+│       │   ├── ExcelLibrary.py
+│       │   ├── SalesforceSupport.py
+│       │   └── WebdriverManager.py
+│       └── tests/
+│           ├── Support.robot
+│           └── Test.robot
 ├── .gitignore
-├── .pabotsuitenames                                           # Pabot suite cache file
+├── .pabotsuitenames                                       # Pabot suite cache file
 ├── CODE_OF_CONDUCT.md
 ├── CONTRIBUTING.md
-├── org_info.json                                              # Salesforce org auth (generated)
-├── README.md                                                  # Read this file
-├── requirements.txt                                           # Python dependencies
+├── README.md
+├── requirements.txt
 └── SECURITY.md
+
 ```
 ---
 
@@ -294,7 +296,7 @@ This command runs all defined test cases sequentially in a single browser sessio
 To execute only a specific test case from multiple batches, use the `--test` option:
 
 ```bash
-robot --test Download_Files_Batch_1 src/robot/tests/Test.robot
+robot --test Download_Batch_1 src/robot/tests/Test.robot
 ```
 
 This is useful when validating a single input file or isolating failures.
@@ -378,8 +380,8 @@ Prepare an Excel file to perform bulk insert into the **ContentDocumentLink** ob
 * File names include the test/batch name for easy identification.
 
 Example generated files in `output/`:
-* `Download_Files_Batch_1_ContentVersion_Inputfile.xlsx`
-* `Download_Files_Batch_1_ContentDocumentLink_Inputfile.xlsx`
+* `Download_Batch_1_ContentVersion_Inputfile.xlsx`
+* `Download_Batch_1_ContentDocumentLink_Inputfile.xlsx`
 
 ---
 ## Output Files Generated
