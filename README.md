@@ -35,13 +35,6 @@ Key features:
 * Fully isolated execution folders
 * CI/CD compatible
 
-## Keywords
-
-Salesforce automation, Salesforce file download, ContentDocumentId export,  
-Salesforce migration tool, Robot Framework automation, Salesforce backup,  
-Bulk file downloader, Salesforce DevOps, Salesforce data migration
-
-
 ## When to Use This Tool
 
 This tool is ideal when you need to:
@@ -66,22 +59,58 @@ This framework provides **deterministic, scalable, and resumable downloads** opt
 
 ---
 
+## Target Audience
+
+This tool is designed for:
+
+- Salesforce Developers and Architects
+- QA / Automation Engineers
+- DevOps Engineers
+- Data Migration Specialists
+- Compliance and Audit Teams
+
+---
+
+## Architecture Overview
+
+High-level architecture:
+
+```text
+Salesforce Org
+      |
+      | (CLI Authentication)
+      v
+Robot Framework
+      |
+      v
+Custom Python Libraries
+      |
+      v
+Headless Chrome
+      |
+      v
+Local Storage + Excel Generator
+
+```
+---
+
 ## Quick Start
 
-1. Authenticate to your Salesforce org: (`Replace <org_name> with your org alias`)
+1. Authenticate to your Salesforce org *(replace `<org_name>` with your org alias)*:
    ```powershell
    sf org display --json --target-org <org_name> | Out-File -Encoding utf8 org_info.json
-
+   ```
+   
 2. Run parallel downloads:
    ```powershell
-   pabot --pabotlib --processes 2 --outputdir results robot/tests/Test.robot
-
+   pabot --pabotlib --processes 2 --outputdir results src/robot/tests/Test.robot
+   ```
 3. Check results
-   ```powershell
+   ```text
    Downloaded files: downloads/<test_name>_<uuid>/069.../<filename>
    Generated Excel files: output/
    Execution logs: results/
-
+   ```
 ---
 
 ## Project Structure
@@ -90,7 +119,7 @@ This framework provides **deterministic, scalable, and resumable downloads** opt
 salesforce-files-downloader-tool/
 ├── .github/
 │   └── workflows/
-│        ├── robot-test.yml
+│        ├── robot-tests.yml
 │   └── PULL_REQUEST_TEMPLATE.md                               # GitHub Actions CI
 ├── ci/
 │   └──  robot/
@@ -101,18 +130,11 @@ salesforce-files-downloader-tool/
 │   └── <test_name>_<uuid>/                                    # One folder per pabot process
 │        ├── 069xxxxxxxxxxxx
 │        └── 069yyyyyyyyyyyy 
-│   └── <test_name>_<uuid>/                                    # One folder per pabot process
-│        ├── 069xxxxxxxxxxxx
-│        └── 069yyyyyyyyyyyy 
 ├── input/                                                     # Input Excel files
 │   ├── Inputfile_1.xlsx
 │   └── Inputfile_2.xlsx
-├── output/                                                    # Failed record logs & generated Excels
-│   └── <test_name>__<uuid>/
-│        ├── <test_name>_Failed IDs_List.xlsx
-│        ├── <test_name>_ContentVersion_Inputfile.xlsx
-│        └── <test_name>_ContentDocumentLink_Inputfile.xlsx
-│   └── <test_name>__<uuid>/
+├── output/                                                    # Runtime: Failed record & Data Loader ready Excels
+│   └── <test_name>__<uuid>/                                   # One folder per pabot process
 │        ├── <test_name>_Failed IDs_List.xlsx
 │        ├── <test_name>_ContentVersion_Inputfile.xlsx
 │        └── <test_name>_ContentDocumentLink_Inputfile.xlsx
@@ -131,25 +153,29 @@ salesforce-files-downloader-tool/
 │            ├── Support.robot
 │            └── Test.robot
 ├── .gitignore
-├── .pabotsuitenames                                           # Generated auth file
+├── .pabotsuitenames                                           # Pabot suite cache file
+├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md
 ├── org_info.json                                              # Salesforce org auth (generated)
-├── PIPE
 ├── README.md                                                  # Read this file
-└── requirements.txt                                           # Python dependencies
-
+├── requirements.txt                                           # Python dependencies
+└── SECURITY.md
 ```
 ---
 
-## Prerequisites
+## First-Time Setup Checklist
 
-* Python 3.10 or higher
-* Node LTS (18 or higher)
-* Salesforce CLI (`sf`)
-* Google Chrome browser
-* Virtual environment (recommended)
+Before running:
 
+* Python installed (3.10+)
+* Node.js installed
+* Salesforce CLI installed
+* Chrome installed
+* Virtual environment activated
+* Salesforce org authenticated
 
 #### Note: Install Salesforce CLI using npm command:
+
 ```
    npm install -g @salesforce/cli
 ```
@@ -161,24 +187,39 @@ salesforce-files-downloader-tool/
    ```bash
    git clone https://github.com/b-vamsipunnam/salesforce-files-downloader-tool.git
    cd salesforce-files-downloader-tool
+   ```
    
 2. Create and activate a virtual environment
+
+   Environment Setup: 
    ```bash
    python -m venv venv
-   source venv/bin/activate  # Linux/macOS
-   venv\Scripts\activate     # Windows
+   ```
+   
+   Activate Virtual Environment: Linux / macOS
+   ```bash
+   source venv/bin/activate
+   ```
+   
+   Activate Virtual Environment: Windows (PowerShell / CMD)
+   ```bash
+   venv\Scripts\activate
+   ```
    
 3. Install dependencies
-    ```bash 
+   ```bash 
    pip install -r requirements.txt
+   ```
    
 4. Authenticate to your Salesforce org
-    ```bash
+   ```bash
    sf org login web --alias <org_name>
+   ```
    
 5. Check the org connection status
    ```bash
    sf org list
+   ```
    
 ## Connected Salesforce Org
 
@@ -200,8 +241,7 @@ This generates `org_info.json`, which is used by the automation for:
 * API version
 * Org alias
 
-⚠️ Never commit org_info.json containing real tokens.
-Add it to .gitignore.
+⚠️ Never commit org_info.json containing real tokens. Add it to .gitignore.
 
 ---
 
@@ -230,8 +270,6 @@ The automation supports parallel execution using pabot.
    pabot --pabotlib --processes 2 --outputdir results src/robot/tests/Test.robot
 ```
 * Note: Adjust --processes based on your machine (e.g., 2-8 recommended)
-
-Here’s a more polished, professional, and README-ready version of your section:
 
 ---
 
@@ -262,7 +300,6 @@ robot --test Download_Files_Batch_1 src/robot/tests/Test.robot
 This is useful when validating a single input file or isolating failures.
 
 ---
-
 
 ## Execution details:
 
@@ -356,7 +393,7 @@ Example generated files in `output/`:
 ---
 ## Error Handling and Logging
 
-* Failed downloads are logged to a timestamped file under `Output/` (e.g., `<test_name>_Failed IDs_List.xlsx`)
+* Failed downloads are logged to a timestamped file under `output/` (e.g., `<test_name>_Failed IDs_List.xlsx`)
 * Partial, corrupted, or mismatched downloads are automatically cleaned
 * File size validation is performed post-download
 * Execution reports are generated in HTML and XML formats
@@ -397,6 +434,12 @@ This test is isolated from Salesforce authentication to ensure deterministic CI 
 * For network/proxy issues → add proxy arguments in WebdriverManager.py
 * Check results/pabot_results/log.html for detailed execution logs
 
+| Error | Cause | Fix |
+|-------|-------|------|
+| WinError 10061 | PabotLib not running | Use --pabotlib |
+| No module ExcelLibrary | venv not active | Activate venv |
+| sf not found | CLI not installed | Reinstall CLI |
+
 ---
 
 ##  Technology Stack
@@ -406,6 +449,27 @@ This test is isolated from Salesforce authentication to ensure deterministic CI 
 * webdriver-manager 4.0.2 (automatic ChromeDriver handling)
 * pabot 2.18.0 (parallel test execution)
 * Custom ExcelLibrary wrapper based on openpyxl (Excel input reading and Excel files generation)
+
+---
+## Security
+
+- No credentials are hardcoded.
+- Authentication is handled via Salesforce CLI.
+- Auth files must never be committed.
+- Sensitive files are excluded via .gitignore.
+
+Rotate credentials immediately if exposure is suspected.
+
+---
+## Roadmap
+
+Planned enhancements:
+
+* OAuth-based auth (non-CLI)
+* Resume from checkpoint
+* S3 / Azure Blob export
+* CLI wrapper
+* Docker support
 
 ---
 
@@ -429,9 +493,9 @@ Contributions are welcome!
 
 ## Author
 
-**Bhimeswara Vamsi Punnam**
+**Name:** **Bhimeswara Vamsi Punnam**
 
-Lead Software Development Engineer in Test (SDET)
+**Role:** Lead Software Development Engineer in Test (SDET)
  
 **Contact:** [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/bvamsipunnam)
 
@@ -441,4 +505,3 @@ Lead Software Development Engineer in Test (SDET)
 
 This project is licensed under the MIT License.  
 See the [LICENSE](LICENSE) file for full terms and conditions.
-

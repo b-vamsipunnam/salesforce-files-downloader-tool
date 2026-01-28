@@ -65,7 +65,7 @@ The solution combines:
 salesforce-files-downloader-tool/
 ├── .github/
 │   └── workflows/
-│        ├── robot-test.yml
+│        ├── robot-tests.yml
 │   └── PULL_REQUEST_TEMPLATE.md                               # GitHub Actions CI
 ├── ci/
 │   └──  robot/
@@ -76,18 +76,11 @@ salesforce-files-downloader-tool/
 │   └── <test_name>_<uuid>/                                    # One folder per pabot process
 │        ├── 069xxxxxxxxxxxx
 │        └── 069yyyyyyyyyyyy 
-│   └── <test_name>_<uuid>/                                    # One folder per pabot process
-│        ├── 069xxxxxxxxxxxx
-│        └── 069yyyyyyyyyyyy 
 ├── input/                                                     # Input Excel files
 │   ├── Inputfile_1.xlsx
 │   └── Inputfile_2.xlsx
-├── output/                                                    # Failed record logs & generated Excels
-│   └── <test_name>__<uuid>/
-│        ├── <test_name>_Failed IDs_List.xlsx
-│        ├── <test_name>_ContentVersion_Inputfile.xlsx
-│        └── <test_name>_ContentDocumentLink_Inputfile.xlsx
-│   └── <test_name>__<uuid>/
+├── output/                                                    # Runtime: Failed record & Data Loader ready Excels
+│   └── <test_name>__<uuid>/                                   # One folder per pabot process
 │        ├── <test_name>_Failed IDs_List.xlsx
 │        ├── <test_name>_ContentVersion_Inputfile.xlsx
 │        └── <test_name>_ContentDocumentLink_Inputfile.xlsx
@@ -106,11 +99,13 @@ salesforce-files-downloader-tool/
 │            ├── Support.robot
 │            └── Test.robot
 ├── .gitignore
-├── .pabotsuitenames                                           # Generated auth file
+├── .pabotsuitenames                                           # Pabot suite cache file
+├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md
 ├── org_info.json                                              # Salesforce org auth (generated)
-├── PIPE
 ├── README.md                                                  # Read this file
-└── requirements.txt                                           # Python dependencies
+├── requirements.txt                                           # Python dependencies
+└── SECURITY.md
 
 ```
 
@@ -121,7 +116,7 @@ salesforce-files-downloader-tool/
 * **input/**      – Excel files containing ContentDocument IDs
 * **downloads/**  – Runtime download workspace (isolated per pabot process)
 * **output/**     – Failed records, validation warnings, generated Excel files to upload to data loader
-* **results/**    – Robot Framework execution artifacts includes Pbot results
+* **results/**    – Robot Framework execution artifacts including pabot results
 
 ---
 
@@ -138,23 +133,41 @@ salesforce-files-downloader-tool/
 * pabot splits execution across multiple processes
 * Each process creates a unique `<test_name>_<uuid>` download directory
 * Browser instances and file operations are fully isolated
-* Separate output/ folder per test case for traceability
+* Separate `output/` folder per test case for traceability
+
 
 ### Download Flow
 
-1. Read ContentDocument IDs from Excel
-2. Initialize Salesforce REST session
-3. Query metadata using SOQL (ContentDocument & ContentDocumentLink)
-4. Launch headless Chrome with a custom download directory
-5. Download files using Shepherd endpoints
-6. Validate file completion and size
-7. Move files into ContentDocument-specific folders
-8. Generate Excel files for ContentVersion and ContentDocumentLink
-9. Log failures and create separate failed IDs Excel
-10. Clean temporary artifacts
+* Read ContentDocument IDs from Excel
+* Initialize Salesforce REST session
+* Query metadata using SOQL (ContentDocument & ContentDocumentLink)
+* Launch headless Chrome with a custom download directory
+* Download files using Shepherd endpoints
+* Validate file completion and size 
+* Move files into ContentDocument-specific folders 
+* Generate Excel files for ContentVersion and ContentDocumentLink 
+* Log failures and create separate failed IDs Excel 
+* Clean temporary artifacts
 
 ---
 
+## Failure and Recovery Model
+
+* Failed downloads are logged per test case
+* Partial files are cleaned automatically
+* Execution can be safely resumed by rerunning failed batches
+* Output Excel files preserve successful records
+
+---
+## Security Architecture
+
+* Authentication delegated to Salesforce CLI
+* No credentials stored in source code
+* Access tokens loaded at runtime
+* Auth files excluded via .gitignore
+* CI runs without org credentials
+
+---
 ## Runtime vs Source Separation
 
 | Category            | Location     | Notes                        |
@@ -174,7 +187,7 @@ salesforce-files-downloader-tool/
 * Idempotent execution (safe to rerun)
 * No credential hardcoding
 * Clear separation of concerns
-* Scalable to millions of files
+* Scalable to very large datasets (thousands to millions of files)
 * CI/CD and headless execution ready
 * Automatic Excel generation for traceability & re-use
 
@@ -188,6 +201,32 @@ salesforce-files-downloader-tool/
 * Streaming downloads instead of in-memory storage
 * Safe cleanup of partial and corrupted files
 * Separate output per test case avoids collisions
+
+---
+## Extensibility
+
+The framework supports extension via:
+
+* Additional Robot keywords
+* New Python helper libraries
+* Alternative storage backends
+* Custom validation rules
+
+---
+## Observability and Monitoring
+
+* Execution status available via Robot HTML reports
+* Per-process logs under `results/pabot_results/`
+* Failed records isolated in output Excel files
+* Timestamped execution artifacts enable auditing
+
+---
+## Deployment Model
+
+* Local developer machines
+* CI/CD pipelines (GitHub Actions, Jenkins)
+* Headless server environments
+* Containerized environments (planned)
 
 ---
 

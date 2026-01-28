@@ -59,8 +59,19 @@ It also applies when representing the project in public spaces.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project maintainer.
 
-**Maintainer:** B Vamsi Punnam  
+All reports will be reviewed promptly and handled with discretion and confidentiality.
+
+**Maintainer:** Bhimeswara Vamsi Punnam  
 **Contact Method:** GitHub private message or repository contact
+
+No retaliation against reporters will be tolerated.
+
+### Enforcement Process
+
+* The maintainer will acknowledge receipt of the report.
+* An initial assessment will be conducted.
+* Appropriate corrective action will be determined.
+* The reporter will be informed of the outcome where appropriate.
 
 ---
 

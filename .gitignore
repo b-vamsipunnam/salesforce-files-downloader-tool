@@ -24,6 +24,7 @@ pabot_results/
 .sfdx/
 org_info.json
 deploy-options.json
+*.auth.json
 
 # Downloads & temp
 downloads/*
@@ -32,7 +33,7 @@ output/*
 !output/.gitkeep
 chromedriver.exe
 chromedriver
-PIPE
+
 .pabotsuitenames
 
 # Editors / IDE
@@ -52,3 +53,11 @@ Desktop.ini
 *.bak
 *.swp
 *.swo
+
+# Generated docs/files from runs (if created at root)
+CDL_DOC
+CV_DOC
+smoke_doc
+
+# UUID-like run folders that may end up at repo root
+????????????????????????????????
