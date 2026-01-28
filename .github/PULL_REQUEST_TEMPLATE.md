@@ -1,132 +1,81 @@
-
-```md
 # Pull Request
 
-Thank you for your contribution! 
-Please complete the checklist below to help us review your changes efficiently.
+Thank you for your contribution! Please complete the sections below.
 
 ---
 
-## Description
+## Summary
 
-Please include a summary of the changes and the related issue (if applicable).
+Describe your changes briefly:
 
-- What problem does this PR solve?
-- What changes were made?
-- Why is this change needed?
-
-Example:
-> This PR fixes the file download timeout issue when handling large files.
+- What problem does this solve?
+- What did you change?
+- Why is it needed?
 
 ---
 
 ## Related Issue
 
-Link the related issue (if any):
+Link related issue (if any):
 
 Fixes #<issue-number>  
-Closes #<issue-number>  
-
-Example:
-Fixes #123
+Closes #<issue-number>
 
 ---
 
-##  Testing
+## Testing
 
-Describe how you tested your changes:
+How was this tested?
 
-- [ ] Unit tests
 - [ ] Robot Framework tests
 - [ ] Manual testing
+- [ ] Not applicable
 
-Provide details:
+Commands run (if applicable):
 
+```bash
+robot src/robot/tests/Test.robot
+pabot --pabotlib src/robot/tests/Test.robot
 ```
 
-Commands run:
-* robot --test Download_Files_Batch_1 src/robot/tests/Test.robot
-* pabot --pabotlib --processes 2 --outputdir results src/robot/tests/Test.robot
+---
 
-```
-
-Test results:
+## Test Results
 
 - [ ] All tests passed
-- [ ] Some tests failed (please explain)
+- [ ] Some tests failed (explain below)
 
 ---
 
-## Screenshots / Logs (If Applicable)
-
-Attach screenshots, logs, or recordings that help demonstrate the change.
-
----
-
-## Code Quality Checklist
+## Checklist
 
 Please confirm:
 
-- [ ] Code follows project style guidelines
-- [ ] No hardcoded credentials or secrets
+- [ ] Code follows project standards
+- [ ] No secrets or credentials added
+- [ ] Tests added/updated where needed
+- [ ] Documentation updated (if applicable)
 - [ ] No unnecessary debug logs
-- [ ] Proper error handling added
-- [ ] Comments/docstrings added where needed
-
----
-
-## Documentation
-
-Have you updated documentation?
-
-- [ ] README.md
-- [ ] CONTRIBUTING.md
-- [ ] Inline comments
-- [ ] Not applicable
 
 ---
 
 ## Security Impact
 
-Does this change impact security?
+- [ ] No security impact
 
-- [ ] No
-- [ ] Yes (please explain below)
+- [ ] Yes (explain below)
 
 If yes, describe:
 
 ---
+## Additional Notes (Optional)
 
-## Deployment / Compatibility
-
-Does this change require special setup?
-
-- [ ] No
-- [ ] Yes (describe below)
-
-If yes, provide instructions:
+Add any extra context, screenshots, or follow-up tasks here.
 
 ---
-
-## Final Checklist
-
-Before submitting, please ensure:
-
-- [ ] My code builds/runs successfully
-- [ ] I have tested my changes
-- [ ] I have followed the contribution guidelines
-- [ ] I have rebased/merged the latest main branch
-- [ ] I understand this PR may be reviewed and modified
-
----
-
-## Additional Notes
-
-Add any extra context, concerns, or follow-up tasks here.
-
----
-
 Maintainer: **Bhimeswara Vamsi Punnam**
 
-Thank you for helping improve this project!
-```
+
+Thank you for contributing!
+
+---

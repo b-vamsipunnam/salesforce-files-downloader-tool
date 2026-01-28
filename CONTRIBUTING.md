@@ -18,7 +18,7 @@ Please read this guide before submitting any contributions.
 ```bash
 git clone https://github.com/your-username/salesforce-files-downloader-tool.git
 cd salesforce-files-downloader-tool
-````
+```
 
 ---
 
@@ -27,6 +27,7 @@ cd salesforce-files-downloader-tool
 Make sure you have the following installed:
 
 * Python 3.10+
+* Node.js (18+)
 * Robot Framework
 * Salesforce CLI
 
@@ -49,14 +50,23 @@ sf org login web
 Before submitting changes, ensure all tests pass:
 
 ```bash
-robot tests/
+robot src/robot/tests/
 ```
 
 For parallel execution:
 
 ```bash
-pabot --pabotlib tests/
+pabot --pabotlib src/robot/tests/
 ```
+
+---
+## Development Workflow
+
+1. Create a feature branch
+2. Implement changes
+3. Run tests locally
+4. Update documentation
+5. Submit pull request
 
 ---
 
@@ -192,6 +202,11 @@ If your change impacts usage:
 
 Good documentation is highly valued!
 
+See also:
+* README.md
+* docs/architecture.md
+* SECURITY.md
+
 ---
 
 ## Community Guidelines
@@ -204,6 +219,13 @@ We follow these principles:
 * Be inclusive
 * Be helpful
 * Accept feedback gracefully
+
+---
+## Review Process
+
+* All pull requests are reviewed by the maintainer
+* Feedback may be requested
+* Changes must pass CI before merge
 
 ---
 
