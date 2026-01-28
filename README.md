@@ -241,7 +241,7 @@ This generates `org_info.json`, which is used by the automation for:
 * API version
 * Org alias
 
-⚠️ Never commit org_info.json containing real tokens. Add it to .gitignore.
+**Note:** Never commit org_info.json containing real tokens. Add it to .gitignore.
 
 ---
 
@@ -311,7 +311,7 @@ Each pabot process creates a unique download folder under `downloads/`
 
 ## Execution Flow
 
-📌 See [Architecture Overview](docs/architecture.md) for a visual execution flow and component breakdown.
+See [Architecture Overview](docs/architecture.md) for a visual execution flow and component breakdown.
 
 * Initialize Salesforce REST session using access token
 * Read ContentDocument IDs from Excel input
