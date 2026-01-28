@@ -145,7 +145,7 @@ salesforce-files-downloader-tool/
 │   └── report.html
 ├── src/
 │   └──  robot/
-│        └── Library/
+│        └── library/
 │            ├── ExcelLibrary.py
 │            ├── SalesforceSupport.py
 │            └── WebdriverManager.py

@@ -21,6 +21,10 @@ Please report security issues by contacting the project maintainer directly.
 **Maintainer:** Bhimeswara Vamsi Punnam  
 **Preferred Method:** GitHub private message or repository contact
 
+If GitHub messaging is unavailable, please open a minimal issue requesting private contact.
+
+We aim to acknowledge reports within **72 hours** and provide regular status updates during investigation.
+
 When reporting, please include:
 
 - Description of the vulnerability
@@ -30,7 +34,7 @@ When reporting, please include:
 - Affected versions
 - Any suggested fixes
 
-This helps us resolve issues faster.
+This helps us resolve issues faster and more effectively.
 
 ---
 
@@ -70,8 +74,9 @@ To help keep your environment secure:
 ### Local Environment
 
 - Protect your local machine
-- Avoid running tools on public/shared systems
+- Avoid running tools on public or shared systems
 - Encrypt sensitive files if needed
+- Restrict access to configuration files
 
 ---
 
@@ -97,9 +102,11 @@ Security patches and advisories will be announced via:
 - Repository changelog
 - Project documentation
 
+For critical vulnerabilities, CVE identifiers may be requested when appropriate.
+
 ---
 
-##  Disclaimer
+## Disclaimer
 
 This tool is provided "as-is" without warranty.
 
