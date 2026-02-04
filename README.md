@@ -1,4 +1,4 @@
-# Salesforce Files Downloader Tool
+# Salesforce Files Bulk Downloader
 
 > Enterprise-grade Salesforce file migration and backup tool built with Robot Framework and Python.  
 > Supports bulk ContentDocumentId downloads, parallel execution, CI/CD, and Data Loader integration.
@@ -22,7 +22,7 @@
 
 ## Introduction
 
-The Salesforce Files Downloader Tool is an open-source, parallel-processing automation framework built with **Robot Framework** and **Python** for fast, reliable bulk downloads of Salesforce files using ContentDocument IDs.
+The Salesforce Files Bulk Downloader is an open-source, parallel-processing automation framework built with **Robot Framework** and **Python** for fast, reliable bulk downloads of Salesforce files using ContentDocument IDs.
 
 Key features:
 

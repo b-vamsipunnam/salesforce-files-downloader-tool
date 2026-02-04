@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation                              Support file for Salesforce Files Bulk Downloader Tool
+Documentation                              Support file for Salesforce Files Bulk Downloader
 Library                                    SeleniumLibrary
 Library                                    OperatingSystem
 Library                                    Collections
