@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Salesforce Files Downloader Tool** is a Robot Framework–based automation solution designed to reliably download large volumes of Salesforce files using ContentDocument IDs. The architecture cleanly separates **source code**, **inputs**, **runtime artifacts**, and **documentation**, making the project easy to maintain, scale, and execute in parallel.
+The **Salesforce Files Bulk Downloader** is a Robot Framework–based automation solution designed to reliably download large volumes of Salesforce files using ContentDocument IDs. The architecture cleanly separates **source code**, **inputs**, **runtime artifacts**, and **documentation**, making the project easy to maintain, scale, and execute in parallel.
 
 The solution combines:
 * Salesforce REST APIs for metadata and validation
