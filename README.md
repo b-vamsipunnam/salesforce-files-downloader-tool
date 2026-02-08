@@ -3,6 +3,12 @@
 > Enterprise-grade Salesforce file migration and backup tool built with Robot Framework and Python.  
 > Supports bulk ContentDocumentId downloads, parallel execution, CI/CD, and Data Loader integration.
 
+## Technical Walkthrough
+
+Read the detailed **Medium article** explaining the architecture, design decisions, and implementation:
+
+👉 [How I Built an Enterprise-Grade Salesforce Bulk File Downloader for Migration and Backup](https://medium.com/@b.vamsipunnam/how-i-built-an-enterprise-grade-salesforce-files-bulk-downloader-for-migration-and-backup-a7df0d60ddc3)
+
 ---
 
 ## Built With
@@ -87,7 +93,7 @@ Custom Python Libraries
       |
       v
 Headless Chrome
-      |
+      |  (File Downloads)
       v
 Local Storage + Excel Generator
 

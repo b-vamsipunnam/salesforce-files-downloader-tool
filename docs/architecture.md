@@ -52,12 +52,11 @@ The solution combines:
                ▼
 ┌──────────────────────────────┐
 │ Local Runtime Storage        │
-│ - downloads/process_<uuid>   │
+│ - downloads/test name_<uuid> │
 │ - output/Failed Records      │
 │ - output/Data Loader files   │
 └──────────────────────────────┘
 ```
-
 
 ## Repository Structure
 
@@ -233,4 +232,4 @@ The framework supports extension via:
 
 **Author:** Bhimeswara Vamsi Punnam
 
-**Role:** Lead SDET / Automation Architect
+**Role:** Lead Software Development Engineer in Test (SDET)
