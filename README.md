@@ -30,7 +30,7 @@ Read the detailed **Medium article** explaining the architecture, design decisio
 
 The Salesforce Files Bulk Downloader is an open-source, parallel-processing automation framework built with **Robot Framework** and **Python** for fast, reliable bulk downloads of Salesforce files using ContentDocument IDs.
 
-Key features:
+**Key features:**
 
 * Supports **any Salesforce org** (via Salesforce CLI authentication)
 * Downloads files using the secure **Shepherd endpoint**
@@ -43,7 +43,7 @@ Key features:
 
 ## When to Use This Tool
 
-This tool is ideal when you need to:
+**This tool is ideal when you need to:**
 
 * Migrate large volumes of Salesforce files
 * Perform org-to-org file migrations
@@ -67,7 +67,7 @@ This framework provides **deterministic, scalable, and resumable downloads** opt
 
 ## Target Audience
 
-This tool is designed for:
+**This tool is designed for:**
 
 - Salesforce Developers and Architects
 - QA / Automation Engineers
@@ -79,7 +79,7 @@ This tool is designed for:
 
 ## Architecture Overview
 
-High-level architecture:
+**High-level architecture:**
 
 ```text
 Salesforce Org
@@ -93,6 +93,7 @@ Custom Python Libraries
       |
       v
 Headless Chrome
+      |      
       |  (File Downloads)
       v
 Local Storage + Excel Generator
@@ -173,7 +174,7 @@ salesforce-files-downloader-tool/
 
 ## First-Time Setup Checklist
 
-Before running:
+**Before running:**
 
 * Python installed (3.10+)
 * Node.js installed
@@ -471,7 +472,7 @@ Rotate credentials immediately if exposure is suspected.
 ---
 ## Roadmap
 
-Planned enhancements:
+**Planned enhancements:**
 
 * OAuth-based auth (non-CLI)
 * Resume from checkpoint
@@ -491,7 +492,7 @@ Planned enhancements:
 
 ## Contributing
 
-Contributions are welcome!
+**Contributions are welcome!**
 
 * Open issues for bugs
 * Submit pull requests for improvements
