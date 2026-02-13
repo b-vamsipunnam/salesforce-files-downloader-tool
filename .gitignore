@@ -1,63 +1,74 @@
 # Python / Robot Framework
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.robotframework/
+
+# Virtual environments
 env/
 venv/
 .venv/
-pip-log.txt
-pip-delete-this-directory.txt
 
-# Robot Framework / Pabot output
+# Robot Framework output
 output.xml
 log.html
 report.html
 pabot_results/
-*.png
-*diagnosis.json
-.robotframework/
+results/
+*.retry
 
-# Salesforce CLI
+# Salesforce CLI / Auth
 .sf/
 .sfdx/
 org_info.json
-deploy-options.json
 *.auth.json
+deploy-options.json
 
-# Downloads & temp
+# Runtime output folders (keep folder, ignore contents)
 downloads/*
-!downloads/.gitkeep
 output/*
+!downloads/.gitkeep
 !output/.gitkeep
-chromedriver.exe
-chromedriver
 
+# Generated docs at root
+CDL_DOC/
+CV_DOC/
+smoke_doc/
+
+# UUID-like 32-char run folders at repo root
+????????????????????????????????
+
+# Browser drivers
+chromedriver
+chromedriver.exe
+
+# Pabot internal
 .pabotsuitenames
 
-# Editors / IDE
+# Editors
 .vscode/
 .idea/
 *.iml
-*.sublime-project
-*.sublime-workspace
+*.sublime-*
+*.code-workspace
 
-# OS junk
+# OS files
 .DS_Store
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Misc
+# Logs / temp / backups
+*.log
+*.log.*
 *.bak
 *.swp
 *.swo
+*.tmp
+*~
 
 # Generated docs/files from runs (if created at root)
-CDL_DOC
-CV_DOC
-smoke_doc
-
-# UUID-like run folders that may end up at repo root
-????????????????????????????????
+/CDL_DOC
+/CV_DOC
+/smoke_doc

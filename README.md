@@ -426,7 +426,7 @@ Example generated files in `output/`:
 
 ---
 
-### CI Smoke Test
+## CI Smoke Test
 The CI pipeline runs a dedicated smoke test (ci/robot/Smoke.robot) to validate:
 * Robot Framework startup
 * Selenium + Chrome in headless CI
