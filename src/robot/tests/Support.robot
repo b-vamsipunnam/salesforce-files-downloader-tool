@@ -30,7 +30,6 @@ Init Salesforce Session
     Set Test Variable                      ${session_alias}
     ${json_text}=                          OperatingSystem.Get File         ${org_info_file}                            encoding=UTF-8-sig
     ${org_dict}=                           Evaluate                         json.loads(r"""${json_text}""")             modules=json
-    LOG                                    ${org_dict}
     ${token}=                              Set Variable                     ${org_dict['result']['accessToken']}
     ${instance}=                           Set Variable                     ${org_dict['result']['instanceUrl']}
     ${apiVersion}=                         Set Variable                     ${org_dict['result']['apiVersion']}
@@ -352,6 +351,7 @@ Validate And Move Downloaded File
     ${previous_file_size}=                 Set Variable                     -1
     FOR    ${i}    IN RANGE    ${timeout}
            ${current_file_size}=           Get File Size                    ${download_directory}${/}${downloaded_filename}
+           Sleep            0.5s
            Run Keyword If    '${current_file_size}' == '${previous_file_size}'                                          Exit For Loop
            ${previous_file_size}=          Set Variable                     ${current_file_size}
     END
