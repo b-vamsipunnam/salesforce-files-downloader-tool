@@ -81,24 +81,10 @@ This framework provides **deterministic, scalable, and resumable downloads** opt
 
 **High-level architecture:**
 
-```text
-Salesforce Org
-      |
-      | (CLI Authentication)
-      v
-Robot Framework
-      |
-      v
-Custom Python Libraries
-      |
-      v
-Headless Chrome
-      |      
-      |  (File Downloads)
-      v
-Local Storage + Excel Generator
+<p align="center">
+  <img src="docs/architecture.png" width="700">
+</p>
 
-```
 ---
 
 ## Quick Start
