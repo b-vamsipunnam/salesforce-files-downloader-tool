@@ -15,48 +15,9 @@ The solution combines:
 
 ## High-Level Architecture
 
-```
-┌──────────────────────────────┐
-│ Excel Input Files            │
-│ (ContentDocumentId)          │
-└──────────────────────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│ Robot Test Suite             │  Test.robot
-│ (Orchestration)              │
-└──────────────────────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│ Support Keywords (Robot)     │  Support.robot
-│ - Auth & Session Handling    │
-│ - Download Orchestration     │
-│ - Validation & Cleanup       │
-└──────────────────────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│ Python Libraries             │
-│ - SalesforceSupport.py       │
-│ - WebdriverManager.py        │
-└──────────────────────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│ Salesforce Platform          │
-│ - REST API (SOQL)            │
-│ - File Delivery (Shepherd)   │
-└──────────────────────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│ Local Runtime Storage        │
-│ - downloads/test name_<uuid> │
-│ - output/Failed Records      │
-│ - output/Data Loader files   │
-└──────────────────────────────┘
-```
+<p align="center">
+  <img src="architecture.png" width="700">
+</p>
 
 ## Repository Structure
 

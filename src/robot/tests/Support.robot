@@ -230,13 +230,15 @@ Download Files Using Content Document IDs
     ${record_number}=                      Set Variable                     0
     FOR    ${content_id}    IN     @{content_ids}
            ${record_number}=               Evaluate                         ${record_number} + 1
-           Set Suite Variable              ${content_id}                    ${content_id}
+           Set Test Variable               ${content_id}                    ${content_id}
            ${content_doc}=                 Get Content DocumentId           ${content_id}
            Log      ${content_doc}
            ${content_LinkedEntityId}=      Get Content LinkedEntityId       ${content_id}
            Log      ${content_LinkedEntityId}
            IF    ${content_doc} is None
                  Append To List	           ${content_ids_NotWorking}	    ${content_id}
+           ELSE IF    ${content_LinkedEntityId} is None
+                 Append To List            ${content_ids_NotWorking}        ${content_id}
            ELSE
                  Get ContentDocumentID Details and Launch the URL           ${content_doc}                              ${content_LinkedEntityId}                    ${record_number}    ${cv_row}       ${cdl_row}
                  ${cv_row}=                Evaluate                         ${cv_row} + 1
@@ -266,11 +268,11 @@ Get ContentDocumentID Details and Launch the URL
     Set Test Variable                      ${ContentDocumentLink_id}        ${content_LinkedEntityId}[Id]
     ${file_name}=                          Catenate    SEPARATOR=           ${file_title}       .                       ${file_extension}
     Set Suite Variable                     ${file_name}
-    ${download_url}                        Build ContentDocument Download URL                                           ${org_domain}                                ${content_id}
+    ${download_url}=                       Build ContentDocument Download URL                                           ${org_domain}                                ${content_doc_id}
     Set Suite Variable                     ${download_url}                  ${download_url}
     ${content_id_folder}=                  Create Folder with name ContentDocumentID                                    ${content_id}
     Set Suite Variable                     ${content_id_folder}
-    Run Keyword If    '${file_extension}' == '${EMPTY}' or '${file_extension}' == '${None}'                             Set Suite Variable                           ${file_name}            ${file_title}
+    Run Keyword If    '${file_extension}' == '${EMPTY}' or '${file_extension}' == '${NONE}'                             Set Suite Variable                           ${file_name}            ${file_title}
     ${download_result}=                    Run Keyword And Ignore Error     Download And Validate Content File          ${download_url}                              ${cv_row}               ${cdl_row}
     Set Suite Variable                     ${is_download_success}           ${download_result[0]}
     Run Keyword If    '${is_download_success}' == 'FAIL'                    Append To List	                            ${content_ids_NotWorking}	                 ${content_id}
