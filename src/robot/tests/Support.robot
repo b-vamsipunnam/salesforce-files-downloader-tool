@@ -78,7 +78,7 @@ Safe Salesforce GET
     [Arguments]                            ${session_alias}                 ${url}                                      ${params}
     ${status}    ${resp}=                  Run Keyword And Ignore Error     GET On Session                              ${session_alias}                             ${url}        params=${params}
     IF    '${status}' == 'FAIL'
-           RETURN    ${None}
+           RETURN    ${NONE}
     END
     ${status_code}=     Set Variable       ${resp.status_code}
     IF    ${status_code} != 200
@@ -146,15 +146,26 @@ Read Content IDs From Excel Sheet
     Open Excel Document                    filename=${input_excel_path}     doc_id=${sheet_name}
     @{column_values}=                      Read Excel Column                1       0       0                           ${sheet_name}
     Close Current Excel Document
-    Remove From List                       ${column_values}                 0
-    @{content_ids}=                        Create List
-    FOR    ${value}    IN    @{column_values}
-           ${str value}=                   Convert To String                ${value}
-           ${id value}=                    Strip String                     ${str value}
-           Continue For Loop If    '${id value}' == '${EMPTY}' or '${id value}' == '${None}'
-           Append To List                  ${content_ids}                   ${id value}
+    ${count}=                              Get Length                       ${column_values}
+    IF    ${count} == 0
+          RETURN    @{EMPTY}
     END
-    Close Current Excel Document
+    ${first}=       Strip String    ${column_values}[0]
+    ${first_lower}=                        Evaluate    str($first).lower()      modules=builtins
+    IF    '${first_lower}' == 'contentdocumentid'
+           Remove From List                ${column_values}    0
+    END
+    ${count}=       Get Length    ${column_values}
+    IF    ${count} == 0
+          RETURN    @{EMPTY}
+    END
+    ${content_ids}=                        Create List
+    FOR    ${value}    IN    @{column_values}
+           ${str_value}=                   Convert To String                ${value}
+           ${id_value}=                    Strip String                     ${str_value}
+           Continue For Loop If    '${id_value}' == '${EMPTY}' or '${id_value}' == '${NONE}'
+           Append To List                  ${content_ids}                   ${id_value}
+    END
     RETURN                                 ${content_ids}
 
 Init Output Directory
@@ -205,56 +216,64 @@ ContentDocumentLink Excel file
 Download Files Using Content Document IDs
     [Documentation]                        The main orchestration keyword for a single batch of files. It reads ContentDocument IDs from an Excel file, initializes authentication and browser,
     ...                                    processes each ID (metadata query, download, validation, move), generates re-upload Excel files (ContentVersion and ContentDocumentLink), and logs failures for traceability.
-    [Tags]                                 robot:flatten
+    #[Tags]                                 robot:flatten
     [Arguments]                            ${input_excel_path}              ${sheet_name}
     ${output_directory}=                   Init Output Directory
     ${output_directory}=                   Normalize Path                   ${output_directory}
-    Set Suite Variable                     ${output_directory}
+    Set Test Variable                      ${output_directory}
+    ${content_ids_Working}                 Create List
+    ${content_ids_NotWorking}              Create List
+    Set Test Variable                      ${content_ids_Working}
+    Set Test Variable                      ${content_ids_NotWorking}
+    @{content_ids}=                        Read Content IDs From Excel Sheet                                            ${input_excel_path}                          ${sheet_name}
+    ${total_records}                       Get Length                       ${content_ids}
+    Set Test Variable                      ${total_records}
+    IF    ${total_records} == 0
+          Log To Console                   No ContentDocumentIds found. Skipping download and Data Loader file generation.
+          RETURN
+    END
     ${cv_row}       ${CV_File_Name}=       ContentVersion Excel file        ${output_directory}
     ${cdl_row}      ${CDL_File_Name}=      ContentDocumentLink Excel file   ${output_directory}
     Set Test Variable                      ${CV_File_Name}
     Set Test Variable                      ${CDL_File_Name}
-    @{content_ids_Working}                 Create List
-    @{content_ids_NotWorking}              Create List
-    Set Suite Variable                     @{content_ids_Working}
-    Set Suite Variable                     @{content_ids_NotWorking}
     ${session_alias}=                      Init Salesforce Session
     ${login_url}=                          Get Salesforce Login Info
     ${download_directory}=                 Init Download Directory
     ${download_directory}=                 Normalize Path                   ${download_directory}
-    Set Suite Variable                     ${download_directory}
+    Set Test Variable                      ${download_directory}
     Configure Browser                      ${download_directory}            ${login_url}                                ${org_domain}
-    @{content_ids}=                        Read Content IDs From Excel Sheet                                            ${input_excel_path}                          ${sheet_name}
-    ${total_records}                       Get Length                       ${content_ids}
-    Set Suite Variable                     ${total_records}
     ${record_number}=                      Set Variable                     0
-    FOR    ${content_id}    IN     @{content_ids}
+    FOR    ${id_value}    IN     @{content_ids}
            ${record_number}=               Evaluate                         ${record_number} + 1
-           Set Test Variable               ${content_id}                    ${content_id}
+           ${content_id}=                  Strip String                     ${id_value}
+           ${is_valid}=                    Evaluate                         str($content_id).startswith('069') and len(str($content_id)) in (15,18)    modules=builtins
+           IF    not ${is_valid}
+                 Log To Console            Invalid ContentDocumentId format: ${content_id}
+                 Append To List            ${content_ids_NotWorking}        ${content_id}
+                 CONTINUE
+           END
            ${content_doc}=                 Get Content DocumentId           ${content_id}
-           Log      ${content_doc}
            ${content_LinkedEntityId}=      Get Content LinkedEntityId       ${content_id}
-           Log      ${content_LinkedEntityId}
-           IF    ${content_doc} is None
+           IF    ${content_doc} == ${NONE}
                  Append To List	           ${content_ids_NotWorking}	    ${content_id}
-           ELSE IF    ${content_LinkedEntityId} is None
+           ELSE IF    ${content_LinkedEntityId} == ${NONE}
                  Append To List            ${content_ids_NotWorking}        ${content_id}
            ELSE
-                 Get ContentDocumentID Details and Launch the URL           ${content_doc}                              ${content_LinkedEntityId}                    ${record_number}    ${cv_row}       ${cdl_row}
+                 Get ContentDocumentID Details and Launch the URL           ${content_id}       ${content_doc}                              ${content_LinkedEntityId}                    ${record_number}    ${cv_row}       ${cdl_row}
                  ${cv_row}=                Evaluate                         ${cv_row} + 1
                  ${cdl_row}=               Evaluate                         ${cdl_row} + 1
            END
     END
     Log    ${content_ids_Working}
     Log    ${content_ids_NotWorking}
-    @{unique_IDslist_NotWorking}=          Remove Duplicates                ${content_ids_NotWorking}
+    ${unique_IDslist_NotWorking}=          Remove Duplicates                ${content_ids_NotWorking}
     Log Failed ContentDocumentIDs to Excel                                  ${unique_IDslist_NotWorking}                ${output_directory}
     Close All Excel Documents
 
 Get ContentDocumentID Details and Launch the URL
     [Documentation]                        Retrieves full metadata for a ContentDocument (title, size, version, etc.) and its linking info (record ID, share type, visibility), then builds the download URL and starts the download/validation process.
     ...                                    If metadata is missing, marks the ID as failed.This keyword orchestrates the per-file processing step.
-    [Arguments]                            ${content_doc}                   ${content_LinkedEntityId}                   ${record_number}                             ${cv_row}               ${cdl_row}
+    [Arguments]                            ${content_id}                    ${content_doc}                              ${content_LinkedEntityId}                   ${record_number}                             ${cv_row}               ${cdl_row}
     Set Test Variable                      ${content_doc_id}                ${content_doc}[Id]
     Set Test Variable                      ${file_title}                    ${content_doc}[Title]
     Set Test Variable                      ${file_extension}                ${content_doc}[FileExtension]
@@ -267,14 +286,14 @@ Get ContentDocumentID Details and Launch the URL
     Set Test Variable                      ${Visibility}                    ${content_LinkedEntityId}[Visibility]
     Set Test Variable                      ${ContentDocumentLink_id}        ${content_LinkedEntityId}[Id]
     ${file_name}=                          Catenate    SEPARATOR=           ${file_title}       .                       ${file_extension}
-    Set Suite Variable                     ${file_name}
+    Set Test Variable                      ${file_name}
     ${download_url}=                       Build ContentDocument Download URL                                           ${org_domain}                                ${content_doc_id}
-    Set Suite Variable                     ${download_url}                  ${download_url}
+    Set Test Variable                      ${download_url}                  ${download_url}
     ${content_id_folder}=                  Create Folder with name ContentDocumentID                                    ${content_id}
-    Set Suite Variable                     ${content_id_folder}
-    Run Keyword If    '${file_extension}' == '${EMPTY}' or '${file_extension}' == '${NONE}'                             Set Suite Variable                           ${file_name}            ${file_title}
-    ${download_result}=                    Run Keyword And Ignore Error     Download And Validate Content File          ${download_url}                              ${cv_row}               ${cdl_row}
-    Set Suite Variable                     ${is_download_success}           ${download_result[0]}
+    Set Test Variable                      ${content_id_folder}
+    Run Keyword If    '${file_extension}' == '${EMPTY}' or '${file_extension}' == '${NONE}'                             Set Test Variable                            ${file_name}            ${file_title}
+    ${download_result}=                    Run Keyword And Ignore Error     Download And Validate Content File          ${content_id}                                ${download_url}                              ${cv_row}               ${cdl_row}
+    ${is_download_success}=                Set Variable    ${download_result[0]}
     Run Keyword If    '${is_download_success}' == 'FAIL'                    Append To List	                            ${content_ids_NotWorking}	                 ${content_id}
     Log To Console                         Completed Downloading the record ${record_number} of ${total_records}\n
 
@@ -282,65 +301,67 @@ Download And Validate Content File
     [Documentation]                        Initiates the download of a Salesforce file by navigating to the Shepherd URL, waits for completion, validates the filename match and integrity,
     ...                                    moves the file to its ContentDocument-specific folder, and updates the re-upload Excel files if successful.
     ...                                    If validation fails, it marks the ID as failed and triggers cleanup.
-    [Arguments]                            ${download_url}                  ${cv_row}                                   ${cdl_row}
+    [Arguments]                            ${content_id}                    ${download_url}                  ${cv_row}                                   ${cdl_row}
     Log To Console                         Starting download: ${file_name} and expected size: ${expected_file_size} bytes
     ${UrlResponse}=                        Run Keyword And Ignore Error     Go To                                       ${download_url}
-    Set Suite Variable                     ${is_url_success}                ${UrlResponse[0]}
+    ${is_url_success}=                     Set Variable                     ${UrlResponse[0]}
     #Sleep    2s
     Run Keyword If    '${is_url_success}' == 'FAIL'                         Append To List	                            ${content_ids_NotWorking}	                 ${content_id}
     ${download_dir_path}                   Normalize Path                   ${download_directory}
     Directory Should Exist                                                  ${download_dir_path}
     ${files_in_download_dir}=              List Directory                   ${download_directory}                       pattern=*.*
     ${file_count}                          Get Length                       ${files_in_download_dir}
-    Run Keyword If    '${file_count}' == '0'                                Remove Content Folder And Temp Files
-    @{MatchingFileNames}                   Create List
-    @{NotMatchingFileNames}                Create List
+    Run Keyword If    '${file_count}' == '0'                                Remove Content Folder And Temp Files        ${content_id}
+    ${MatchingFileNames}                   Create List
+    ${NotMatchingFileNames}                Create List
     FOR    ${existingfilename}    IN    @{files_in_download_dir}
-           Set Suite Variable              ${temp_filename}                 ${existingfilename}
+           Set Test Variable               ${temp_filename}                 ${existingfilename}
            ${IsDownloadProper}=            Run Keyword And Return Status    Wait Until File Download Completes
-           Run Keyword If    '${IsDownloadProper}' == 'False'               Remove Content Folder And Temp Files
+           Run Keyword If    '${IsDownloadProper}' == 'False'               Remove Content Folder And Temp Files        ${content_id}
            ${RecentFile}=                  List Directory                   ${download_directory}                       pattern=*.*
            ${RecentFile_count}             Get Length                       ${RecentFile}
-           Run Keyword If    '${RecentFile_count}' != '0'                   Set Suite Variable                          ${latest_filename}                           ${RecentFile}[0]
+           Run Keyword If    '${RecentFile_count}' != '0'                   Set Test Variable                           ${latest_filename}                           ${RecentFile}[0]
            ${IsNameMatch}=                 Run Keyword And Return Status    Should Contain                              ${latest_filename}                           ${file_title}
            Run Keyword If    '${IsNameMatch}' == 'True'                     Append To List                              ${MatchingFileNames}                         ${latest_filename}
            Run Keyword If    '${IsNameMatch}' == 'False'                    Append To List                              ${NotMatchingFileNames}                      ${latest_filename}
     END
     FOR    ${FinalMatchingFilename}    IN    @{MatchingFileNames}
-           Set Suite Variable              ${downloaded_filename}           ${FinalMatchingFilename}
-           ${IsNameMatch}=                 Run Keyword And Return Status    Should Contain                              ${downloaded_filename}                       ${file_title}
-           Run Keyword If    '${IsNameMatch}' == 'True'                     Validate And Move Downloaded File           500                                          ${cv_row}       ${cdl_row}
+           ${IsNameMatch}=                 Run Keyword And Return Status    Should Contain                              ${FinalMatchingFilename}                     ${file_title}
+           Run Keyword If    '${IsNameMatch}' == 'True'                     Validate And Move Downloaded File           ${FinalMatchingFilename}                     ${content_id}          500                ${cv_row}       ${cdl_row}
     END
     FOR    ${NotMatchingFilename}    IN    @{NotMatchingFileNames}
-           Set Suite Variable              ${downloaded_filename_notmatched}                                            ${NotMatchingFilename}
-           ${IsNameMatch}=                 Run Keyword And Return Status    Should Contain                              ${downloaded_filename_notmatched}            ${file_title}
-           Run Keyword If    '${IsNameMatch}' == 'False'                    Remove Content Folder And Temp Files
+           ${IsNameMatch}=                 Run Keyword And Return Status    Should Contain                              ${NotMatchingFilename}                       ${file_title}
+           Run Keyword If    '${IsNameMatch}' == 'False'                    Remove Content Folder And Temp Files        ${content_id}
     END
 
+
 Wait Until File Download Completes
-    [Documentation]                        Repeatedly checks the download directory until the file has fully downloaded (no temporary extensions like .crdownload, .tmp, .part, or "unconfirmed downloading").
-    ...                                    This polling loop ensures the file is complete and stable before proceeding to validation and move steps.
-    ${IsTempfilesExist}=                   Run Keyword And Return Status    Should Not Contain Any                      ${temp_filename}                             @{TEMP_FILE_MARKERS}
-    ${StatusCheck}                         Set Variable                     ${IsTempfilesExist}
-    WHILE    '${StatusCheck}' == '${FALSE}'    limit=60s
-              ${RecentFile}=               List Directory                   ${download_directory}                       pattern=*.*
-              ${file_count}                Get Length                       ${RecentFile}
-              Run Keyword If    '${file_count}' == '0'                      Run Keyword And Ignore Error                Remove Directory                             ${content_id_folder}
-              Run Keyword If    '${file_count}' != '0'                      Check File is Downloaded                    ${RecentFile}
-              ${StatusCheck}               Get Variable Value               ${IsFileNameProper}
+    [Documentation]    Polls the download directory until a fully downloaded file is detected. Verifies that the latest file does not contain temporary download markers.
+    ...                Exits when a stable file is found or when the 60-second timeout is reached.
+    Set Test Variable                       ${IsFileNameProper}             ${FALSE}
+    WHILE    not ${IsFileNameProper}    limit=60s
+        ${RecentFile}=                      List Directory                  ${download_directory}                       pattern=*.*
+        ${file_count}=                      Get Length                      ${RecentFile}
+        IF    ${file_count} == 0
+            Run Keyword And Ignore Error    Remove Directory                ${content_id_folder}
+            Sleep    0.5s
+            CONTINUE
+        END
+        Check File is Downloaded            ${RecentFile}
     END
 
 Check File is Downloaded
     [Documentation]                        Verifies whether the most recently downloaded file has completed fully (no temporary/partially-downloaded extensions like .crdownload, .tmp, .part, or "unconfirmed downloading").
     ...                                    This is a helper step to confirm the file is ready before moving it or considering the download successful.
     [Arguments]                            ${RecentFile}
-    Set Suite Variable                     ${latest_filename}               ${RecentFile}[0]
-    ${IsFileNameProper}=                   Run Keyword And Return Status    Should Not Contain Any                      ${latest_filename}                           @{TEMP_FILE_MARKERS}
-    Set Suite Variable                     ${IsFileNameProper}
+    Set Test Variable                      ${latest_filename}               ${RecentFile}[0]
+    ${is_file_ready}=                      Run Keyword And Return Status    Should Not Contain Any                      ${latest_filename}                           @{TEMP_FILE_MARKERS}
+    Set Test Variable                      ${IsFileNameProper}              ${is_file_ready}
 
 Remove Content Folder And Temp Files
     [Documentation]                        Deletes the temporary ContentDocument-specific folder and removes any leftover temporary or unnecessary files from the download directory.
     ...                                    This keeps the workspace clean and prevents partial/corrupted files from accumulating.
+    [Arguments]                            ${content_id}
     Append To List	                       ${content_ids_NotWorking}	    ${content_id}
     Run Keyword And Ignore Error           Remove Directory                 ${content_id_folder}
     Cleanup the download directory
@@ -349,12 +370,12 @@ Validate And Move Downloaded File
     [Documentation]                        Checks if the downloaded file has the expected name and size stability.
     ...                                    If valid, moves the file to the ContentDocument-specific folder, logs success, and writes metadata to the ContentVersion and ContentDocumentLink Excel files.
     ...                                    If invalid (size mismatch or file missing), marks the ID as failed.
-    [Arguments]                            ${timeout}                       ${cv_row}                                   ${cdl_row}
+    [Arguments]                            ${downloaded_filename}           ${content_id}                    ${timeout}                       ${cv_row}                                   ${cdl_row}
     ${previous_file_size}=                 Set Variable                     -1
     FOR    ${i}    IN RANGE    ${timeout}
            ${current_file_size}=           Get File Size                    ${download_directory}${/}${downloaded_filename}
            Sleep            0.5s
-           Run Keyword If    '${current_file_size}' == '${previous_file_size}'                                          Exit For Loop
+           Run Keyword If    ${current_file_size} == ${previous_file_size}                                          Exit For Loop
            ${previous_file_size}=          Set Variable                     ${current_file_size}
     END
     ${is_size_stable}=                     Evaluate                         ${current_file_size} == ${previous_file_size}
@@ -396,7 +417,7 @@ Cleanup the download directory
     FOR    ${file}    IN    @{ListFiles}
            ${full_path}                    Evaluate                         os.path.join(r'${download_dir_path}', $file)    modules=os
            ${KeywordStatus}=               Run Keyword And Ignore Error     Evaluate                                    os.remove($full_path)    modules=os
-           Set Suite Variable              ${IsFileDeleted}                 ${KeywordStatus}[0]
+           ${IsFileDeleted}=               Set Variable    ${KeywordStatus}[0]
            Run Keyword If    '${IsFileDeleted}' == 'PASS'                   Log                                         DELETED : ${file}
            Run Keyword If    '${IsFileDeleted}' == 'FAIL'                   Remove File                                 ${full_path}
     END
