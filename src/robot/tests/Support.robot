@@ -74,15 +74,18 @@ Configure Browser
 
 Safe Salesforce GET
     [Documentation]                        Safely executes a GET request to the Salesforce REST API using an authenticated session. It handles errors gracefully (e.g., network issues, invalid responses)
-    ...                                    and returns either the response object or `None`, preventing the entire tool from crashing on transient API failures.
-    [Arguments]                            ${session_alias}                 ${url}                                      ${params}
+    ...                                    and returns either the response object or None, preventing the entire tool from crashing on transient API failures.
+    [Arguments]                            ${session_alias}                 ${url}                                      ${params}=${None}
     ${status}    ${resp}=                  Run Keyword And Ignore Error     GET On Session                              ${session_alias}                             ${url}        params=${params}
     IF    '${status}' == 'FAIL'
+           Log    GET failed for ${url}
            RETURN    ${NONE}
     END
     ${status_code}=     Set Variable       ${resp.status_code}
     IF    ${status_code} != 200
-          RETURN    ${resp}
+          Log    HTTP ${status_code} for ${url}
+          Log    Response body: ${resp.text}
+          RETURN    ${NONE}
     END
     RETURN    ${resp}
 
@@ -92,13 +95,17 @@ Run SOQL
     [Arguments]                            ${soql}                          ${session_alias}
     ${params}=                             Create Dictionary                q=${soql}
     ${resp}=                               Safe Salesforce GET              ${session_alias}                            /services/data/v${apiVersion}/query          params=${params}
-    IF    $resp == None
+    IF    $resp is None
         RETURN    @{EMPTY}
     END
     ${json}=    Evaluate    $resp.json()
-    RETURN      ${json['records']}
+    ${has}=     Run Keyword And Return Status    Dictionary Should Contain Key    ${json}    records
+    IF    not ${has}
+        RETURN    @{EMPTY}
+    END
+    RETURN    ${json['records']}
 
-Get Content DocumentId
+Get ContentDocument Metadata
     [Documentation]                        Queries Salesforce via SOQL to retrieve core metadata for a given ContentDocument ID, including title, description, file extension, latest version ID, and file size.
     ...                                    This information is essential for building the download URL, validating the file after download, and populating the re-upload Excel files.
     [Arguments]                            ${content_id}
@@ -110,7 +117,7 @@ Get Content DocumentId
     END
     RETURN    None
 
-Get Content LinkedEntityId
+Get ContentDocumentLink Metadata
     [Documentation]                        Queries Salesforce via SOQL to retrieve linking information for a given ContentDocument ID — specifically, which record(s) the file is attached to (LinkedEntityId), along with sharing details (ShareType, Visibility).
     ...                                    This metadata is essential for re-linking files after re-upload.
     [Arguments]                            ${content_id}
@@ -173,10 +180,10 @@ Init Output Directory
     ...                                    for that specific run, ensuring traceability and no collisions in parallel execution.
     ${uuid}=                               Evaluate                         __import__('uuid').uuid4().hex
     ${safe_test_name}=                     Replace String                   ${TEST NAME}        ${SPACE}    _
-    ${download_directory}=                 Set Variable                     ${output_folder}/${safe_test_name}_${uuid}
-    Create Directory                       ${download_directory}
-    Directory Should Exist                 ${download_directory}
-    RETURN                                 ${download_directory}
+    ${output_directory}=                   Set Variable                       ${output_folder}/${safe_test_name}_${uuid}
+    Create Directory                       ${output_directory}
+    Directory Should Exist                 ${output_directory}
+    RETURN                                 ${output_directory}
 
 ContentVersion Excel file
     [Documentation]                        Creates a new Excel template file specifically formatted for bulk insert into the **ContentVersion** object in Salesforce.
@@ -218,13 +225,6 @@ Download Files Using Content Document IDs
     ...                                    processes each ID (metadata query, download, validation, move), generates re-upload Excel files (ContentVersion and ContentDocumentLink), and logs failures for traceability.
     #[Tags]                                 robot:flatten
     [Arguments]                            ${input_excel_path}              ${sheet_name}
-    ${output_directory}=                   Init Output Directory
-    ${output_directory}=                   Normalize Path                   ${output_directory}
-    Set Test Variable                      ${output_directory}
-    ${content_ids_Working}                 Create List
-    ${content_ids_NotWorking}              Create List
-    Set Test Variable                      ${content_ids_Working}
-    Set Test Variable                      ${content_ids_NotWorking}
     @{content_ids}=                        Read Content IDs From Excel Sheet                                            ${input_excel_path}                          ${sheet_name}
     ${total_records}                       Get Length                       ${content_ids}
     Set Test Variable                      ${total_records}
@@ -232,6 +232,13 @@ Download Files Using Content Document IDs
           Log To Console                   No ContentDocumentIds found. Skipping download and Data Loader file generation.
           RETURN
     END
+    ${content_ids_Working}                 Create List
+    ${content_ids_NotWorking}              Create List
+    Set Test Variable                      ${content_ids_Working}
+    Set Test Variable                      ${content_ids_NotWorking}
+    ${output_directory}=                   Init Output Directory
+    ${output_directory}=                   Normalize Path                   ${output_directory}
+    Set Test Variable                      ${output_directory}
     ${cv_row}       ${CV_File_Name}=       ContentVersion Excel file        ${output_directory}
     ${cdl_row}      ${CDL_File_Name}=      ContentDocumentLink Excel file   ${output_directory}
     Set Test Variable                      ${CV_File_Name}
@@ -252,8 +259,8 @@ Download Files Using Content Document IDs
                  Append To List            ${content_ids_NotWorking}        ${content_id}
                  CONTINUE
            END
-           ${content_doc}=                 Get Content DocumentId           ${content_id}
-           ${content_LinkedEntityId}=      Get Content LinkedEntityId       ${content_id}
+           ${content_doc}=                 Get ContentDocument Metadata     ${content_id}
+           ${content_LinkedEntityId}=      Get ContentDocumentLink Metadata     ${content_id}
            IF    ${content_doc} == ${NONE}
                  Append To List	           ${content_ids_NotWorking}	    ${content_id}
            ELSE IF    ${content_LinkedEntityId} == ${NONE}
@@ -371,40 +378,29 @@ Validate And Move Downloaded File
     ...                                    If valid, moves the file to the ContentDocument-specific folder, logs success, and writes metadata to the ContentVersion and ContentDocumentLink Excel files.
     ...                                    If invalid (size mismatch or file missing), marks the ID as failed.
     [Arguments]                            ${downloaded_filename}           ${content_id}                    ${timeout}                       ${cv_row}                                   ${cdl_row}
+    ${src}=                                Set Variable                     ${download_directory}${/}${downloaded_filename}
+    ${dst}=                                Set Variable                     ${content_id_folder}${/}${file_name}
     ${previous_file_size}=                 Set Variable                     -1
     FOR    ${i}    IN RANGE    ${timeout}
-           ${current_file_size}=           Get File Size                    ${download_directory}${/}${downloaded_filename}
+           ${current_file_size}=           Get File Size                    ${src}
            Sleep            0.5s
            Run Keyword If    ${current_file_size} == ${previous_file_size}                                          Exit For Loop
            ${previous_file_size}=          Set Variable                     ${current_file_size}
     END
     ${is_size_stable}=                     Evaluate                         ${current_file_size} == ${previous_file_size}
     Run Keyword If    '${is_size_stable}' == 'False'                        Append To List	                            ${content_ids_NotWorking}	                 ${content_id}
-    ${is_source_file_exists}=              Run Keyword And Return Status                                                File Should Exist                            ${download_directory}${/}${downloaded_filename}
+    ${is_source_file_exists}=              Run Keyword And Return Status                                                File Should Exist                            ${src}
     Run Keyword If    '${is_source_file_exists}' == 'False'                 Append To List	                            ${content_ids_NotWorking}	                 ${content_id}
-    Run Keyword If    '${is_source_file_exists}' == 'True' and '${is_size_stable}' == 'True'                            Move File                                    ${download_directory}${/}${downloaded_filename}    ${content_id_folder}${/}${file_name}
-    ${target_file_exists}=                 Run Keyword And Return Status                                                File Should Exist                            ${content_id_folder}${/}${file_name}
+    Run Keyword If    '${is_source_file_exists}' == 'True' and '${is_size_stable}' == 'True'                            Move File                                    ${src}    ${dst}
+    ${target_file_exists}=                 Run Keyword And Return Status                                                File Should Exist                            ${dst}
     Log To Console                         SUCCESS: ${file_name} downloaded and moved to ${content_id}
     Run Keyword If    '${target_file_exists}' == 'True'                     Append To List	                            ${content_ids_Working}	                     ${content_id}
-    Open Excel Document                    filename=${CV_File_Name}         doc_id=CV_DOC
-    Write Excel Cell                       row_num=${cv_row}                col_num=1                                   value=${file_title}
-    Write Excel Cell                       row_num=${cv_row}                col_num=2                                   value=${content_id_folder}${/}${file_name}
-    Write Excel Cell                       row_num=${cv_row}                col_num=3                                   value=${content_id_folder}${/}${file_name}
-    #Write Excel Cell                      row_num=${cv_row}                col_num=4                                   value=${Description}
-    #Write Excel Cell                      row_num=${cv_row}                col_num=5                                   value=FirstPublishLocationId
-    Save Excel Document                    filename=${CV_File_Name}
-    Close Current Excel Document
-    Open Excel Document                    filename=${CDL_File_Name}        doc_id=CDL_DOC
-    Write Excel Cell                       row_num=${cdl_row}               col_num=1                                   value=${content_doc_id}
-    Write Excel Cell                       row_num=${cdl_row}               col_num=2                                   value=${LinkedEntityID}
-    Write Excel Cell                       row_num=${cdl_row}               col_num=3                                   value=${ShareType}
-    Write Excel Cell                       row_num=${cdl_row}               col_num=4                                   value=${Visibility}
-    Save Excel Document                    filename=${CDL_File_Name}
-    Close Current Excel Document
-    ${actual_file_size}=                   Run Keyword If    '${target_file_exists}' == 'True'                          Get File Size                                ${content_id_folder}${/}${file_name}
+    Write ContentVersion Row               ${cv_row}                        ${dst}
+    Write ContentDocumentLink Row          ${cdl_row}
+    ${actual_file_size}=                   Run Keyword If    '${target_file_exists}' == 'True'                          Get File Size                                ${dst}
     Run Keyword If    '${actual_file_size}' != '${expected_file_size}'      Append To List	                            ${content_ids_NotWorking}	                 ${content_id}
-    ${source_still_exists}=                Run Keyword And Return Status    File Should Exist                           ${download_directory}${/}${downloaded_filename}
-    Run Keyword If    '${source_still_exists}' == 'True'                    Run Keyword And Ignore Error                Remove File                                  ${download_directory}${/}${downloaded_filename}
+    ${source_still_exists}=                Run Keyword And Return Status    File Should Exist                           ${src}
+    Run Keyword If    '${source_still_exists}' == 'True'                    Run Keyword And Ignore Error                Remove File                                  ${src}
     Cleanup the download directory
 
 Cleanup the download directory
@@ -443,3 +439,29 @@ Write the ContentDocumentIDs
            ${row}=                         Evaluate                         ${row} + 1
     END
     Save Excel Document                    filename=${Excel_File}
+
+Write ContentVersion Row
+    [Documentation]                        Writes a single record into the ContentVersion Excel file.Populates file metadata and local path for bulk re-upload.
+    ...                                    Appends values to the specified row in the prepared template.
+    [Arguments]                            ${cv_row}                        ${dst}
+    Open Excel Document                    filename=${CV_File_Name}         doc_id=CV_DOC
+    Write Excel Cell                       row_num=${cv_row}                col_num=1                                   value=${file_title}
+    Write Excel Cell                       row_num=${cv_row}                col_num=2                                   value=${dst}
+    Write Excel Cell                       row_num=${cv_row}                col_num=3                                   value=${dst}
+    #Intentionally kept these commented lines for futures use.
+    #Write Excel Cell                      row_num=${cv_row}                col_num=4                                   value=${Description}
+    #Write Excel Cell                      row_num=${cv_row}                col_num=5                                   value=FirstPublishLocationId
+    Save Excel Document                    filename=${CV_File_Name}
+    Close Current Excel Document
+
+Write ContentDocumentLink Row
+    [Documentation]                        Writes a single record into the ContentDocumentLink Excel file.Populates linking metadata required for re-associating files after upload.
+    ...                                    Appends values to the specified row in the prepared template.
+    [Arguments]                            ${cdl_row}
+    Open Excel Document                    filename=${CDL_File_Name}        doc_id=CDL_DOC
+    Write Excel Cell                       row_num=${cdl_row}               col_num=1                                   value=${content_doc_id}
+    Write Excel Cell                       row_num=${cdl_row}               col_num=2                                   value=${LinkedEntityID}
+    Write Excel Cell                       row_num=${cdl_row}               col_num=3                                   value=${ShareType}
+    Write Excel Cell                       row_num=${cdl_row}               col_num=4                                   value=${Visibility}
+    Save Excel Document                    filename=${CDL_File_Name}
+    Close Current Excel Document
