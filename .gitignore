@@ -10,7 +10,7 @@ env/
 venv/
 .venv/
 
-# Robot Framework output
+# Robot Framework results
 output.xml
 log.html
 report.html
@@ -25,18 +25,18 @@ org_info.json
 *.auth.json
 deploy-options.json
 
-# Runtime output folders (keep folder, ignore contents)
+# Runtime folders (keep folder, ignore contents)
 downloads/*
-output/*
+artifacts/*
 !downloads/.gitkeep
-!output/.gitkeep
+!artifacts/.gitkeep
 
-# Generated docs at root
-CDL_DOC/
-CV_DOC/
-smoke_doc/
+# Generated temp files at root
+/CDL_DOC
+/CV_DOC
+/smoke_doc
 
-# UUID-like 32-char run folders at repo root
+# UUID-like 32-char temp files/folders at repo root
 ????????????????????????????????
 
 # Browser drivers
@@ -67,8 +67,3 @@ Desktop.ini
 *.swo
 *.tmp
 *~
-
-# Generated docs/files from runs (if created at root)
-/CDL_DOC
-/CV_DOC
-/smoke_doc

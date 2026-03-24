@@ -10,16 +10,18 @@ Library                                    RequestsLibrary
 Library                                    BuiltIn
 Library                                    json
 Library                                    urllib.parse
-Library                                    ../library/SalesforceSupport.py
-Library                                    ../library/WebdriverManager.py
-Library                                    ../library/ExcelLibrary.py
+Library                                    ../libraries/SalesforceSupport.py
+Library                                    ../libraries/WebdriverManager.py
+Library                                    ../libraries/ExcelLibrary.py
+Library                                    Process
 
 *** Variables ***
 @{TEMP_FILE_MARKERS}                       .crdownload    .tmp    .part    unconfirmed    downloading
+@{TEMP_FILES}                              CDL_DOC    CV_DOC    PIPE    smoke_doc    log.html    output.xml    report.html    org_info.json
 ${org_info_file}                           org_info.json
 ${input_folder}                            ${EXECDIR}${/}input
 ${base_download_folder}                    ${EXECDIR}${/}downloads
-${output_folder}                           ${EXECDIR}${/}output
+${output_folder}                           ${EXECDIR}${/}artifacts
 
 *** Keywords ***
 Init Salesforce Session
@@ -191,7 +193,7 @@ ContentVersion Excel file
     [Arguments]                            ${download_directory}
     ${uuid}=                               Evaluate                         __import__('uuid').uuid4().hex
     ${Proper_test_name}=                   Replace String                   ${TEST NAME}        ${SPACE}    _
-    ${CV_File_Name}=                       Set Variable                     ${download_directory}${/}${Proper_test_name}_ContentVersion_Inputfile.xlsx
+    ${CV_File_Name}=                       Set Variable                     ${download_directory}${/}${Proper_test_name}_ContentVersion_Import.xlsx
     Create Excel Document                  doc_id=CV_DOC
     Write Excel Cell                       row_num=1                        col_num=1                                   value=Title
     Write Excel Cell                       row_num=1                        col_num=2                                   value=VersionData
@@ -209,7 +211,7 @@ ContentDocumentLink Excel file
     [Arguments]                            ${download_directory}
     ${uuid}=                               Evaluate                         __import__('uuid').uuid4().hex
     ${Proper_test_name}=                   Replace String                   ${TEST NAME}        ${SPACE}    _
-    ${CDL_File_Name}=                      Set Variable                     ${download_directory}${/}${Proper_test_name}_ContentDocumentLink_Inputfile.xlsx
+    ${CDL_File_Name}=                      Set Variable                     ${download_directory}${/}${Proper_test_name}_ContentDocumentLink_Import.xlsx
     Create Excel Document                  doc_id=CDL_DOC
     Write Excel Cell                       row_num=1                        col_num=1                                   value=ContentDocumentId
     Write Excel Cell                       row_num=1                        col_num=2                                   value=LinkedEntityID
@@ -423,7 +425,7 @@ Log Failed ContentDocumentIDs to Excel
     ...                                    This provides a quick, traceable record of failures for later review or retry.
     [Arguments]                            ${unique_IDslist_NotWorking}     ${output_directory}
     ${test_name}=                          Replace String                   ${TEST NAME}    ${SPACE}    _
-    ${Excel_File}=                         Set Variable                     ${output_directory}${/}${test_name}_FAILED_IDs_List.xlsx
+    ${Excel_File}=                         Set Variable                     ${output_directory}${/}${test_name}_FAILED_IDs.xlsx
     ${no_of_records}                       Get Length                       ${unique_IDslist_NotWorking}
     Run Keyword If    '${no_of_records}' != '0'                             Write the ContentDocumentIDs                ${unique_IDslist_NotWorking}                 ${Excel_File}
 
@@ -465,3 +467,86 @@ Write ContentDocumentLink Row
     Write Excel Cell                       row_num=${cdl_row}               col_num=4                                   value=${Visibility}
     Save Excel Document                    filename=${CDL_File_Name}
     Close Current Excel Document
+
+Check Prerequisites
+    [Documentation]                        Ensure Salesforce CLI is installed and org alias is authenticated.
+    [Arguments]                            ${ORG_ALIAS}
+    Resolve Salesforce CLI
+    Validate Salesforce CLI
+    Load Org Context                       ${ORG_ALIAS}
+
+Resolve Salesforce CLI
+    [Documentation]                        Resolve Salesforce CLI executable path on Windows.
+    ${where_res}=                          Run Process    where    sf    stdout=PIPE    stderr=PIPE
+    Should Be Equal As Integers            ${where_res.rc}    0             msg=Salesforce CLI (sf) not found in PATH.
+    @{lines}=                              Split To Lines                   ${where_res.stdout}
+    ${sf_path}=                            Set Variable                     ${EMPTY}
+    FOR    ${line}    IN    @{lines}
+        ${candidate}=                      Strip String                     ${line}
+        ${is_cmd}=                         Run Keyword And Return Status    Should End With                             ${candidate}    .cmd
+        IF    ${is_cmd}
+              ${sf_path}=                  Set Variable                     ${candidate}
+              Exit For Loop
+        END
+    END
+    Should Not Be Empty                    ${sf_path}                       msg=Could not resolve sf.cmd executable.
+    Set Suite Variable                     ${SF_CLI}                        ${sf_path}
+    Log To Console                         Using SF CLI: ${SF_CLI}
+
+Validate Salesforce CLI
+    [Documentation]                        Verify Salesforce CLI executes successfully.
+    ${ver_res}=                            Run Process    ${SF_CLI}    --version    stdout=PIPE    stderr=PIPE
+    Should Be Equal As Integers            ${ver_res.rc}    0               msg=Salesforce CLI failed to execute.\n${ver_res.stderr}
+
+Load Org Context
+    [Documentation]                        Validate target org authentication and capture API version.
+    [Arguments]                            ${ORG_ALIAS}
+    ${org_res}=                            Run Process
+    ...    ${SF_CLI}
+    ...    org
+    ...    display
+    ...    --target-org
+    ...    ${ORG_ALIAS}
+    ...    --json
+    ...    stdout=PIPE
+    ...    stderr=PIPE
+    Should Be Equal As Integers            ${org_res.rc}    0               msg=Org alias not found or not authenticated: ${ORG_ALIAS}\n${org_res.stderr}
+    ${json_obj}=                           Safe Parse Sf Json               ${org_res.stdout}
+    Dictionary Should Contain Key          ${json_obj}                      result
+    ${result_dict}=                        Get From Dictionary              ${json_obj}                                 result
+    Dictionary Should Contain Key          ${result_dict}                   apiVersion
+    ${api_version}=                        Get From Dictionary              ${result_dict}                              apiVersion
+    Set Suite Variable                     ${API_VERSION}                   ${api_version}
+    Log To Console                         Connected to ${ORG_ALIAS} (API v${API_VERSION})
+
+Safe Parse Sf Json
+    [Arguments]                            ${raw_output}
+    ${obj_start}=                          Evaluate                         $raw_output.find('{')
+    ${arr_start}=                          Evaluate                         $raw_output.find('[')
+    ${start}=                              Set Variable                     ${obj_start}
+    IF    ${start} == -1
+          ${start}=                        Set Variable                     ${arr_start}
+    END
+    IF    ${start} == -1
+          Log To Console                   No JSON found in output:\n${raw_output}
+          Fail                             Invalid sf CLI output - no JSON block
+    END
+    ${json_text}=                          Evaluate                         $raw_output[$start:]
+    ${data}=                               Evaluate                         json.loads($json_text)                      modules=json
+    RETURN                                 ${data}
+
+Cleanup Runtime Artifacts
+    [Documentation]                        Cleans Pabot temp files, Excel handles, and process artifacts from project root.
+    ${items}=                              List Directory                   ${EXECDIR}
+    FOR    ${item}    IN    @{items}
+           ${full_path}=                   Set Variable                     ${EXECDIR}${/}${item}
+           ${is_uuid}=                     Evaluate                         len($item) == 32 and all(c in "0123456789abcdef" for c in $item)
+           ${is_known_temp}=               Evaluate                         $item in $TEMP_FILES
+           IF    ${is_uuid} or ${is_known_temp}
+              ${is_file}=                  Run Keyword And Return Status    File Should Exist                           ${full_path}
+            IF    ${is_file}
+                Log    Removing temp file: ${item}
+                Remove File    ${full_path}
+            END
+        END
+    END

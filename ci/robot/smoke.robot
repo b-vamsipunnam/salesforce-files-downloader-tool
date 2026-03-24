@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation                       CI smoke test – validates libraries and Selenium startup only
 Library                             SeleniumLibrary
-Library                             ../../src/robot/library/ExcelLibrary.py
+Library                             ../../src/robot/libraries/ExcelLibrary.py
 
 *** Variables ***
 ${URL}                              https://example.com

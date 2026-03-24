@@ -50,13 +50,13 @@ sf org login web
 Before submitting changes, ensure all tests pass:
 
 ```bash
-robot src/robot/tests/
+robot --outputdir results src/robot/orchestrator/download.robot
 ```
 
 For parallel execution:
 
 ```bash
-pabot --pabotlib src/robot/tests/
+pabot --pabotlib --processes 2 --outputdir results src/robot/orchestrator/download.robot
 ```
 
 ---
