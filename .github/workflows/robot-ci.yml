@@ -1,4 +1,4 @@
-name: Robot Framework Tests
+name: Robot CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  robot-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,7 +32,7 @@ jobs:
       # ---------------------------------------------
       - name: Prepare directories
         run: |
-          mkdir -p results/smoke results/full input output downloads
+          mkdir -p results/smoke results/full input artifacts downloads
 
       # ---------------------------------------------
       # Browser availability check (GitHub runner provides Chrome/Chromium)
@@ -56,7 +56,7 @@ jobs:
       # ---------------------------------------------
       - name: Set PYTHONPATH
         run: |
-          echo "PYTHONPATH=${GITHUB_WORKSPACE}/src/robot/library:${GITHUB_WORKSPACE}" >> $GITHUB_ENV
+          echo "PYTHONPATH=${GITHUB_WORKSPACE}/src/robot/libraries:${GITHUB_WORKSPACE}" >> $GITHUB_ENV
 
       # ---------------------------------------------
       # CI Smoke Test (NO Salesforce auth)
@@ -64,10 +64,10 @@ jobs:
       # ---------------------------------------------
       - name: Run CI Smoke Test
         run: |
-          robot --outputdir results/smoke --loglevel INFO ci/robot/Smoke.robot
+          robot --outputdir results/smoke --loglevel INFO ci/robot/smoke.robot
 
       # ---------------------------------------------
-      # Dummy Salesforce org (CI-safe) for full tests
+      # Dummy Salesforce org (CI-safe) for full test
       # ---------------------------------------------
       - name: Create dummy org_info.json
         run: |
@@ -88,10 +88,10 @@ jobs:
       - name: Run Full Robot Tests (non-blocking)
         continue-on-error: true
         run: |
-          robot --outputdir results/full --loglevel TRACE src/robot/tests/Test.robot
+          robot --outputdir results/full --loglevel TRACE src/robot/orchestrator/download.robot
 
       # ---------------------------------------------
-      # Debug output
+      # Debug results.
       # ---------------------------------------------
       - name: List results
         if: always()

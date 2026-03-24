@@ -2,6 +2,7 @@
 
 > Enterprise-grade Salesforce file migration and backup tool built with Robot Framework and Python.  
 > Supports bulk ContentDocumentId downloads, parallel execution, CI/CD, and Data Loader integration.
+> Used in enterprise environments to process millions of Salesforce files across large-scale migration and backup workflows.
 
 ## Technical Walkthrough
 
@@ -20,7 +21,7 @@ Read the detailed **Medium article** explaining the architecture, design decisio
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![Salesforce CLI](https://img.shields.io/badge/Salesforce%20CLI-2.116.6-00A1E0?style=flat&logo=salesforce&logoColor=white)](https://developer.salesforce.com/tools/sfdxcli)
 [![Node.js](https://img.shields.io/badge/Node.js-18.20.4-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![CI](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions/workflows/robot-tests.yml/badge.svg)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions)
+[![CI](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions/workflows/robot-ci.yml/badge.svg)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions)
 [![Release](https://img.shields.io/github/v/release/b-vamsipunnam/salesforce-files-downloader-tool?style=flat&color=orange&logo=github&logoColor=white)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/releases)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat&logo=open-source-initiative&logoColor=white)](https://opensource.org/licenses/MIT)
 
@@ -40,6 +41,12 @@ The Salesforce Files Bulk Downloader is an open-source, parallel-processing auto
 * Tracks failures with detailed logs
 * Fully isolated execution folders
 * CI/CD compatible
+
+**Additional Highlights**
+
+* A version of this framework has been successfully used to process millions of Salesforce files in enterprise environments.
+* Designed to operate within Salesforce API limits without retry amplification.
+* No paid AppExchange tools required.
 
 ## When to Use This Tool
 
@@ -61,25 +68,31 @@ Traditional Salesforce tools (Data Loader, Workbench, UI downloads) have limitat
 * Slow UI-based downloads
 * Limited retry and tracking
 
-This framework provides **deterministic, scalable, and resumable downloads** optimized for enterprise environments.
+This framework provides **deterministic, scalable downloads with failure tracking** optimized for enterprise environments.
 
----
+## Why Not Data Loader?
+
+* Does not support bulk file download
+* No parallel execution
+* Manual and error-prone for large datasets
 
 ## Target Audience
 
 **This tool is designed for:**
 
-- Salesforce Developers and Architects
-- QA / Automation Engineers
-- DevOps Engineers
-- Data Migration Specialists
-- Compliance and Audit Teams
+* Salesforce Developers and Architects
+* QA / Automation Engineers
+* DevOps Engineers
+* Data Migration Specialists
+* Compliance and Audit Teams
 
 ---
 
 ## Architecture Overview
 
 **High-level architecture:**
+
+*Figure: Control plane (REST metadata) and data plane (browser download) separation.*
 
 <p align="center">
   <img src="docs/architecture.png" width="700">
@@ -90,18 +103,22 @@ This framework provides **deterministic, scalable, and resumable downloads** opt
 ## Quick Start
 
 1. Authenticate to your Salesforce org *(replace `<org_name>` with your org alias)*:
-   ```powershell
+   ### Windows
+   ```bash
    sf org display --json --target-org <org_name> | Out-File -Encoding utf8 org_info.json
    ```
-   
+   ### Linux / macOS
+   ```bash
+   sf org display --json --target-org <org_name> > org_info.json
+   ```
 2. Run parallel downloads:
    ```powershell
-   pabot --pabotlib --processes 2 --outputdir results src/robot/tests/Test.robot
+   pabot --pabotlib --processes 2 --outputdir results src/robot/orchestrator/download.robot
    ```
 3. Check results
    ```text
-   Downloaded files: downloads/<test_name>_<uuid>/069.../<filename>
-   Generated Excel files: output/
+   Downloaded files: downloads/
+   Generated Excel files: artifacts/
    Execution logs: results/
    ```
 ---
@@ -112,11 +129,16 @@ This framework provides **deterministic, scalable, and resumable downloads** opt
 salesforce-files-downloader-tool/
 ├── .github/
 │   ├── workflows/
-│   │   └── robot-tests.yml                                # GitHub Actions CI
+│   │   └── robot-ci.yml                                   # GitHub Actions CI
 │   └── PULL_REQUEST_TEMPLATE.md                           # Pull request template
+├── artifacts/                                             # Runtime: Failed records + Data Loader-ready Excels
+│   └── <test_name>__<uuid>/                               # One folder per test case
+│       ├── <test_name>_Failed_IDs.xlsx
+│       ├── <test_name>_ContentVersion_Import.xlsx
+│       └── <test_name>_ContentDocumentLink_Import.xlsx
 ├── ci/
 │   └── robot/
-│       └── Smoke.robot
+│       └── smoke.robot
 ├── docs/
 │   └── architecture.md                                    # High-level design documentation
 ├── downloads/                                             # Runtime: downloaded Salesforce files
@@ -128,11 +150,6 @@ salesforce-files-downloader-tool/
 ├── input/                                                 # Input Excel files
 │   ├── Inputfile_1.xlsx
 │   └── Inputfile_2.xlsx
-├── output/                                                # Runtime: Failed records + Data Loader-ready Excels
-│   └── <test_name>__<uuid>/                               # One folder per test case
-│       ├── <test_name>_Failed_IDs_List.xlsx
-│       ├── <test_name>_ContentVersion_Inputfile.xlsx
-│       └── <test_name>_ContentDocumentLink_Inputfile.xlsx
 ├── results/                                               # Robot execution results
 │   ├── pabot_results/
 │   ├── log.html
@@ -140,13 +157,14 @@ salesforce-files-downloader-tool/
 │   └── report.html
 ├── src/
 │   └── robot/
-│       ├── library/
+│       ├── libraries/
 │       │   ├── ExcelLibrary.py
 │       │   ├── SalesforceSupport.py
 │       │   └── WebdriverManager.py
-│       └── tests/
-│           ├── Support.robot
-│           └── Test.robot
+│       ├── resources/
+│       │   └── keywords.robot
+│       └── orchestrator/
+│           └── download.robot
 ├── .gitignore
 ├── .pabotsuitenames                                       # Pabot suite cache file
 ├── CODE_OF_CONDUCT.md
@@ -260,9 +278,9 @@ Example:
 
 The automation supports parallel execution using pabot.
 
-### Run the multiple tests using below pabot command: (Recommended)
+### Run tests in parallel using the following pabot command: (Recommended)
 ```
-   pabot --pabotlib --processes 2 --outputdir results src/robot/tests/Test.robot
+   pabot --pabotlib --processes 2 --outputdir results src/robot/orchestrator/download.robot
 ```
 * Note: Adjust --processes based on your machine (e.g., 2-8 recommended)
 
@@ -274,12 +292,12 @@ To execute **only one batch** (for example, a single Excel input file) without p
 
 #### Prerequisite
 
-Ensure that only **one batch** is enabled under the **Test Cases** section in `Test.robot` when running in single-test mode.
+Ensure that only **one batch** is enabled under the **Test Cases** section in `download.robot` when running in single-test mode.
 
 #### Run All Batches Sequentially (Single Process)
 
 ```bash
-robot src/robot/tests/Test.robot
+robot --outputdir results src/robot/orchestrator/download.robot
 ```
 
 This command runs all defined test cases sequentially in a single browser session.
@@ -289,7 +307,7 @@ This command runs all defined test cases sequentially in a single browser sessio
 To execute only a specific test case from multiple batches, use the `--test` option:
 
 ```bash
-robot --test Download_Batch_1 src/robot/tests/Test.robot
+robot --test Download_Batch_1 --outputdir results src/robot/orchestrator/download.robot
 ```
 
 This is useful when validating a single input file or isolating failures.
@@ -301,7 +319,7 @@ This is useful when validating a single input file or isolating failures.
 Each pabot process creates a unique download folder under `downloads/`
 * Files are downloaded in headless Chrome sessions
 * Results are consolidated under the `results/` directory
-* Failed records are logged in `output/<test_name>_Failed IDs_List.xlsx`
+* Failed records are logged in `artifacts/<test_name>_Failed_IDs.xlsx`
 
 
 ## Execution Flow
@@ -323,7 +341,7 @@ See [Architecture Overview](docs/architecture.md) for a visual execution flow an
 
 ## Generated Excel Files for Bulk Insert
 
-The tool automatically creates **two Excel files** in the `output/` folder for every run. These files are designed to make it easy to **re-upload** or **associate** the downloaded files back into Salesforce (e.g., using Data Loader, Workbench, or Salesforce Flow).
+The tool automatically creates **two Excel files** in the `artifacts/` folder for every run. These files are designed to make it easy to **re-upload** or **associate** the downloaded files back into Salesforce (e.g., using Data Loader, Workbench, or Salesforce Flow).
 Both files are generated **per test case / batch** (named using the test name + timestamp), so each run produces isolated, traceable files.
 
 The generated Excel files are ready for bulk insert using tools like **Data Loader**, **Salesforce Import Wizard**, or **Workbench**. Below are the column details:
@@ -372,23 +390,23 @@ Prepare an Excel file to perform bulk insert into the **ContentDocumentLink** ob
 * Use them for **recovery / re-upload** scenarios or to associate files with records after migration.
 * File names include the test/batch name for easy identification.
 
-Example generated files in `output/`:
-* `Download_Batch_1_ContentVersion_Inputfile.xlsx`
-* `Download_Batch_1_ContentDocumentLink_Inputfile.xlsx`
+Example generated files in `artifacts/`:
+* `Download_Batch_1_ContentVersion_Import.xlsx`
+* `Download_Batch_1_ContentDocumentLink_Import.xlsx`
 
 ---
 ## Output Files Generated
 
-| File Type                          | Location                              | Purpose                              |
-|------------------------------------|---------------------------------------|--------------------------------------|
-| Failed Records Log                 | `output/*_Failed IDs_List.xlsx`       | List of failed ContentDocument IDs   |
-| ContentVersion Insert Ready        | `output/*_ContentVersion_*.xlsx`      | Prepare bulk upload of files         |
-| ContentDocumentLink Insert Ready   | `output/*_ContentDocumentLink_*.xlsx` | Prepare linking files to records     |
+| File Type                          | Location                                      | Purpose                              |
+|------------------------------------|-----------------------------------------------|--------------------------------------|
+| Failed Records Log                 | `artifacts/*_Failed_IDs.xlsx`                 | List of failed ContentDocument IDs   |
+| ContentVersion Insert Ready        | `artifacts/*_ContentVersion_Import.xlsx`      | Prepare bulk upload of files         |
+| ContentDocumentLink Insert Ready   | `artifacts/*_ContentDocumentLink_Import.xlsx` | Prepare linking files to records     |
 
 ---
 ## Error Handling and Logging
 
-* Failed downloads are logged to a timestamped file under `output/` (e.g., `<test_name>_Failed IDs_List.xlsx`)
+* Failed downloads are logged to a timestamped file under `artifacts/` (e.g., `<test_name>_Failed_IDs.xlsx`)
 * Partial, corrupted, or mismatched downloads are automatically cleaned
 * File size validation is performed post-download
 * Execution reports are generated in HTML and XML formats
@@ -430,10 +448,11 @@ This test is isolated from Salesforce authentication to ensure deterministic CI 
 * Check results/pabot_results/log.html for detailed execution logs
 
 | Error | Cause | Fix |
-|-------|-------|------|
+|-------|------|------|
 | WinError 10061 | PabotLib not running | Use --pabotlib |
 | No module ExcelLibrary | venv not active | Activate venv |
 | sf not found | CLI not installed | Reinstall CLI |
+| Session expired / frontdoor login failed | org_info.json outdated or token revoked/expired during long run | Re-run sf org display --json --target-org <alias> > org_info.json to refresh |
 
 ---
 
@@ -446,14 +465,23 @@ This test is isolated from Salesforce authentication to ensure deterministic CI 
 * Custom ExcelLibrary wrapper based on openpyxl (Excel input reading and Excel files generation)
 
 ---
+
 ## Security
 
-- No credentials are hardcoded.
-- Authentication is handled via Salesforce CLI.
-- Auth files must never be committed.
-- Sensitive files are excluded via .gitignore.
+* No credentials are hardcoded.
+* Authentication is handled via Salesforce CLI.
+* Auth files must never be committed.
+* Sensitive files are excluded via .gitignore. 
+* Rotate credentials immediately if exposure is suspected.
 
-Rotate credentials immediately if exposure is suspected.
+---
+
+## Limitations & Trade-offs
+
+* Uses headless browser automation (Selenium + Chrome) to access the Shepherd endpoint. This provides reliable downloads with preserved original filenames, but consumes more CPU and memory per process than a pure REST-based approach would.
+* Parallel execution is limited by local system resources (CPU, memory). Recommended range: 2–8 processes per machine.
+* No native resume of partially completed downloads yet (planned in roadmap).
+* Requires Chrome browser installed for execution.
 
 ---
 ## Roadmap
@@ -472,9 +500,8 @@ Rotate credentials immediately if exposure is suspected.
 
 * Browser runs in headless mode by default (optimized for CI/CD and servers)
 * All ChromeDriver management is automatic — no need to download or maintain chromedriver.exe
-* Designed for scalability: tested with thousands of files across multiple parallel processes
+* Designed for scalability: tested with large-scale datasets across multiple parallel processes
 * Secure handling of authentication via Salesforce CLI (no hardcoded credentials)
-
 
 ## Contributing
 
@@ -484,6 +511,15 @@ Rotate credentials immediately if exposure is suspected.
 * Submit pull requests for improvements
 * Follow existing coding patterns
 
+## Support
+
+If this project helps you:
+
+- Star ⭐ the repository  
+- Share feedback  
+- Open issues for improvements  
+
+Your support helps improve and maintain the project.
 ---
 
 ## Author

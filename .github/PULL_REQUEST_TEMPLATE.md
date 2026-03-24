@@ -4,68 +4,31 @@ Thank you for your contribution! Please complete the sections below.
 
 ---
 
+# Pull Request
+
 ## Summary
-
-Describe your changes briefly:
-
-- What problem does this solve?
-- What did you change?
-- Why is it needed?
+Briefly describe:
+- What changed?
+- Why?
 
 ---
 
 ## Related Issue
-
-Link related issue (if any):
-
-Fixes #<issue-number>  
-Closes #<issue-number>
+Fixes #<issue-number>
 
 ---
 
 ## Testing
-
-How was this tested?
-
-- [ ] Robot Framework tests
+- [ ] Robot tests
 - [ ] Manual testing
-- [ ] Not applicable
+- [ ] N/A
 
-Commands run (if applicable):
+Commands to run (if applicable):
 
 ```bash
-robot src/robot/tests/Test.robot
-pabot --pabotlib src/robot/tests/Test.robot
+robot src/robot/orchestrator/download.robot
+pabot --pabotlib src/robot/orchestrator/download.robot
 ```
-
----
-
-## Test Results
-
-- [ ] All tests passed
-- [ ] Some tests failed (explain below)
-
----
-
-## Checklist
-
-Please confirm:
-
-- [ ] Code follows project standards
-- [ ] No secrets or credentials added
-- [ ] Tests added/updated where needed
-- [ ] Documentation updated (if applicable)
-- [ ] No unnecessary debug logs
-
----
-
-## Security Impact
-
-- [ ] No security impact
-
-- [ ] Yes (explain below)
-
-If yes, describe:
 
 ---
 ## Additional Notes (Optional)
