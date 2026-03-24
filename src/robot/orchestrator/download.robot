@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation                   Automates bulk download of Salesforce files using ContentDocument IDs and stores them locally in ID-based folders.
 Resource                        ../resources/keywords.robot
-Suite Teardown                  Close All Browsers
+Suite Teardown                  Cleanup Suite
 
 *** Variables ***
 ${input_excel_path1}            ${input_folder}/Inputfile_1.xlsx
@@ -14,6 +14,3 @@ Download_Batch_1
 
 Download_Batch_2
     Download Files Using Content Document IDs        ${input_excel_path2}        ${sheet_name}
-
-Test12
-    Cleanup Runtime Artifacts

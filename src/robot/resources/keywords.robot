@@ -550,3 +550,7 @@ Cleanup Runtime Artifacts
             END
         END
     END
+
+Cleanup Suite
+    Close All Browsers
+    Cleanup Runtime Artifacts
