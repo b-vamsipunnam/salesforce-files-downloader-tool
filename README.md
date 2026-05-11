@@ -339,6 +339,20 @@ See [Architecture Overview](docs/architecture.md) for a visual execution flow an
 
 ---
 
+## Download Validation Strategy
+
+The framework performs multiple validation layers before marking a file download successful:
+
+- Waits for file appearance in the download directory
+- Detects temporary browser download artifacts (`.crdownload`, `.tmp`, `.part`)
+- Handles delayed browser download completion scenarios
+- Validates downloaded file size against Salesforce `ContentSize`
+- Confirms file size stability before moving files
+- Supports files with and without file extensions
+- Handles browser-renamed download files gracefully
+
+---
+
 ## Generated Excel Files for Bulk Insert
 
 The tool automatically creates **two Excel files** in the `artifacts/` folder for every run. These files are designed to make it easy to **re-upload** or **associate** the downloaded files back into Salesforce (e.g., using Data Loader, Workbench, or Salesforce Flow).
@@ -393,6 +407,23 @@ Prepare an Excel file to perform bulk insert into the **ContentDocumentLink** ob
 Example generated files in `artifacts/`:
 * `Download_Batch_1_ContentVersion_Import.xlsx`
 * `Download_Batch_1_ContentDocumentLink_Import.xlsx`
+
+---
+
+## 3. Optional Data Loader File Generation
+
+The framework supports optional generation of Salesforce Data Loader-ready Excel templates.
+
+```robot
+# Generate Data Loader-ready Excel files.
+# Accepted values: Yes / No
+
+${GENERATE_CONTENT_VERSION_FILE}           Yes
+${GENERATE_CONTENT_DOCUMENT_LINK_FILE}     Yes
+```
+
+- `Yes` → generates the corresponding Data Loader Excel file
+- `No` → skips file generation completely
 
 ---
 ## Output Files Generated
