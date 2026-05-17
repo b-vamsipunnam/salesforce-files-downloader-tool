@@ -16,17 +16,28 @@ Library                                    ../libraries/ExcelLibrary.py
 Library                                    Process
 
 *** Variables ***
+
+# Temporary browser download markers and runtime-generated artifacts used during cleanup.
 @{TEMP_FILE_MARKERS}                       .crdownload    .tmp    .part    unconfirmed    downloading
 @{TEMP_FILES}                              CDL_DOC    CV_DOC    PIPE    smoke_doc    log.html    output.xml    report.html    org_info.json
+
+# Salesforce CLI-generated organization authentication metadata file.
 ${ORG_INFO_FILE}                           org_info.json
+
+# Standard project directories for input files, isolated downloads, and generated artifacts.
 ${INPUT_FOLDER}                            ${EXECDIR}${/}input
 ${BASE_DOWNLOAD_FOLDER}                    ${EXECDIR}${/}downloads
 ${OUTPUT_FOLDER}                           ${EXECDIR}${/}artifacts
 
+# Download timing controls for file appearance, completion, and stability validation.
 ${DOWNLOAD_APPEAR_TIMEOUT}                 60s
 ${DOWNLOAD_COMPLETE_TIMEOUT}               60s
 ${FILE_STABILITY_TIMEOUT}                  60
 ${FILE_STABILITY_INTERVAL}                 0.25s
+
+# Number of ContentDocument IDs processed per SOQL metadata batch query.
+${METADATA_BATCH_SIZE}                     200
+
 
 *** Keywords ***
 Init Salesforce Session
@@ -78,21 +89,20 @@ Configure Browser
     [Arguments]                            ${download_directory}            ${login_url}                                ${org_domain}                                ${headless}=${True}
     Configure Chrome Browser               ${download_directory}            ${login_url}                                ${org_domain}                                headless=${headless}
 
-
 Safe Salesforce GET
     [Documentation]                        Safely executes a GET request to the Salesforce REST API using an authenticated session. It handles errors gracefully (e.g., network issues, invalid responses)
     ...                                    and returns either the response object or None, preventing the entire tool from crashing on transient API failures.
     [Arguments]                            ${session_alias}                 ${url}                                      ${params}=${None}
     ${status}    ${resp}=                  Run Keyword And Ignore Error     GET On Session                              ${session_alias}                             ${url}        params=${params}
     IF    '${status}' == 'FAIL'
-           Log    GET failed for ${url}
-           RETURN    ${NONE}
+           Log                             GET failed for ${url}
+           RETURN       ${NONE}
     END
-    ${status_code}=     Set Variable       ${resp.status_code}
+    ${status_code}=                        Set Variable       ${resp.status_code}
     IF    ${status_code} != 200
-          Log    HTTP ${status_code} for ${url}
-          Log    Response body: ${resp.text}
-          RETURN    ${NONE}
+          Log                              HTTP ${status_code} for ${url}
+          Log                              Response body: ${resp.text}
+          RETURN        ${NONE}
     END
     RETURN    ${resp}
 
@@ -164,12 +174,12 @@ Read Content IDs From Excel Sheet
     IF    ${count} == 0
           RETURN    @{EMPTY}
     END
-    ${first}=       Strip String    ${column_values}[0]
-    ${first_lower}=                        Evaluate    str($first).lower()      modules=builtins
+    ${first}=                              Strip String                     ${column_values}[0]
+    ${first_lower}=                        Evaluate                         str($first).lower()                         modules=builtins
     IF    '${first_lower}' == 'contentdocumentid'
            Remove From List                ${column_values}    0
     END
-    ${count}=       Get Length    ${column_values}
+    ${count}=                              Get Length                       ${column_values}
     IF    ${count} == 0
           RETURN    @{EMPTY}
     END
@@ -187,7 +197,7 @@ Init Output Directory
     ...                                    for that specific run, ensuring traceability and no collisions in parallel execution.
     ${uuid}=                               Evaluate                         __import__('uuid').uuid4().hex
     ${safe_test_name}=                     Replace String                   ${TEST NAME}        ${SPACE}    _
-    ${output_directory}=                   Set Variable                       ${OUTPUT_FOLDER}/${safe_test_name}_${uuid}
+    ${output_directory}=                   Set Variable                     ${OUTPUT_FOLDER}/${safe_test_name}_${uuid}
     Create Directory                       ${output_directory}
     Directory Should Exist                 ${output_directory}
     RETURN                                 ${output_directory}
@@ -255,10 +265,16 @@ Download Files Using Content Document IDs
            Set Test Variable                  ${CV_File_Name}
     END
     IF    '${GENERATE_CONTENT_DOCUMENT_LINK_FILE.lower()}' == 'yes'
-           ${cdl_row}    ${CDL_File_Name}=    ContentDocumentLink Excel file   ${output_directory}
+           ${cdl_row}    ${CDL_File_Name}=    ContentDocumentLink Excel file        ${output_directory}
            Set Test Variable                  ${CDL_File_Name}
     END
     ${session_alias}=                      Init Salesforce Session
+    ${content_doc_map}=                    Get ContentDocument Metadata Map         ${content_ids}                      ${METADATA_BATCH_SIZE}
+    IF    '${GENERATE_CONTENT_DOCUMENT_LINK_FILE.lower()}' == 'yes'
+           ${cdl_map}=                     Get ContentDocumentLink Metadata Map     ${content_ids}                      ${METADATA_BATCH_SIZE}
+    ELSE
+           ${cdl_map}=                     Create Dictionary
+    END
     ${login_url}=                          Get Salesforce Login Info
     ${download_directory}=                 Init Download Directory
     ${download_directory}=                 Normalize Path                   ${download_directory}
@@ -274,9 +290,9 @@ Download Files Using Content Document IDs
                  Append To List            ${content_ids_NotWorking}        ${content_id}
                  CONTINUE
            END
-           ${content_doc}=                 Get ContentDocument Metadata     ${content_id}
-           IF    '${GENERATE_CONTENT_DOCUMENT_LINK_FILE}' == 'Yes'
-                  ${content_LinkedEntityId}=    Get ContentDocumentLink Metadata    ${content_id}
+           ${content_doc}=                 Get From Dictionary              ${content_doc_map}          ${content_id}   default=${NONE}
+           IF    '${GENERATE_CONTENT_DOCUMENT_LINK_FILE.lower()}' == 'yes'
+                  ${content_LinkedEntityId}=    Get From Dictionary         ${cdl_map}                  ${content_id}   default=${NONE}
            ELSE
                   ${content_LinkedEntityId}=    Create Dictionary
                   ...    ContentDocumentId=${content_id}
@@ -286,11 +302,13 @@ Download Files Using Content Document IDs
                   ...    Id=${EMPTY}
            END
            IF    ${content_doc} == ${NONE}
+                 Log To Console            FAILED: ${content_id} - ContentDocument metadata not found
                  Append To List	           ${content_ids_NotWorking}	    ${content_id}
            ELSE IF    ${content_LinkedEntityId} == ${NONE}
+                 Log To Console    FAILED: ${content_id} - ContentDocumentLink metadata not found
                  Append To List            ${content_ids_NotWorking}        ${content_id}
            ELSE
-                 ${download_status}=       Get ContentDocumentID Details and Launch the URL           ${content_id}       ${content_doc}                              ${content_LinkedEntityId}                    ${record_number}    ${cv_row}       ${cdl_row}
+                 ${download_status}=       Get ContentDocumentID Details and Launch the URL             ${content_id}   ${content_doc}                              ${content_LinkedEntityId}                    ${record_number}    ${cv_row}       ${cdl_row}
                  IF    '${download_status}' == 'PASS'
                         ${cv_row}=         Evaluate                         ${cv_row} + 1
                         ${cdl_row}=        Evaluate                         ${cdl_row} + 1
@@ -302,6 +320,13 @@ Download Files Using Content Document IDs
     ${unique_IDslist_NotWorking}=          Remove Duplicates                ${content_ids_NotWorking}
     Log Failed ContentDocumentIDs to Excel                                  ${unique_IDslist_NotWorking}                ${output_directory}
     Close All Excel Documents
+
+Sanitize Filename
+    [Documentation]                        Sanitizes a Salesforce file title so it can be safely used as a local filename.
+    ...                                    Replaces operating-system-restricted characters with underscores and trims extra whitespace before download storage.
+    [Arguments]                            ${name}
+    ${safe}=                               Evaluate                         re.sub(r'[\\\\/:*?"<>|]', '_', str($name)).strip()    modules=re
+    RETURN    ${safe}
 
 Get ContentDocumentID Details and Launch the URL
     [Documentation]                        Retrieves full metadata for a ContentDocument (title, size, version, etc.) and its linking info (record ID, share type, visibility), then builds the download URL and starts the download/validation process.
@@ -318,10 +343,11 @@ Get ContentDocumentID Details and Launch the URL
     Set Test Variable                      ${ShareType}                     ${content_LinkedEntityId}[ShareType]
     Set Test Variable                      ${Visibility}                    ${content_LinkedEntityId}[Visibility]
     Set Test Variable                      ${ContentDocumentLink_id}        ${content_LinkedEntityId}[Id]
-    ${file_name}=                          Set Variable                     ${file_title}
+    ${safe_file_title}=                    Sanitize Filename                ${file_title}
+    ${file_name}=                          Set Variable                     ${safe_file_title}
     ${has_extension}=                      Evaluate                         str($file_extension).strip() not in ['', 'None', 'none', 'NULL', 'null']
     IF    ${has_extension}
-          ${file_name}=                    Catenate    SEPARATOR=.          ${file_title}    ${file_extension}
+          ${file_name}=                    Catenate    SEPARATOR=.          ${safe_file_title}    ${file_extension}
     END
     Set Test Variable                      ${file_name}
     ${download_url}=                       Build ContentDocument Download URL                                           ${org_domain}                                ${content_doc_id}
@@ -342,32 +368,32 @@ Download And Validate Content File
     ${UrlResponse}=                        Run Keyword And Ignore Error     Go To                                       ${download_url}
     ${is_url_success}=                     Set Variable                     ${UrlResponse[0]}
     IF    '${is_url_success}' == 'FAIL'
-           Remove Content Folder And Temp Files                             ${content_id}
-           RETURN    FAIL
+           ${status}=                      Handle Download Failure          ${content_id}                               Browser navigation to download URL failed
+           RETURN    ${status}
     END
     ${IsFileAppeared}=                     Run Keyword And Return Status    Wait Until Download File Appears            ${DOWNLOAD_APPEAR_TIMEOUT}
     IF    '${IsFileAppeared}' == 'False'
-           Remove Content Folder And Temp Files                             ${content_id}
-           RETURN    FAIL
+           ${status}=                      Handle Download Failure          ${content_id}                               Download file did not appear within timeout
+           RETURN    ${status}
     END
     ${download_dir_path}                   Normalize Path                   ${download_directory}
     Directory Should Exist                                                  ${download_dir_path}
     ${files_in_download_dir}=              List Files In Directory          ${download_directory}
     ${RecentFile_count}                    Get Length                       ${files_in_download_dir}
     IF    '${RecentFile_count}' == '0'
-           Remove Content Folder And Temp Files                             ${content_id}
-           RETURN    FAIL
+           ${status}=                      Handle Download Failure          ${content_id}                               Download directory is empty after download trigger
+           RETURN    ${status}
     END
     ${IsDownloadProper}=                   Run Keyword And Return Status    Wait Until File Download Completes
     IF    '${IsDownloadProper}' == 'False'
-           Remove Content Folder And Temp Files                             ${content_id}
-           RETURN    FAIL
+           ${status}=                      Handle Download Failure          ${content_id}                               Download did not complete within timeout
+           RETURN    ${status}
     END
     ${RecentFile}=                         List Files In Directory          ${download_directory}
     ${RecentFile_count}                    Get Length                       ${RecentFile}
     IF    ${RecentFile_count} == 0
-          Remove Content Folder And Temp Files    ${content_id}
-          RETURN    FAIL
+          ${status}=                       Handle Download Failure          ${content_id}                               No downloaded file found after completion wait
+          RETURN    ${status}
     END
     IF    ${RecentFile_count} > 1
           Log    WARNING: Multiple files detected in download directory: ${RecentFile}
@@ -380,8 +406,8 @@ Download And Validate Content File
           END
           ${matching_count}=               Get Length                       ${matching_size_files}
           IF    ${matching_count} == 0
-                Remove Content Folder And Temp Files                        ${content_id}
-                RETURN    FAIL
+                ${status}=                 Handle Download Failure          ${content_id}                               No downloaded file matched expected file size
+                RETURN    ${status}
           END
           ${latest_filename}=              Evaluate
           ...    max(${matching_size_files}, key=lambda f: os.path.getmtime(os.path.join(r'''${download_directory}''', f)))
@@ -393,8 +419,8 @@ Download And Validate Content File
     END
     ${downloaded_size}=                    Get File Size                    ${download_directory}${/}${latest_filename}
     IF    ${downloaded_size} != ${expected_file_size}
-          Remove Content Folder And Temp Files                              ${content_id}
-          RETURN    FAIL
+          ${status}=    Handle Download Failure    ${content_id}            Downloaded file size does not match expected ContentSize
+          RETURN    ${status}
     END
     ${IsNameMatch}=                        Run Keyword And Return Status    Should Start With                           ${latest_filename}                           ${file_title}
     IF    '${IsNameMatch}' == 'False'
@@ -404,6 +430,8 @@ Download And Validate Content File
     RETURN    ${validation_status}
 
 Download Directory Should Have File
+    [Documentation]                        Verifies that the active download directory contains at least one completed, non-temporary file.
+    ...                                    Temporary browser download files such as `.crdownload`, `.tmp`, `.part`, and unconfirmed downloads are ignored.
     ${files}=                              List Files In Directory          ${download_directory}
     ${valid_files}=                        Create List
     FOR    ${file}    IN    @{files}
@@ -416,6 +444,8 @@ Download Directory Should Have File
     Should Be True                         ${count} > 0
 
 Wait Until Download File Appears
+    [Documentation]                        Waits until a non-temporary file appears in the download directory.
+    ...                                    This confirms that the browser has started producing a real downloaded file before completion validation begins.
     [Arguments]                            ${timeout}
     Wait Until Keyword Succeeds            ${timeout}    1s                 Download Directory Should Have File
 
@@ -442,13 +472,19 @@ Check File is Downloaded
     ${is_file_ready}=                      Run Keyword And Return Status    Should Not Contain Any                      ${latest_filename}                           @{TEMP_FILE_MARKERS}
     Set Test Variable                      ${IsFileNameProper}              ${is_file_ready}
 
-Remove Content Folder And Temp Files
+Handle Download Failure
     [Documentation]                        Deletes the temporary ContentDocument-specific folder and removes any leftover temporary or unnecessary files from the download directory.
     ...                                    This keeps the workspace clean and prevents partial/corrupted files from accumulating.
-    [Arguments]                            ${content_id}
-    Append To List	                       ${content_ids_NotWorking}	    ${content_id}
-    Run Keyword And Ignore Error           Remove Directory                 ${content_id_folder}
+    [Arguments]                            ${content_id}                    ${reason}=${EMPTY}
+    Append To List                         ${content_ids_NotWorking}        ${content_id}
+    Run Keyword And Ignore Error           Remove Directory                 ${content_id_folder}                        recursive=True
     Cleanup the download directory
+    IF    '${reason}' != '${EMPTY}'
+           Log To Console                  FAILED: ${content_id} - ${reason}
+    ELSE
+           Log To Console                  FAILED: ${content_id}
+    END
+    RETURN    FAIL
 
 Validate And Move Downloaded File
     [Documentation]                        Checks if the downloaded file has the expected name and size stability.
@@ -459,9 +495,8 @@ Validate And Move Downloaded File
     ${dst}=                                Set Variable                     ${content_id_folder}${/}${file_name}
     ${is_source_file_exists}=              Run Keyword And Return Status    File Should Exist                           ${src}
     IF    '${is_source_file_exists}' == 'False'
-           Append To List                  ${content_ids_NotWorking}        ${content_id}
-           Cleanup the download directory
-           RETURN    FAIL
+           ${status}=    Handle Download Failure    ${content_id}    Downloaded source file missing before move
+           RETURN    ${status}
     END
     ${previous_file_size}=                 Set Variable                     -1
     FOR    ${i}    IN RANGE    ${timeout}
@@ -472,13 +507,13 @@ Validate And Move Downloaded File
     END
     ${is_size_stable}=                     Evaluate                         ${current_file_size} == ${previous_file_size}
     IF    '${is_size_stable}' == 'False'
-          Append To List                   ${content_ids_NotWorking}        ${content_id}
-          RETURN    FAIL
+           ${status}=                      Handle Download Failure          ${content_id}                               Downloaded file size did not stabilize
+           RETURN    ${status}
     END
     ${is_source_file_exists}=              Run Keyword And Return Status    File Should Exist                           ${src}
     IF    '${is_source_file_exists}' == 'False'
-           Append To List                  ${content_ids_NotWorking}        ${content_id}
-           RETURN    FAIL
+           ${status}=                      Handle Download Failure          ${content_id}                               Downloaded source file disappeared before move
+           RETURN    ${status}
     END
     Move File                              ${src}         ${dst}
     ${target_file_exists}=                 Run Keyword And Return Status                                                File Should Exist                            ${dst}
@@ -493,16 +528,15 @@ Validate And Move Downloaded File
            IF    '${GENERATE_CONTENT_DOCUMENT_LINK_FILE.lower()}' == 'yes'
                   Write ContentDocumentLink Row          ${cdl_row}
            END
-           ${source_still_exists}=                Run Keyword And Return Status    File Should Exist                           ${src}
-           Run Keyword If    '${source_still_exists}' == 'True'                    Run Keyword And Ignore Error                Remove File                                  ${src}
+           ${source_still_exists}=         Run Keyword And Return Status           File Should Exist                    ${src}
+           Run Keyword If    '${source_still_exists}' == 'True'                    Run Keyword And Ignore Error         Remove File                                  ${src}
            Cleanup the download directory
            RETURN    PASS
     ELSE
-           Append To List                  ${content_ids_NotWorking}        ${content_id}
-           ${source_still_exists}=                Run Keyword And Return Status    File Should Exist                           ${src}
-           Run Keyword If    '${source_still_exists}' == 'True'                    Run Keyword And Ignore Error                Remove File                                  ${src}
-           Cleanup the download directory
-           RETURN    FAIL
+           ${source_still_exists}=         Run Keyword And Return Status           File Should Exist                    ${src}
+           Run Keyword If    '${source_still_exists}' == 'True'                    Run Keyword And Ignore Error         Remove File                                  ${src}
+           ${status}=                      Handle Download Failure                 ${content_id}                        Moved file missing or final file size validation failed
+           RETURN    ${status}
     END
 
 Cleanup the download directory
@@ -568,6 +602,83 @@ Write ContentDocumentLink Row
     Save Excel Document                    filename=${CDL_File_Name}
     Close Current Excel Document
 
+Get ContentDocument Metadata Map
+    [Documentation]                        Fetches ContentDocument metadata for valid Salesforce file IDs in configurable SOQL batches.
+    ...                                    Returns a dictionary keyed by ContentDocument Id to avoid one-query-per-file processing and improve API efficiency.
+    [Arguments]                            ${content_ids}                   ${batch_size}=200
+    ${content_doc_map}=                    Create Dictionary
+    @{valid_ids}=                          Create List
+    FOR    ${content_id}    IN    @{content_ids}
+           ${content_id}=                  Strip String                     ${content_id}
+           ${is_valid}=                    Evaluate                         str($content_id).startswith('069') and len(str($content_id)) in (15,18)    modules=builtins
+           IF    ${is_valid}
+                 Append To List            ${valid_ids}                     ${content_id}
+           END
+    END
+    @{id_batches}=                         Split List Into Batches          ${valid_ids}    ${batch_size}
+    FOR    ${batch}    IN    @{id_batches}
+           ${quoted_ids}=                  Quote Ids For SOQL IN Clause     ${batch}
+           ${soql}=                        Set Variable                     SELECT Id, Description, Title, FileExtension, LatestPublishedVersionId, ContentSize FROM ContentDocument WHERE Id IN (${quoted_ids})
+           ${records}=                     Run SOQL                         ${soql}         ${session_alias}
+           FOR    ${record}    IN    @{records}
+                  ${doc_id}=               Get From Dictionary              ${record}       Id
+                  Set To Dictionary        ${content_doc_map}               ${doc_id}=${record}
+           END
+    END
+    RETURN    ${content_doc_map}
+
+Get ContentDocumentLink Metadata Map
+    [Documentation]                        Fetches ContentDocumentLink metadata for valid Salesforce file IDs in configurable SOQL batches.
+    ...                                    Returns a dictionary keyed by ContentDocumentId for later Data Loader file generation.
+    ...                                    Note: if multiple links exist for the same ContentDocumentId, the implementation should preserve all links instead of overwriting earlier records.
+    [Arguments]                            ${content_ids}                   ${batch_size}=200
+    ${cdl_map}=                            Create Dictionary
+    @{valid_ids}=                          Create List
+    FOR    ${content_id}    IN    @{content_ids}
+           ${content_id}=                  Strip String                     ${content_id}
+           ${is_valid}=                    Evaluate                         str($content_id).startswith('069') and len(str($content_id)) in (15,18)    modules=builtins
+           IF    ${is_valid}
+                 Append To List            ${valid_ids}                     ${content_id}
+           END
+    END
+    @{id_batches}=                         Split List Into Batches          ${valid_ids}    ${batch_size}
+
+    FOR    ${batch}    IN    @{id_batches}
+           ${quoted_ids}=                  Quote Ids For SOQL IN Clause     ${batch}
+           ${soql}=                        Set Variable                     SELECT ContentDocumentId, Id, ShareType, Visibility, LinkedEntityId FROM ContentDocumentLink WHERE ContentDocumentId IN (${quoted_ids})
+           ${records}=                     Run SOQL                         ${soql}         ${session_alias}
+           FOR    ${record}    IN    @{records}
+                  ${doc_id}=               Get From Dictionary              ${record}       ContentDocumentId
+                  Set To Dictionary        ${cdl_map}                       ${doc_id}=${record}
+           END
+    END
+    RETURN    ${cdl_map}
+
+Split List Into Batches
+    [Documentation]                        Splits a list into smaller fixed-size batches.
+    ...                                    Used to keep SOQL IN-clause queries controlled, configurable, and safe for large input files.
+    [Arguments]                            ${items}                         ${batch_size}
+    @{batches}=                            Create List
+    ${total}=                              Get Length                       ${items}
+    FOR    ${start}    IN RANGE    0    ${total}    ${batch_size}
+           ${end}=                         Evaluate                         min(${start} + ${batch_size}, ${total})
+           ${batch}=                       Get Slice From List              ${items}    ${start}    ${end}
+           Append To List                  ${batches}                       ${batch}
+    END
+    RETURN    ${batches}
+
+Quote Ids For SOQL IN Clause
+    [Documentation]                        Converts Salesforce IDs into single-quoted values suitable for a SOQL IN clause.
+    ...                                    Example output format: '069AAA','069BBB','069CCC'.
+    [Arguments]                            ${ids}
+    @{quoted_ids}=                         Create List
+    FOR    ${id}    IN    @{ids}
+           ${quoted_id}=                   Catenate                         SEPARATOR=    '    ${id}    '
+           Append To List                  ${quoted_ids}                    ${quoted_id}
+    END
+    ${joined_ids}=                         Catenate                         SEPARATOR=,    @{quoted_ids}
+    RETURN    ${joined_ids}
+
 Check Prerequisites
     [Documentation]                        Ensure Salesforce CLI is installed and org alias is authenticated.
     [Arguments]                            ${ORG_ALIAS}
@@ -620,6 +731,8 @@ Load Org Context
     Log To Console                         Connected to ${ORG_ALIAS} (API v${API_VERSION})
 
 Safe Parse Sf Json
+    [Documentation]                        Safely extracts and parses a JSON object or array from Salesforce CLI output.
+    ...                                    This protects against CLI banners, warnings, or extra text before the JSON payload and fails clearly when no JSON block is found.
     [Arguments]                            ${raw_output}
     ${obj_start}=                          Evaluate                         $raw_output.find('{')
     ${arr_start}=                          Evaluate                         $raw_output.find('[')
@@ -652,5 +765,7 @@ Cleanup Runtime Artifacts
     END
 
 Cleanup Suite
+    [Documentation]                        Performs final suite-level cleanup after execution.
+    ...                                    Closes all browser sessions and removes temporary runtime artifacts generated during Salesforce file download processing.
     Close All Browsers
     Cleanup Runtime Artifacts
