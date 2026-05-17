@@ -4,13 +4,13 @@ Resource                                   ../resources/keywords.robot
 Suite Teardown                             Cleanup Suite
 
 *** Variables ***
-${input_excel_path1}                       ${input_folder}${/}Inputfile_1.xlsx
-${input_excel_path2}                       ${input_folder}${/}Inputfile_2.xlsx
-${sheet_name}                              Input
+${INPUT_EXCEL_PATH_1}                      ${INPUT_FOLDER}${/}Inputfile_1.xlsx
+${INPUT_EXCEL_PATH_2}                      ${INPUT_FOLDER}${/}Inputfile_2.xlsx
+${SHEET_NAME}                              Input
 # Generate Data Loader-ready Excel files.
 # Accepted values: Yes / No
-${GENERATE_CONTENT_VERSION_FILE}           Yes
-${GENERATE_CONTENT_DOCUMENT_LINK_FILE}     Yes
+${GENERATE_CONTENT_VERSION_FILE}           No
+${GENERATE_CONTENT_DOCUMENT_LINK_FILE}     No
 
 *** Test Cases ***
 Download_Batch_1
