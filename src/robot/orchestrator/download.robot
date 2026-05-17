@@ -4,10 +4,12 @@ Resource                                   ../resources/keywords.robot
 Suite Teardown                             Cleanup Suite
 
 *** Variables ***
+# Input Excel files and worksheet used for ContentDocumentId processing.
 ${INPUT_EXCEL_PATH_1}                      ${INPUT_FOLDER}${/}Inputfile_1.xlsx
 ${INPUT_EXCEL_PATH_2}                      ${INPUT_FOLDER}${/}Inputfile_2.xlsx
 ${SHEET_NAME}                              Input
-# Generate Data Loader-ready Excel files.
+
+# Controls optional generation of Data Loader-ready ContentVersion and ContentDocumentLink Excel files.
 # Accepted values: Yes / No
 ${GENERATE_CONTENT_VERSION_FILE}           No
 ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}     No
