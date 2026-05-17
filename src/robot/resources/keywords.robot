@@ -18,10 +18,10 @@ Library                                    Process
 *** Variables ***
 @{TEMP_FILE_MARKERS}                       .crdownload    .tmp    .part    unconfirmed    downloading
 @{TEMP_FILES}                              CDL_DOC    CV_DOC    PIPE    smoke_doc    log.html    output.xml    report.html    org_info.json
-${org_info_file}                           org_info.json
-${input_folder}                            ${EXECDIR}${/}input
-${base_download_folder}                    ${EXECDIR}${/}downloads
-${output_folder}                           ${EXECDIR}${/}artifacts
+${ORG_INFO_FILE}                           org_info.json
+${INPUT_FOLDER}                            ${EXECDIR}${/}input
+${BASE_DOWNLOAD_FOLDER}                    ${EXECDIR}${/}downloads
+${OUTPUT_FOLDER}                           ${EXECDIR}${/}artifacts
 
 ${DOWNLOAD_APPEAR_TIMEOUT}                 60s
 ${DOWNLOAD_COMPLETE_TIMEOUT}               60s
@@ -35,7 +35,7 @@ Init Salesforce Session
     ${uuid}=                               Evaluate                         __import__('uuid').uuid4().hex
     ${session_alias}=                      Set Variable                     salesforce_${uuid}
     Set Test Variable                      ${session_alias}
-    ${json_text}=                          OperatingSystem.Get File         ${org_info_file}                            encoding=UTF-8-sig
+    ${json_text}=                          OperatingSystem.Get File         ${ORG_INFO_FILE}                            encoding=UTF-8-sig
     ${org_dict}=                           Evaluate                         json.loads(r"""${json_text}""")             modules=json
     ${token}=                              Set Variable                     ${org_dict['result']['accessToken']}
     ${instance}=                           Set Variable                     ${org_dict['result']['instanceUrl']}
@@ -51,7 +51,7 @@ Init Salesforce Session
 Get Salesforce Login Info
     [Documentation]                        Reads the Salesforce authentication details from the generated `org_info.json` file (created by Salesforce CLI), constructs the frontdoor.jsp login URL for browser-based authentication, extracts the organization domain, and stores it for use in Shepherd download URLs.
     ...                                    This keyword prepares the authenticated session for headless browser downloads without requiring username/password.
-    ${json_text}=                          OperatingSystem.Get File         ${org_info_file}                            encoding=UTF-8-sig
+    ${json_text}=                          OperatingSystem.Get File         ${ORG_INFO_FILE}                            encoding=UTF-8-sig
     ${org_dict}=                           Evaluate                         json.loads(r"""${json_text}""")             modules=json
     ${instance_url}=                       Set Variable                     ${org_dict['result']['instanceUrl']}
     ${access_token}=                       Set Variable                     ${org_dict['result']['accessToken']}
@@ -67,7 +67,7 @@ Init Download Directory
     ...                                    and a random UUID to guarantee no collisions during parallel runs with Pabot.
     ${uuid}=                               Evaluate                         __import__('uuid').uuid4().hex
     ${safe_test_name}=                     Replace String                   ${TEST NAME}    ${SPACE}    _
-    ${download_directory}=                 Set Variable                     ${base_download_folder}/${safe_test_name}_${uuid}
+    ${download_directory}=                 Set Variable                     ${BASE_DOWNLOAD_FOLDER}/${safe_test_name}_${uuid}
     Create Directory                       ${download_directory}
     Directory Should Exist                 ${download_directory}
     RETURN                                 ${download_directory}
@@ -187,7 +187,7 @@ Init Output Directory
     ...                                    for that specific run, ensuring traceability and no collisions in parallel execution.
     ${uuid}=                               Evaluate                         __import__('uuid').uuid4().hex
     ${safe_test_name}=                     Replace String                   ${TEST NAME}        ${SPACE}    _
-    ${output_directory}=                   Set Variable                       ${output_folder}/${safe_test_name}_${uuid}
+    ${output_directory}=                   Set Variable                       ${OUTPUT_FOLDER}/${safe_test_name}_${uuid}
     Create Directory                       ${output_directory}
     Directory Should Exist                 ${output_directory}
     RETURN                                 ${output_directory}
@@ -275,7 +275,16 @@ Download Files Using Content Document IDs
                  CONTINUE
            END
            ${content_doc}=                 Get ContentDocument Metadata     ${content_id}
-           ${content_LinkedEntityId}=      Get ContentDocumentLink Metadata     ${content_id}
+           IF    '${GENERATE_CONTENT_DOCUMENT_LINK_FILE}' == 'Yes'
+                  ${content_LinkedEntityId}=    Get ContentDocumentLink Metadata    ${content_id}
+           ELSE
+                  ${content_LinkedEntityId}=    Create Dictionary
+                  ...    ContentDocumentId=${content_id}
+                  ...    LinkedEntityId=${EMPTY}
+                  ...    ShareType=${EMPTY}
+                  ...    Visibility=${EMPTY}
+                  ...    Id=${EMPTY}
+           END
            IF    ${content_doc} == ${NONE}
                  Append To List	           ${content_ids_NotWorking}	    ${content_id}
            ELSE IF    ${content_LinkedEntityId} == ${NONE}
