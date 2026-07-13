@@ -18,7 +18,7 @@ Library                                    Process
 *** Variables ***
 
 # Temporary browser download markers and runtime-generated artifacts used during cleanup.
-@{TEMP_FILE_MARKERS}                       .crdownload    .tmp    .part    unconfirmed    downloading
+@{TEMP_FILE_SUFFIXES}                      .crdownload    .tmp    .part
 @{TEMP_FILES}                              CDL_DOC    CV_DOC    PIPE    smoke_doc    log.html    output.xml    report.html    org_info.json
 
 # Salesforce CLI-generated organization authentication metadata file.
@@ -47,7 +47,7 @@ Init Salesforce Session
     ${session_alias}=                      Set Variable                     salesforce_${uuid}
     Set Test Variable                      ${session_alias}
     ${json_text}=                          OperatingSystem.Get File         ${ORG_INFO_FILE}                            encoding=UTF-8-sig
-    ${org_dict}=                           Evaluate                         json.loads(r"""${json_text}""")             modules=json
+    ${org_dict}=                           Evaluate                         json.loads($json_text)                      modules=json
     ${token}=                              Set Variable                     ${org_dict['result']['accessToken']}
     ${instance}=                           Set Variable                     ${org_dict['result']['instanceUrl']}
     ${apiVersion}=                         Set Variable                     ${org_dict['result']['apiVersion']}
@@ -63,7 +63,7 @@ Get Salesforce Login Info
     [Documentation]                        Reads the Salesforce authentication details from the generated `org_info.json` file (created by Salesforce CLI), constructs the frontdoor.jsp login URL for browser-based authentication, extracts the organization domain, and stores it for use in Shepherd download URLs.
     ...                                    This keyword prepares the authenticated session for headless browser downloads without requiring username/password.
     ${json_text}=                          OperatingSystem.Get File         ${ORG_INFO_FILE}                            encoding=UTF-8-sig
-    ${org_dict}=                           Evaluate                         json.loads(r"""${json_text}""")             modules=json
+    ${org_dict}=                           Evaluate                         json.loads($json_text)                      modules=json
     ${instance_url}=                       Set Variable                     ${org_dict['result']['instanceUrl']}
     ${access_token}=                       Set Variable                     ${org_dict['result']['accessToken']}
     ${login_url}=                          Set Variable                     ${instance_url}/secur/frontdoor.jsp?sid=${access_token}
@@ -92,7 +92,7 @@ Configure Browser
 Safe Salesforce GET
     [Documentation]                        Safely executes a GET request to the Salesforce REST API using an authenticated session. It handles errors gracefully (e.g., network issues, invalid responses)
     ...                                    and returns either the response object or None, preventing the entire tool from crashing on transient API failures.
-    [Arguments]                            ${session_alias}                 ${url}                                      ${params}=${None}
+    [Arguments]                            ${session_alias}                 ${url}                                      ${params}=${NONE}
     ${status}    ${resp}=                  Run Keyword And Ignore Error     GET On Session                              ${session_alias}                             ${url}        params=${params}
     IF    '${status}' == 'FAIL'
            Log                             GET failed for ${url}
@@ -101,7 +101,6 @@ Safe Salesforce GET
     ${status_code}=                        Set Variable       ${resp.status_code}
     IF    ${status_code} != 200
           Log                              HTTP ${status_code} for ${url}
-          Log                              Response body: ${resp.text}
           RETURN        ${NONE}
     END
     RETURN    ${resp}
@@ -132,7 +131,7 @@ Get ContentDocument Metadata
     IF    ${records_count} > 0
         RETURN    ${records}[0]
     END
-    RETURN    None
+    RETURN    ${NONE}
 
 Get ContentDocumentLink Metadata
     [Documentation]                        Queries Salesforce via SOQL to retrieve linking information for a given ContentDocument ID — specifically, which record(s) the file is attached to (LinkedEntityId), along with sharing details (ShareType, Visibility).
@@ -144,7 +143,7 @@ Get ContentDocumentLink Metadata
     IF    ${records_count} > 0
           RETURN    ${records}[0]
     END
-    RETURN    None
+    RETURN    ${NONE}
 
 Build ContentDocument Download URL
     [Documentation]                        Constructs the direct, secure download URL for a Salesforce file using the organization's domain and the ContentDocument ID.
@@ -190,6 +189,7 @@ Read Content IDs From Excel Sheet
            Continue For Loop If    '${id_value}' == '${EMPTY}' or '${id_value}' == '${NONE}'
            Append To List                  ${content_ids}                   ${id_value}
     END
+    ${content_ids}=                        Remove Duplicates                ${content_ids}
     RETURN                                 ${content_ids}
 
 Init Output Directory
@@ -344,6 +344,7 @@ Get ContentDocumentID Details and Launch the URL
     Set Test Variable                      ${Visibility}                    ${content_LinkedEntityId}[Visibility]
     Set Test Variable                      ${ContentDocumentLink_id}        ${content_LinkedEntityId}[Id]
     ${safe_file_title}=                    Sanitize Filename                ${file_title}
+    Set Test Variable                      ${safe_file_title}
     ${file_name}=                          Set Variable                     ${safe_file_title}
     ${has_extension}=                      Evaluate                         str($file_extension).strip() not in ['', 'None', 'none', 'NULL', 'null']
     IF    ${has_extension}
@@ -372,7 +373,7 @@ Download And Validate Content File
            RETURN    ${status}
     END
     ${IsFileAppeared}=                     Run Keyword And Return Status    Wait Until Download File Appears            ${DOWNLOAD_APPEAR_TIMEOUT}
-    IF    '${IsFileAppeared}' == 'False'
+    IF    not ${IsFileAppeared}
            ${status}=                      Handle Download Failure          ${content_id}                               Download file did not appear within timeout
            RETURN    ${status}
     END
@@ -385,7 +386,7 @@ Download And Validate Content File
            RETURN    ${status}
     END
     ${IsDownloadProper}=                   Run Keyword And Return Status    Wait Until File Download Completes
-    IF    '${IsDownloadProper}' == 'False'
+    IF    not ${IsDownloadProper}
            ${status}=                      Handle Download Failure          ${content_id}                               Download did not complete within timeout
            RETURN    ${status}
     END
@@ -422,20 +423,20 @@ Download And Validate Content File
           ${status}=    Handle Download Failure    ${content_id}            Downloaded file size does not match expected ContentSize
           RETURN    ${status}
     END
-    ${IsNameMatch}=                        Run Keyword And Return Status    Should Start With                           ${latest_filename}                           ${file_title}
+    ${IsNameMatch}=                        Run Keyword And Return Status    Should Start With                           ${latest_filename}                           ${safe_file_title}
     IF    '${IsNameMatch}' == 'False'
-           Log    WARNING: Downloaded filename does not exactly match expected title. Expected: ${file_title}, Actual: ${latest_filename}, Expected size: ${expected_file_size}, Actual size: ${downloaded_size}
+           Log    WARNING: Downloaded filename does not match the sanitized expected title. Expected: ${safe_file_title}, Actual: ${latest_filename}, Expected size: ${expected_file_size}, Actual size: ${downloaded_size}
     END
     ${validation_status}=    Validate And Move Downloaded File              ${latest_filename}    ${content_id}         ${FILE_STABILITY_TIMEOUT}         ${cv_row}    ${cdl_row}
     RETURN    ${validation_status}
 
-Download Directory Should Have File
+Download Directory Should Have Completed File
     [Documentation]                        Verifies that the active download directory contains at least one completed, non-temporary file.
     ...                                    Temporary browser download files such as `.crdownload`, `.tmp`, `.part`, and unconfirmed downloads are ignored.
     ${files}=                              List Files In Directory          ${download_directory}
     ${valid_files}=                        Create List
     FOR    ${file}    IN    @{files}
-           ${is_temp}=                     Run Keyword And Return Status    Should Contain Any      ${file}             @{TEMP_FILE_MARKERS}
+           ${is_temp}=                     Run Keyword And Return Status    Should Contain Any      ${file}             @{TEMP_FILE_SUFFIXES}
            IF    not ${is_temp}
                  Append To List            ${valid_files}                   ${file}
            END
@@ -447,30 +448,57 @@ Wait Until Download File Appears
     [Documentation]                        Waits until a non-temporary file appears in the download directory.
     ...                                    This confirms that the browser has started producing a real downloaded file before completion validation begins.
     [Arguments]                            ${timeout}
-    Wait Until Keyword Succeeds            ${timeout}    1s                 Download Directory Should Have File
+    Wait Until Keyword Succeeds            ${timeout}    1s                 Download Directory Should Have Completed File
 
 Wait Until File Download Completes
     [Documentation]    Polls the download directory until a fully downloaded file is detected. Verifies that the latest file does not contain temporary download markers.
     ...                Exits when a stable file is found or when the 60-second timeout is reached.
     Set Test Variable                       ${IsFileNameProper}             ${FALSE}
-    WHILE    not ${IsFileNameProper}    limit=${DOWNLOAD_COMPLETE_TIMEOUT}
+    WHILE    not ${IsFileNameProper}
+    ...    limit=${DOWNLOAD_COMPLETE_TIMEOUT}
+    ...    on_limit=FAIL
+    ...    on_limit_message=Download did not complete within ${DOWNLOAD_COMPLETE_TIMEOUT}
         ${RecentFile}=                      List Files In Directory         ${download_directory}
         ${file_count}=                      Get Length                      ${RecentFile}
         IF    ${file_count} == 0
-            Run Keyword And Ignore Error    Remove Directory                ${content_id_folder}
-            Sleep    0.5s
-            CONTINUE
+              Sleep    0.5s
+              CONTINUE
         END
         Check File is Downloaded            ${RecentFile}
+        IF    not ${IsFileNameProper}
+            Sleep    0.5s
+        END
     END
 
-Check File is Downloaded
+Check File Is Downloaded
     [Documentation]                        Verifies whether the most recently downloaded file has completed fully (no temporary/partially-downloaded extensions like .crdownload, .tmp, .part, or "unconfirmed downloading").
     ...                                    This is a helper step to confirm the file is ready before moving it or considering the download successful.
-    [Arguments]                            ${RecentFile}
-    Set Test Variable                      ${latest_filename}               ${RecentFile}[0]
-    ${is_file_ready}=                      Run Keyword And Return Status    Should Not Contain Any                      ${latest_filename}                           @{TEMP_FILE_MARKERS}
-    Set Test Variable                      ${IsFileNameProper}              ${is_file_ready}
+    [Arguments]                            ${recent_files}
+    Set Test Variable                      ${IsFileNameProper}              ${FALSE}
+    FOR    ${file}    IN    @{recent_files}
+        ${lower_file}=    Convert To Lower Case    ${file}
+
+        ${is_crdownload}=    Run Keyword And Return Status
+        ...    Should End With
+        ...    ${lower_file}
+        ...    .crdownload
+
+        ${is_tmp}=    Run Keyword And Return Status
+        ...    Should End With
+        ...    ${lower_file}
+        ...    .tmp
+
+        ${is_part}=    Run Keyword And Return Status
+        ...    Should End With
+        ...    ${lower_file}
+        ...    .part
+
+        IF    not ${is_crdownload} and not ${is_tmp} and not ${is_part}
+            Set Test Variable    ${latest_filename}     ${file}
+            Set Test Variable    ${IsFileNameProper}    ${TRUE}
+            RETURN
+        END
+    END
 
 Handle Download Failure
     [Documentation]                        Deletes the temporary ContentDocument-specific folder and removes any leftover temporary or unnecessary files from the download directory.

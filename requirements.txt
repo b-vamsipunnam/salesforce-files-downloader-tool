@@ -1,20 +1,19 @@
 # Core Robot Framework and extensions
-robotframework==7.0.1
-robotframework-seleniumlibrary==6.8.0
+robotframework==7.4.2
+robotframework-seleniumlibrary==6.9.0
 robotframework-pabot==2.18.0
 robotframework-requests==0.9.7
-robotframework-pythonlibcore==4.4.1
+robotframework-pythonlibcore==4.6.0
 
 # Selenium and browser automation
-selenium==4.39.0
-webdriver-manager==4.0.2
+selenium==4.46.0
 
 # Excel handling
 openpyxl==3.1.5
 
 # Salesforce-specific libraries
-simple-salesforce==1.11.4      # Optional – keep if you use direct API calls
-salesforce-bulk==2.2.0         # Optional – keep if you use bulk API
+simple-salesforce==1.12.9
+salesforce-bulk==2.2.0
 
 # HTTP and utility libraries
 requests==2.32.3
