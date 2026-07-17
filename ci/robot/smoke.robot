@@ -1,21 +1,25 @@
 *** Settings ***
 Documentation       CI smoke test that validates library imports, Selenium startup, and the Excel wrapper
+
 Library             SeleniumLibrary
 Library             ../../src/robot/libraries/ExcelLibrary.py
 
+
 *** Variables ***
-${URL}              https://example.com
+${URL}      https://example.com
+
 
 *** Test Cases ***
 CI Smoke – Framework Boots
-    [Teardown]    Close All Browsers
     Open Browser For Smoke
     Title Should Be    Example Domain
+    [Teardown]    Close All Browsers
 
 CI Smoke – Excel Wrapper Works
-    [Teardown]    Close All Excel Documents
     Create Excel Document    smoke_doc
     Write Excel Cell    1    1    Hello CI
+    [Teardown]    Close All Excel Documents
+
 
 *** Keywords ***
 Open Browser For Smoke
