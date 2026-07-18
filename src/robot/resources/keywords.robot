@@ -21,14 +21,14 @@ Library             Process
 # Temporary browser download markers and runtime-generated artifacts used during cleanup.
 @{TEMP_FILE_SUFFIXES}           .crdownload    .tmp    .part
 @{TEMP_FILES}
-...    CDL_DOC
-...    CV_DOC
-...    PIPE
-...    smoke_doc
-...    log.html
-...    output.xml
-...    report.html
-...    org_info.json
+...                             CDL_DOC
+...                             CV_DOC
+...                             PIPE
+...                             smoke_doc
+...                             log.html
+...                             output.xml
+...                             report.html
+...                             org_info.json
 
 # Salesforce CLI-generated organization authentication metadata file.
 ${ORG_INFO_FILE}                org_info.json
@@ -41,7 +41,7 @@ ${OUTPUT_FOLDER}                ${EXECDIR}${/}artifacts
 # Download timing controls for file appearance, completion, and stability validation.
 ${DOWNLOAD_APPEAR_TIMEOUT}      60s
 ${DOWNLOAD_COMPLETE_TIMEOUT}    60s
-${FILE_STABILITY_TIMEOUT}       60
+${FILE_STABILITY_MAX_CHECKS}    60
 ${FILE_STABILITY_INTERVAL}      0.25s
 
 # Number of ContentDocument IDs processed per SOQL metadata batch query.
@@ -66,7 +66,11 @@ Init Salesforce Session
     ${headers}=    Create Dictionary
     ...    Authorization=Bearer ${token}
     ...    Content-Type=application/json
-    Create Session    ${session_alias}    ${instance}    headers=${headers}
+    Create Session
+    ...    ${session_alias}
+    ...    ${instance}
+    ...    headers=${headers}
+    ...    verify=${TRUE}
     RETURN    ${session_alias}
 
 Get Salesforce Login Info
@@ -77,7 +81,7 @@ Get Salesforce Login Info
     ${org_dict}=    Evaluate    json.loads($json_text)    modules=json
     ${instance_url}=    Set Variable    ${org_dict['result']['instanceUrl']}
     ${access_token}=    Set Variable    ${org_dict['result']['accessToken']}
-    ${parsed}=    Evaluate    urllib.parse.urlparse("${instance_url}")    modules=urllib.parse
+    ${parsed}=    Evaluate    urllib.parse.urlparse($instance_url)    modules=urllib.parse
     ${netloc}=    Set Variable    ${parsed.netloc}
     ${org_domain}=    Replace String    ${netloc}    .my.salesforce.com    ${EMPTY}
     ${login_url}=    Catenate    SEPARATOR=    ${instance_url}/secur/frontdoor.jsp?sid=${access_token}
@@ -104,11 +108,16 @@ Safe Salesforce GET
     [Documentation]                        Safely executes a GET request to the Salesforce REST API using an authenticated session. It handles errors gracefully (e.g., network issues, invalid responses)
     ...                                    and returns either the response object or None, preventing the entire tool from crashing on transient API failures.
     [Arguments]    ${session_alias}    ${url}    ${params}=${NONE}
-    ${status}    ${resp}=    Run Keyword And Ignore Error
-    ...    GET On Session
-    ...    ${session_alias}
-    ...    ${url}
-    ...    params=${params}
+    ${previous_level}=    Set Log Level    NONE
+    TRY
+        ${status}    ${resp}=    Run Keyword And Ignore Error
+        ...    GET On Session
+        ...    ${session_alias}
+        ...    ${url}
+        ...    params=${params}
+    FINALLY
+        Set Log Level    ${previous_level}
+    END
     IF    '${status}' == 'FAIL'
         Log    Salesforce GET failed for ${url}: ${resp}    level=WARN
         RETURN    ${NONE}
@@ -116,7 +125,10 @@ Safe Salesforce GET
     ${status_code}=    Set Variable    ${resp.status_code}
     IF    ${status_code} != 200
         ${body}=    Set Variable    ${resp.text}
-        Log    Salesforce GET returned HTTP ${status_code}: ${body}    level=WARN
+        ${body_preview}=    Evaluate    str($body)[:500]
+        Log
+        ...    Salesforce GET returned HTTP ${status_code}: ${body_preview}
+        ...    level=WARN
         RETURN    ${NONE}
     END
     RETURN    ${resp}
@@ -129,64 +141,31 @@ Run SOQL
     ${params}=    Create Dictionary    q=${soql}
     ${url}=    Set Variable    /services/data/v${apiVersion}/query
     ${page_number}=    Set Variable    1
-
     WHILE    ${TRUE}
-        ${resp}=    Safe Salesforce GET    ${session_alias}    ${url}    params=${params}
-
+        ${resp}=    Safe Salesforce GET
+        ...    ${session_alias}
+        ...    ${url}
+        ...    params=${params}
         IF    $resp is None
-            IF    ${page_number} == 1
-                Log    Salesforce SOQL query failed before any records were retrieved.    level=WARN
-                RETURN    ${all_records}
-            END
-            Fail
-            ...    Salesforce SOQL pagination failed while retrieving page ${page_number}. Partial results were discarded.
+            Fail    Salesforce SOQL query failed while retrieving page ${page_number}.
         END
-
         ${payload}=    Evaluate    $resp.json()
         ${records}=    Get From Dictionary    ${payload}    records    default=${empty_records}
         ${all_records}=    Combine Lists    ${all_records}    ${records}
         ${done}=    Get From Dictionary    ${payload}    done    default=${TRUE}
-
         IF    ${done}    BREAK
-
         ${next_url}=    Get From Dictionary    ${payload}    nextRecordsUrl    default=${NONE}
-
         IF    $next_url is None
             Fail    Salesforce returned done=false without nextRecordsUrl on page ${page_number}.
         END
-
         ${url}=    Set Variable    ${next_url}
         ${params}=    Set Variable    ${NONE}
         ${page_number}=    Evaluate    ${page_number} + 1
-
         IF    ${page_number} > 10000
             Fail    Salesforce SOQL pagination exceeded the safety limit of 10,000 pages.
         END
     END
-
     RETURN    ${all_records}
-
-Get ContentDocument Metadata
-    [Documentation]                        Queries Salesforce via SOQL to retrieve core metadata for a given ContentDocument ID, including title, description, file extension, latest version ID, and file size.
-    ...                                    This information is essential for building the download URL, validating the file after download, and populating the re-upload Excel files.
-    [Arguments]    ${content_id}
-    ${soql}=    Set Variable
-    ...    SELECT Id, Description, Title, FileExtension, LatestPublishedVersionId, ContentSize FROM ContentDocument WHERE Id='${content_id}'
-    ${records}=    Run SOQL    ${soql}    ${session_alias}
-    ${records_count}=    Get Length    ${records}
-    IF    ${records_count} > 0    RETURN    ${records}
-    RETURN    ${NONE}
-
-Get ContentDocumentLink Metadata
-    [Documentation]                        Queries Salesforce via SOQL to retrieve linking information for a given ContentDocument ID — specifically, which record(s) the file is attached to (LinkedEntityId), along with sharing details (ShareType, Visibility).
-    ...                                    This metadata is essential for re-linking files after re-upload.
-    [Arguments]    ${content_id}
-    ${soql}=    Set Variable
-    ...    SELECT ContentDocumentId, Id, ShareType, Visibility, LinkedEntityId FROM ContentDocumentLink WHERE ContentDocumentId ='${content_id}'
-    ${records}=    Run SOQL    ${soql}    ${session_alias}
-    ${records_count}=    Get Length    ${records}
-    IF    ${records_count} > 0    RETURN    ${records}
-    RETURN    ${NONE}
 
 Build ContentDocument Download URL
     [Documentation]                        Constructs the direct, secure download URL for a Salesforce file using the organization's domain and the ContentDocument ID.
@@ -248,36 +227,34 @@ ContentVersion Excel file
     [Documentation]                        Creates a new Excel template file specifically formatted for bulk insert into the **ContentVersion** object in Salesforce.
     ...                                    This file prepares file metadata and local paths so downloaded files can be easily re-uploaded via tools like Data Loader.
     [Arguments]    ${download_directory}
-    ${uuid}=    Evaluate    __import__('uuid').uuid4().hex
-    ${Proper_test_name}=    Replace String    ${TEST NAME}    ${SPACE}    _
-    ${CV_File_Name}=    Set Variable    ${download_directory}${/}${Proper_test_name}_ContentVersion_Import.xlsx
+    ${proper_test_name}=    Replace String    ${TEST NAME}    ${SPACE}    _
+    ${cv_file_name}=    Set Variable    ${download_directory}${/}${proper_test_name}_ContentVersion_Import.xlsx
     Create Excel Document    doc_id=CV_DOC
     Write Excel Cell    row_num=1    col_num=1    value=Title
     Write Excel Cell    row_num=1    col_num=2    value=VersionData
     Write Excel Cell    row_num=1    col_num=3    value=PathOnClient
     # Write Excel Cell    row_num=1    col_num=4    value=Description
     # Write Excel Cell    row_num=1    col_num=5    value=FirstPublishLocationId
-    Save Excel Document    filename=${CV_File_Name}
+    Save Excel Document    filename=${cv_file_name}
     Close Current Excel Document
     ${rowValue}=    Set Variable    2
-    RETURN    ${rowValue}    ${CV_File_Name}
+    RETURN    ${rowValue}    ${cv_file_name}
 
 ContentDocumentLink Excel file
     [Documentation]                        Creates a new Excel template file specifically formatted for bulk insert into the **ContentDocumentLink** object in Salesforce.
     ...                                    This file prepares linking metadata so downloaded files can be easily re-associated with records after re-upload (e.g., via Data Loader).
     [Arguments]    ${download_directory}
-    ${uuid}=    Evaluate    __import__('uuid').uuid4().hex
-    ${Proper_test_name}=    Replace String    ${TEST NAME}    ${SPACE}    _
-    ${CDL_File_Name}=    Set Variable    ${download_directory}${/}${Proper_test_name}_ContentDocumentLink_Import.xlsx
+    ${proper_test_name}=    Replace String    ${TEST NAME}    ${SPACE}    _
+    ${cdl_file_name}=    Set Variable    ${download_directory}${/}${proper_test_name}_ContentDocumentLink_Import.xlsx
     Create Excel Document    doc_id=CDL_DOC
     Write Excel Cell    row_num=1    col_num=1    value=ContentDocumentId
     Write Excel Cell    row_num=1    col_num=2    value=LinkedEntityID
     Write Excel Cell    row_num=1    col_num=3    value=ShareType
     Write Excel Cell    row_num=1    col_num=4    value=Visibility
-    Save Excel Document    filename=${CDL_File_Name}
+    Save Excel Document    filename=${cdl_file_name}
     Close Current Excel Document
     ${rowValue}=    Set Variable    2
-    RETURN    ${rowValue}    ${CDL_File_Name}
+    RETURN    ${rowValue}    ${cdl_file_name}
 
 Download Files Using Content Document IDs
     [Documentation]                        The main orchestration keyword for a single batch of files. It reads ContentDocument IDs from an Excel file, initializes authentication and browser,
@@ -307,12 +284,12 @@ Download Files Using Content Document IDs
     ${cv_row}=    Set Variable    2
     ${cdl_row}=    Set Variable    2
     IF    '${GENERATE_CONTENT_VERSION_FILE.lower()}' == 'yes'
-        ${cv_row}    ${CV_File_Name}=    ContentVersion Excel file    ${output_directory}
-        Set Test Variable    ${CV_File_Name}
+        ${cv_row}    ${cv_file_name}=    ContentVersion Excel file    ${output_directory}
+        Set Test Variable    ${cv_file_name}
     END
     IF    '${GENERATE_CONTENT_DOCUMENT_LINK_FILE.lower()}' == 'yes'
-        ${cdl_row}    ${CDL_File_Name}=    ContentDocumentLink Excel file    ${output_directory}
-        Set Test Variable    ${CDL_File_Name}
+        ${cdl_row}    ${cdl_file_name}=    ContentDocumentLink Excel file    ${output_directory}
+        Set Test Variable    ${cdl_file_name}
     END
     ${download_directory}=    Init Download Directory
     ${download_directory}=    Normalize Path    ${download_directory}
@@ -386,6 +363,14 @@ Download Files Using Content Document IDs
     ${unique_IDslist_NotWorking}=    Remove Duplicates    ${content_ids_NotWorking}
     Log Failed ContentDocumentIDs to Excel    ${unique_IDslist_NotWorking}    ${output_directory}
     Close All Excel Documents
+    ${failed_count}=    Get Length    ${unique_IDslist_NotWorking}
+    ${successful_count}=    Get Length    ${content_ids_Working}
+    Log To Console
+    ...    Download summary: ${successful_count} successful, ${failed_count} failed, ${total_records} total.
+    IF    ${failed_count} > 0
+        Fail
+        ...    ${failed_count} of ${total_records} ContentDocument downloads failed. Review the failed-ID Excel file in ${output_directory}.
+    END
 
 Sanitize Filename
     [Documentation]                        Sanitizes a Salesforce file title so it can be safely used as a local filename.
@@ -432,16 +417,15 @@ Download And Validate Content File
     [Arguments]    ${content_id}    ${download_url}    ${content_links}    ${cv_row}    ${cdl_row}
     Cleanup the download directory
     Log To Console    Starting download: ${file_name} and expected size: ${expected_file_size} bytes
-    ${UrlResponse}=    Run Keyword And Ignore Error    Go To    ${download_url}
-    ${is_url_success}=    Set Variable    ${UrlResponse[0]}
-    IF    '${is_url_success}' == 'FAIL'
+    ${is_url_success}=    Run Keyword And Return Status    Go To    ${download_url}
+    IF    not ${is_url_success}
         ${status}=    Handle Download Failure    ${content_id}    Browser navigation to download URL failed
         RETURN    ${status}
     END
-    ${IsFileAppeared}=    Run Keyword And Return Status
+    ${is_file_appeared}=    Run Keyword And Return Status
     ...    Wait Until Download File Appears
     ...    ${DOWNLOAD_APPEAR_TIMEOUT}
-    IF    not ${IsFileAppeared}
+    IF    not ${is_file_appeared}
         ${status}=    Handle Download Failure    ${content_id}    Download file did not appear within timeout
         RETURN    ${status}
     END
@@ -453,21 +437,21 @@ Download And Validate Content File
         ${status}=    Handle Download Failure    ${content_id}    Download directory is empty after download trigger
         RETURN    ${status}
     END
-    ${IsDownloadProper}=    Run Keyword And Return Status    Wait Until File Download Completes
-    IF    not ${IsDownloadProper}
+    ${is_download_proper}=    Run Keyword And Return Status    Wait Until File Download Completes
+    IF    not ${is_download_proper}
         ${status}=    Handle Download Failure    ${content_id}    Download did not complete within timeout
         RETURN    ${status}
     END
-    ${RecentFile}=    List Files In Directory    ${download_directory}
-    ${RecentFile_count}=    Get Length    ${RecentFile}
+    ${recent_files}=    List Files In Directory    ${download_directory}
+    ${RecentFile_count}=    Get Length    ${recent_files}
     IF    ${RecentFile_count} == 0
         ${status}=    Handle Download Failure    ${content_id}    No downloaded file found after completion wait
         RETURN    ${status}
     END
     IF    ${RecentFile_count} > 1
-        Log    WARNING: Multiple files detected in download directory: ${RecentFile}
+        Log    WARNING: Multiple files detected in download directory: ${recent_files}
         ${matching_size_files}=    Create List
-        FOR    ${file}    IN    @{RecentFile}
+        FOR    ${file}    IN    @{recent_files}
             ${file_size}=    Get File Size    ${download_directory}${/}${file}
             IF    ${file_size} == ${expected_file_size}
                 Append To List    ${matching_size_files}    ${file}
@@ -479,12 +463,12 @@ Download And Validate Content File
             RETURN    ${status}
         END
         ${latest_filename}=    Evaluate
-        ...    max(${matching_size_files}, key=lambda f: os.path.getmtime(os.path.join(r'''${download_directory}''', f)))
+        ...    max($matching_size_files, key=lambda f: os.path.getmtime(os.path.join($download_directory, f)))
         ...    modules=os
         Set Test Variable    ${latest_filename}
     END
     IF    ${RecentFile_count} == 1
-        Set Test Variable    ${latest_filename}    ${RecentFile}[0]
+        Set Test Variable    ${latest_filename}    ${recent_files}[0]
     END
     ${downloaded_size}=    Get File Size    ${download_directory}${/}${latest_filename}
     IF    ${downloaded_size} != ${expected_file_size}
@@ -494,7 +478,7 @@ Download And Validate Content File
         RETURN    ${status}
     END
     ${IsNameMatch}=    Run Keyword And Return Status    Should Start With    ${latest_filename}    ${safe_file_title}
-    IF    '${IsNameMatch}' == 'False'
+    IF    not ${IsNameMatch}
         Log
         ...    WARNING: Downloaded filename does not match the sanitized expected title. Expected: ${safe_file_title}, Actual: ${latest_filename}, Expected size: ${expected_file_size}, Actual size: ${downloaded_size}
     END
@@ -502,7 +486,7 @@ Download And Validate Content File
     ...    ${latest_filename}
     ...    ${content_id}
     ...    ${content_links}
-    ...    ${FILE_STABILITY_TIMEOUT}
+    ...    ${FILE_STABILITY_MAX_CHECKS}
     ...    ${cv_row}
     ...    ${cdl_row}
     RETURN    ${validation_status}
@@ -513,11 +497,14 @@ Download Directory Should Have Completed File
     ${files}=    List Files In Directory    ${download_directory}
     ${valid_files}=    Create List
     FOR    ${file}    IN    @{files}
-        ${is_temp}=    Run Keyword And Return Status    Should Contain Any    ${file}    @{TEMP_FILE_SUFFIXES}
+        ${lower_file}=    Convert To Lower Case    ${file}
+        ${is_temp}=    Evaluate
+        ...    $lower_file.endswith(tuple($TEMP_FILE_SUFFIXES))
         IF    not ${is_temp}    Append To List    ${valid_files}    ${file}
     END
     ${count}=    Get Length    ${valid_files}
     Should Be True    ${count} > 0
+    ...    msg=No completed download found in ${download_directory}. Files present: ${files}
 
 Wait Until Download File Appears
     [Documentation]                        Waits until a non-temporary file appears in the download directory.
@@ -533,13 +520,13 @@ Wait Until File Download Completes
     ...    limit=${DOWNLOAD_COMPLETE_TIMEOUT}
     ...    on_limit=FAIL
     ...    on_limit_message=Download did not complete within ${DOWNLOAD_COMPLETE_TIMEOUT}
-        ${RecentFile}=    List Files In Directory    ${download_directory}
-        ${file_count}=    Get Length    ${RecentFile}
+        ${recent_files}=    List Files In Directory    ${download_directory}
+        ${file_count}=    Get Length    ${recent_files}
         IF    ${file_count} == 0
             Sleep    0.5s
             CONTINUE
         END
-        Check File is Downloaded    ${RecentFile}
+        Check File is Downloaded    ${recent_files}
         IF    not ${IsFileNameProper}    Sleep    0.5s
     END
 
@@ -548,25 +535,13 @@ Check File Is Downloaded
     ...                                    This is a helper step to confirm the file is ready before moving it or considering the download successful.
     [Arguments]    ${recent_files}
     Set Test Variable    ${IsFileNameProper}    ${FALSE}
+
     FOR    ${file}    IN    @{recent_files}
         ${lower_file}=    Convert To Lower Case    ${file}
+        ${is_temp}=    Evaluate
+        ...    $lower_file.endswith(tuple($TEMP_FILE_SUFFIXES))
 
-        ${is_crdownload}=    Run Keyword And Return Status
-        ...    Should End With
-        ...    ${lower_file}
-        ...    .crdownload
-
-        ${is_tmp}=    Run Keyword And Return Status
-        ...    Should End With
-        ...    ${lower_file}
-        ...    .tmp
-
-        ${is_part}=    Run Keyword And Return Status
-        ...    Should End With
-        ...    ${lower_file}
-        ...    .part
-
-        IF    not ${is_crdownload} and not ${is_tmp} and not ${is_part}
+        IF    not ${is_temp}
             Set Test Variable    ${latest_filename}    ${file}
             Set Test Variable    ${IsFileNameProper}    ${TRUE}
             RETURN
@@ -595,40 +570,45 @@ Validate And Move Downloaded File
     ${src}=    Set Variable    ${download_directory}${/}${downloaded_filename}
     ${dst}=    Set Variable    ${content_id_folder}${/}${file_name}
     ${is_source_file_exists}=    Run Keyword And Return Status    File Should Exist    ${src}
-    IF    '${is_source_file_exists}' == 'False'
+    IF    not ${is_source_file_exists}
         ${status}=    Handle Download Failure    ${content_id}    Downloaded source file missing before move
         RETURN    ${status}
     END
     ${previous_file_size}=    Set Variable    -1
+    ${is_size_stable}=    Set Variable    ${FALSE}
     FOR    ${i}    IN RANGE    ${timeout}
         ${current_file_size}=    Get File Size    ${src}
-        Sleep    ${FILE_STABILITY_INTERVAL}
-        IF    ${current_file_size} == ${previous_file_size}    BREAK
+        IF    ${current_file_size} == ${previous_file_size}
+            ${is_size_stable}=    Set Variable    ${TRUE}
+            BREAK
+        END
         ${previous_file_size}=    Set Variable    ${current_file_size}
+        Sleep    ${FILE_STABILITY_INTERVAL}
     END
-    ${is_size_stable}=    Evaluate    ${current_file_size} == ${previous_file_size}
-    IF    '${is_size_stable}' == 'False'
-        ${status}=    Handle Download Failure    ${content_id}    Downloaded file size did not stabilize
+    IF    not ${is_size_stable}
+        ${status}=    Handle Download Failure
+        ...    ${content_id}
+        ...    Downloaded file size did not stabilize
         RETURN    ${status}
     END
     ${is_source_file_exists}=    Run Keyword And Return Status    File Should Exist    ${src}
-    IF    '${is_source_file_exists}' == 'False'
+    IF    not ${is_source_file_exists}
         ${status}=    Handle Download Failure    ${content_id}    Downloaded source file disappeared before move
         RETURN    ${status}
     END
     Move File    ${src}    ${dst}
     ${target_file_exists}=    Run Keyword And Return Status    File Should Exist    ${dst}
-    IF    '${target_file_exists}' == 'True'
+    IF    ${target_file_exists}
         ${actual_file_size}=    Get File Size    ${dst}
     ELSE
-        ${actual_file_size}=    Set Variable    ${None}
+        ${actual_file_size}=    Set Variable    ${NONE}
     END
-    IF    '${target_file_exists}' == 'True'
-        ${is_file_size_matching}=    Evaluate    int(${actual_file_size}) == int(${expected_file_size})
+    IF    ${target_file_exists}
+        ${is_file_size_matching}=    Evaluate    int($actual_file_size) == int($expected_file_size)
     ELSE
-        ${is_file_size_matching}=    Set Variable    ${None}
+        ${is_file_size_matching}=    Set Variable    ${FALSE}
     END
-    IF    '${target_file_exists}' == 'True' and '${is_file_size_matching}' == 'True'
+    IF    ${target_file_exists} and ${is_file_size_matching}
         Append To List    ${content_ids_Working}    ${content_id}
         Log To Console    SUCCESS: ${file_name} downloaded and moved to ${content_id}
         IF    '${GENERATE_CONTENT_VERSION_FILE.lower()}' == 'yes'
@@ -642,14 +622,14 @@ Validate And Move Downloaded File
             END
         END
         ${source_still_exists}=    Run Keyword And Return Status    File Should Exist    ${src}
-        IF    '${source_still_exists}' == 'True'
+        IF    ${source_still_exists}
             Run Keyword And Ignore Error    Remove File    ${src}
         END
         Cleanup the download directory
         RETURN    PASS
     ELSE
         ${source_still_exists}=    Run Keyword And Return Status    File Should Exist    ${src}
-        IF    '${source_still_exists}' == 'True'
+        IF    ${source_still_exists}
             Run Keyword And Ignore Error    Remove File    ${src}
         END
         ${status}=    Handle Download Failure
@@ -662,17 +642,17 @@ Cleanup the download directory
     [Documentation]                        Deletes temporary leftover/unnecessary files in download directory.
     ${download_dir_path}=    Normalize Path    ${download_directory}
     Directory Should Exist    ${download_dir_path}
-    ${ListFiles}=    Evaluate
+    ${list_files}=    Evaluate
     ...    [f for f in os.listdir(r'${download_dir_path}') if os.path.isfile(os.path.join(r'${download_dir_path}', f))]
     ...    modules=os
-    ${Files Count}=    Evaluate    len($ListFiles)    modules=os
-    Log    Found ${Files Count} files to delete.
-    FOR    ${file}    IN    @{ListFiles}
+    ${file_count}=    Evaluate    len($list_files)    modules=os
+    Log    Found ${file_count} files to delete.
+    FOR    ${file}    IN    @{list_files}
         ${full_path}=    Evaluate    os.path.join(r'${download_dir_path}', $file)    modules=os
-        ${KeywordStatus}=    Run Keyword And Ignore Error    Evaluate    os.remove($full_path)    modules=os
-        ${IsFileDeleted}=    Set Variable    ${KeywordStatus}[0]
-        IF    '${IsFileDeleted}' == 'PASS'    Log    DELETED : ${file}
-        IF    '${IsFileDeleted}' == 'FAIL'    Remove File    ${full_path}
+        ${keyword_status}=    Run Keyword And Ignore Error    Evaluate    os.remove($full_path)    modules=os
+        ${is_file_deleted}=    Set Variable    ${keyword_status}[0]
+        IF    '${is_file_deleted}' == 'PASS'    Log    DELETED : ${file}
+        IF    '${is_file_deleted}' == 'FAIL'    Remove File    ${full_path}
     END
 
 Log Failed ContentDocumentIDs to Excel
@@ -680,15 +660,15 @@ Log Failed ContentDocumentIDs to Excel
     ...                                    This provides a quick, traceable record of failures for later review or retry.
     [Arguments]    ${unique_IDslist_NotWorking}    ${output_directory}
     ${test_name}=    Replace String    ${TEST NAME}    ${SPACE}    _
-    ${Excel_File}=    Set Variable    ${output_directory}${/}${test_name}_FAILED_IDs.xlsx
+    ${excel_file}=    Set Variable    ${output_directory}${/}${test_name}_FAILED_IDs.xlsx
     ${no_of_records}=    Get Length    ${unique_IDslist_NotWorking}
     IF    '${no_of_records}' != '0'
-        Write the ContentDocumentIDs    ${unique_IDslist_NotWorking}    ${Excel_File}
+        Write the ContentDocumentIDs    ${unique_IDslist_NotWorking}    ${excel_file}
     END
 
 Write the ContentDocumentIDs
     [Documentation]                        Writes a list of failed ContentDocument IDs to a new Excel file.This helps with later analysis, retrying failed downloads, or reporting.
-    [Arguments]    ${unique_IDslist_NotWorking}    ${Excel_File}
+    [Arguments]    ${unique_IDslist_NotWorking}    ${excel_file}
     ${uuid}=    Evaluate    __import__('uuid').uuid4().hex
     Create Excel Document    ${uuid}
     Write Excel Cell    row_num=1    col_num=1    value=ContentDocumentId
@@ -697,20 +677,21 @@ Write the ContentDocumentIDs
         Write Excel Cell    row_num=${row}    col_num=1    value=${id}
         ${row}=    Evaluate    ${row} + 1
     END
-    Save Excel Document    filename=${Excel_File}
+    Save Excel Document    filename=${excel_file}
+    Close Current Excel Document
 
 Write ContentVersion Row
     [Documentation]                        Writes a single record into the ContentVersion Excel file.Populates file metadata and local path for bulk re-upload.
     ...                                    Appends values to the specified row in the prepared template.
     [Arguments]    ${cv_row}    ${dst}
-    Open Excel Document    filename=${CV_File_Name}    doc_id=CV_DOC
+    Open Excel Document    filename=${cv_file_name}    doc_id=CV_DOC
     Write Excel Cell    row_num=${cv_row}    col_num=1    value=${file_title}
     Write Excel Cell    row_num=${cv_row}    col_num=2    value=${dst}
     Write Excel Cell    row_num=${cv_row}    col_num=3    value=${dst}
     # Intentionally kept these commented lines for futures use.
     # Write Excel Cell    row_num=${cv_row}    col_num=4    value=${Description}
     # Write Excel Cell    row_num=${cv_row}    col_num=5    value=FirstPublishLocationId
-    Save Excel Document    filename=${CV_File_Name}
+    Save Excel Document    filename=${cv_file_name}
     Close Current Excel Document
 
 Write ContentDocumentLink Row
@@ -720,12 +701,12 @@ Write ContentDocumentLink Row
     ${linked_entity_id}=    Get From Dictionary    ${content_link}    LinkedEntityId
     ${share_type}=    Get From Dictionary    ${content_link}    ShareType
     ${visibility}=    Get From Dictionary    ${content_link}    Visibility
-    Open Excel Document    filename=${CDL_File_Name}    doc_id=CDL_DOC
+    Open Excel Document    filename=${cdl_file_name}    doc_id=CDL_DOC
     Write Excel Cell    row_num=${cdl_row}    col_num=1    value=${document_id}
     Write Excel Cell    row_num=${cdl_row}    col_num=2    value=${linked_entity_id}
     Write Excel Cell    row_num=${cdl_row}    col_num=3    value=${share_type}
     Write Excel Cell    row_num=${cdl_row}    col_num=4    value=${visibility}
-    Save Excel Document    filename=${CDL_File_Name}
+    Save Excel Document    filename=${cdl_file_name}
     Close Current Excel Document
 
 Get ContentDocument Metadata Map
@@ -821,20 +802,12 @@ Check Prerequisites
     Load Org Context    ${ORG_ALIAS}
 
 Resolve Salesforce CLI
-    [Documentation]                        Resolve Salesforce CLI executable path on Windows.
-    ${where_res}=    Run Process    where    sf    stdout=PIPE    stderr=PIPE
-    Should Be Equal As Integers    ${where_res.rc}    0    msg=Salesforce CLI (sf) not found in PATH.
-    @{lines}=    Split To Lines    ${where_res.stdout}
-    ${sf_path}=    Set Variable    ${EMPTY}
-    FOR    ${line}    IN    @{lines}
-        ${candidate}=    Strip String    ${line}
-        ${is_cmd}=    Run Keyword And Return Status    Should End With    ${candidate}    .cmd
-        IF    ${is_cmd}
-            ${sf_path}=    Set Variable    ${candidate}
-            BREAK
-        END
-    END
-    Should Not Be Empty    ${sf_path}    msg=Could not resolve sf.cmd executable.
+    [Documentation]    Resolves the Salesforce CLI executable from PATH.
+    ${sf_path}=    Evaluate    shutil.which("sf")    modules=shutil
+    Should Not Be Equal
+    ...    ${sf_path}
+    ...    ${NONE}
+    ...    msg=Salesforce CLI (sf) not found in PATH.
     Set Suite Variable    ${SF_CLI}    ${sf_path}
     Log To Console    Using SF CLI: ${SF_CLI}
 
