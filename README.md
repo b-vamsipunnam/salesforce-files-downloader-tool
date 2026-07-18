@@ -1,8 +1,8 @@
 # Salesforce Files Bulk Downloader
 
-> An open-source Robot Framework and Python tool for downloading Salesforce Files in bulk by `ContentDocumentId`.
+> An open-source Robot Framework and Python tool that makes it easier to download Salesforce Files in bulk using `ContentDocumentId` values.
 
-The tool combines Salesforce REST metadata queries with authenticated Shepherd downloads, validates every downloaded file, and optionally generates Data Loader-ready Excel workbooks for migration and recovery workflows. A version of this framework has been used to process millions of files in enterprise environments.
+It combines Salesforce REST metadata queries with authenticated Shepherd downloads, checks every downloaded file, and can generate Data Loader-ready Excel workbooks for migration and recovery work. A version of this framework has been used to process millions of files in enterprise environments.
 
 [![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.x-orange?style=flat&logo=robotframework&logoColor=white)](https://robotframework.org/)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/)
@@ -13,15 +13,15 @@ The tool combines Salesforce REST metadata queries with authenticated Shepherd d
 
 ## Features
 
-- Downloads Salesforce Files using 15-character or 18-character `ContentDocumentId` values
-- Uses Salesforce CLI authentication without storing usernames or passwords
-- Queries `ContentDocument` and `ContentDocumentLink` metadata in batches
-- Preserves every `ContentDocumentLink` associated with a file
-- Downloads each physical file only once
-- Runs in isolated, UUID-based download and artifact directories
-- Validates completion, file stability, and size against Salesforce `ContentSize`
-- Tracks failed IDs in a separate Excel workbook
-- Optionally generates ContentVersion and ContentDocumentLink import workbooks
+- Accepts both 15-character and 18-character `ContentDocumentId` values
+- Authenticates through Salesforce CLI without storing usernames or passwords
+- Retrieves `ContentDocument` and `ContentDocumentLink` metadata in batches
+- Keeps every `ContentDocumentLink` associated with a file
+- Downloads each physical file only once, even when it has multiple links
+- Gives each batch its own UUID-based download and artifact directories
+- Checks download completion, file stability, and size against Salesforce `ContentSize`
+- Saves failed IDs in a separate Excel workbook for easier retry and review
+- Can generate ContentVersion and ContentDocumentLink import workbooks
 - Supports headless execution and Pabot-based parallel processing
 
 ## Quick Start
@@ -35,12 +35,13 @@ The tool combines Salesforce REST metadata queries with authenticated Shepherd d
    pip install -r requirements.txt
    ```
 
-2. Authenticate to Salesforce and generate `org_info.json`:
+2. Authenticate to Salesforce:
 
    ```bash
    sf org login web --alias <org_alias>
-   sf org display --json --target-org <org_alias> > org_info.json
    ```
+
+   Then generate `org_info.json` using the platform-specific command in [Salesforce Authentication](#salesforce-authentication).
 
 3. Add ContentDocument IDs to the first column of `input/Inputfile_1.xlsx`. The default worksheet name is `Input`.
 
@@ -54,7 +55,7 @@ The tool combines Salesforce REST metadata queries with authenticated Shepherd d
 
 ## How It Works
 
-The framework separates metadata retrieval from binary download:
+The downloader keeps metadata retrieval separate from the actual file download:
 
 1. Read and deduplicate ContentDocument IDs from Excel.
 2. Validate each ID and query Salesforce metadata in SOQL batches.
@@ -63,7 +64,7 @@ The framework separates metadata retrieval from binary download:
 5. Validate the downloaded size and move the file into its ID-based folder.
 6. Write optional migration workbooks and a failed-ID report.
 
-For additional design details, see [Architecture Overview](docs/architecture.md) and the [technical walkthrough on Medium](https://medium.com/@b.vamsipunnam/how-i-built-an-enterprise-grade-salesforce-files-bulk-downloader-for-migration-and-backup-a7df0d60ddc3).
+For a closer look at the design, see the [Architecture Overview](docs/architecture.md) and the [technical walkthrough on Medium](https://medium.com/@b.vamsipunnam/how-i-built-an-enterprise-grade-salesforce-files-bulk-downloader-for-migration-and-backup-a7df0d60ddc3).
 
 ## Project Layout
 
@@ -89,7 +90,7 @@ salesforce-files-downloader-tool/
 - Google Chrome
 - Node.js
 - Salesforce CLI
-- Access to a Salesforce org with permission to read the requested files and metadata
+- Access to a Salesforce org where you can read the requested files and metadata
 
 Install Salesforce CLI if needed:
 
@@ -133,13 +134,13 @@ Authenticate and assign an org alias:
 sf org login web --alias <org_alias>
 ```
 
-Confirm the connection:
+Make sure the org is connected:
 
 ```bash
 sf org display --target-org <org_alias>
 ```
 
-Generate the authentication file in the project root.
+Next, generate the authentication file in the project root.
 
 Windows PowerShell:
 
@@ -164,7 +165,7 @@ Place the configured `.xlsx` files in `input/`. By default, the automation reads
 | 069XXXXXXXXXXXXXXX |
 | 069YYYYYYYYYYYYYYY |
 
-The header is optional. Blank rows are ignored, duplicate IDs are removed, and invalid IDs are recorded as failures.
+The header is optional. The downloader ignores blank rows, removes duplicate IDs, and records invalid IDs as failures.
 
 Configure the input paths and worksheet in `src/robot/orchestrator/download.robot`:
 
@@ -173,11 +174,11 @@ ${INPUT_EXCEL_PATH_1}    ${INPUT_FOLDER}${/}Inputfile_1.xlsx
 ${SHEET_NAME}            Input
 ```
 
-Add or remove batch test cases based on the number of input files.
+You can add or remove batch test cases to match the number of input files you want to process.
 
 ## Optional Migration Workbooks
 
-Control workbook generation in `src/robot/orchestrator/download.robot`:
+Choose which migration workbooks to generate in `src/robot/orchestrator/download.robot`:
 
 ```robot
 ${GENERATE_CONTENT_VERSION_FILE}            Yes
@@ -188,7 +189,7 @@ Accepted values are `Yes` and `No`.
 
 ## Configuration
 
-The primary settings are located in `src/robot/orchestrator/download.robot` and `src/robot/resources/keywords.robot`.
+Most settings you may want to adjust are in `src/robot/orchestrator/download.robot` and `src/robot/resources/keywords.robot`.
 
 | Setting | Default | Purpose |
 |---|---:|---|
@@ -204,25 +205,29 @@ Input workbook paths are configured through `${INPUT_EXCEL_PATH_1}`, `${INPUT_EX
 
 ## Execution
 
+Before starting a long-running job, regenerate `org_info.json` using the appropriate command in [Salesforce Authentication](#salesforce-authentication).
+
 Run all batches sequentially:
 
 ```bash
 robot --outputdir results src/robot/orchestrator/download.robot
 ```
 
-The following Pabot command also schedules at suite level. Because `download.robot` is one suite, its test cases remain sequential:
+You can also run the suite through Pabot. Because `download.robot` is a single suite, its batch tests still run one after another with this command:
 
 ```bash
 pabot --pabotlib --processes 4 --outputdir results src/robot/orchestrator/download.robot
 ```
 
-Run individual batch tests concurrently:
+To run the individual batches at the same time, enable test-level splitting:
 
 ```bash
 pabot --pabotlib --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
 ```
 
-Test-level splitting starts a separate Robot and browser environment for each worker. It is most useful for larger, evenly distributed batches. For small inputs, startup and result-merging overhead can make sequential execution faster.
+Test-level splitting starts a separate Robot and browser environment for each worker. It works best with larger, evenly distributed batches. For small inputs, starting the workers and merging their results can take longer than simply running the batches sequentially.
+
+> When using `--testlevelsplit`, do not delete the shared `org_info.json` from worker-level suite teardown. Remove it only after the complete Pabot execution finishes.
 
 Run one batch while debugging:
 
@@ -230,11 +235,11 @@ Run one batch while debugging:
 robot --test Download_Batch_1 --outputdir results src/robot/orchestrator/download.robot
 ```
 
-Adjust `--processes` for available CPU, memory, disk throughput, network capacity, and Salesforce session limits.
+Choose the `--processes` value based on the CPU, memory, disk performance, network capacity, and Salesforce session limits available in your environment.
 
 ## Output
 
-Each batch receives unique download and artifact directories.
+Each batch writes to its own download and artifact directories, so files from parallel runs do not overlap.
 
 ```text
 downloads/
@@ -256,7 +261,7 @@ results/
 
 ### ContentVersion workbook
 
-Contains one row for every successfully downloaded file.
+This workbook contains one row for every file downloaded successfully.
 
 | Column | Description |
 |---|---|
@@ -266,7 +271,7 @@ Contains one row for every successfully downloaded file.
 
 ### ContentDocumentLink workbook
 
-Contains one row for every original link associated with each successful file.
+This workbook contains one row for every original link associated with each successfully downloaded file.
 
 | Column | Description |
 |---|---|
@@ -275,15 +280,15 @@ Contains one row for every original link associated with each successful file.
 | `ShareType` | Viewer, Collaborator, or Inferred sharing value |
 | `Visibility` | Salesforce visibility value |
 
-After inserting new ContentVersion records in the destination org, replace the source `ContentDocumentId` values with the newly created destination IDs before importing the ContentDocumentLink rows.
+After inserting the new ContentVersion records in the destination org, replace the source `ContentDocumentId` values with the newly created destination IDs. You can then import the ContentDocumentLink rows.
 
 ### Failed-ID workbook
 
-Contains unique IDs that failed validation, metadata retrieval, download, or final verification. If no file succeeds, empty migration workbooks are removed.
+This workbook lists the unique IDs that failed during validation, metadata retrieval, download, or final verification. If no files are downloaded successfully, the empty migration workbooks are removed.
 
 ## Download Validation
 
-A download is marked successful only after the framework:
+A file is marked as successfully downloaded only after the tool:
 
 - Detects a completed, non-temporary browser download
 - Rejects `.crdownload`, `.tmp`, and `.part` files
@@ -298,26 +303,28 @@ A download is marked successful only after the framework:
 - Credentials are not hardcoded.
 - Token-bearing initialization steps are suppressed from ordinary Robot logs.
 - `org_info.json` and runtime outputs must remain excluded from version control.
-- Refresh the org information file if the Salesforce session expires.
+- Regenerate `org_info.json` immediately before long-running jobs and again if the Salesforce session expires.
 
-Use a dedicated Salesforce integration user with only the permissions required for the migration whenever possible.
+When possible, use a dedicated Salesforce integration user with only the permissions needed for the migration.
 
 ## Troubleshooting
 
-| Problem | Recommended action |
-|---|---|
-| `sf` is not found | Install Salesforce CLI and confirm it is available on `PATH` |
-| `ExcelLibrary` cannot be imported | Activate the virtual environment and reinstall `requirements.txt` |
-| PabotLib connection fails | Include `--pabotlib` in the Pabot command |
-| Salesforce session or frontdoor login fails | Regenerate `org_info.json` from the authenticated org |
-| Chrome fails to start | Confirm Chrome is installed and compatible with the current Selenium setup |
-| Downloads time out | Check Salesforce access, network stability, file size, and timeout configuration |
+If something does not work as expected, start with `results/log.html`. It usually contains the most useful error details. For download failures, also check the batch-specific failed-ID workbook in `artifacts/`.
 
-Review `results/log.html` and the batch-specific failed-ID workbook for detailed diagnostics.
+| Problem | What to try |
+|---|---|
+| Salesforce CLI is not recognized | Confirm that Salesforce CLI is installed and available on your system `PATH` |
+| `ExcelLibrary` cannot be imported | Activate the virtual environment and run `pip install -r requirements.txt` |
+| PabotLib cannot connect | Make sure the Pabot command includes `--pabotlib` |
+| The Salesforce session or browser login fails | Regenerate `org_info.json` from the authenticated org and run the job again |
+| Chrome does not start | Confirm that Google Chrome is installed and up to date |
+| A download times out | Verify access to the file, check the network connection, and increase the configured timeouts if needed |
+
+If the problem continues, open a GitHub issue and include the relevant error message, environment details, and steps needed to reproduce it. Never attach `org_info.json` or include Salesforce access tokens in logs or screenshots.
 
 ## CI
 
-The GitHub Actions workflow runs an isolated smoke test that validates Robot Framework, headless Chrome, SeleniumLibrary, and the custom Excel library. It does not authenticate to Salesforce or download Salesforce files.
+The GitHub Actions workflow runs an isolated smoke test for Robot Framework, headless Chrome, SeleniumLibrary, and the custom Excel library. It does not connect to Salesforce or download any Salesforce files.
 
 ## Limitations
 
@@ -336,7 +343,7 @@ The GitHub Actions workflow runs an isolated smoke test that validates Robot Fra
 
 ## Contributing and Support
 
-Contributions are welcome. Review [CONTRIBUTING.md](CONTRIBUTING.md), open an issue for defects or enhancements, and follow the existing project conventions when submitting a pull request.
+Contributions are welcome. Please review [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request. You can also open an issue to report a problem or suggest an improvement.
 
 If the project is useful, consider starring the repository and sharing feedback.
 
