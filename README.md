@@ -1,569 +1,349 @@
 # Salesforce Files Bulk Downloader
 
-> Enterprise-grade Salesforce file migration and backup tool built with Robot Framework and Python.  
-> Supports bulk ContentDocumentId downloads, parallel execution, CI/CD, and Data Loader integration.
-> Used in enterprise environments to process millions of Salesforce files across large-scale migration and backup workflows.
+> An open-source Robot Framework and Python tool for downloading Salesforce Files in bulk by `ContentDocumentId`.
 
-## Technical Walkthrough
+The tool combines Salesforce REST metadata queries with authenticated Shepherd downloads, validates every downloaded file, and optionally generates Data Loader-ready Excel workbooks for migration and recovery workflows. A version of this framework has been used to process millions of files in enterprise environments.
 
-Read the detailed **Medium article** explaining the architecture, design decisions, and implementation:
-
-👉 [How I Built an Enterprise-Grade Salesforce Bulk File Downloader for Migration and Backup](https://medium.com/@b.vamsipunnam/how-i-built-an-enterprise-grade-salesforce-files-bulk-downloader-for-migration-and-backup-a7df0d60ddc3)
-
----
-
-## Built With
-
-[![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.0.1-orange?style=flat&logo=robotframework&logoColor=white)](https://robotframework.org/)
-[![Pabot](https://img.shields.io/badge/Pabot-2.18.0-blue?style=flat&logo=github&logoColor=white)](https://github.com/mkorpela/pabot)
-[![SeleniumLibrary](https://img.shields.io/badge/SeleniumLibrary-6.8.0-green?style=flat&logo=selenium&logoColor=white)](https://github.com/robotframework/SeleniumLibrary)
-[![webdriver-manager](https://img.shields.io/badge/webdriver--manager-4.0.2-blue?style=flat&logo=googlechrome&logoColor=white)](https://pypi.org/project/webdriver-manager/)
+[![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.x-orange?style=flat&logo=robotframework&logoColor=white)](https://robotframework.org/)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/)
-[![Salesforce CLI](https://img.shields.io/badge/Salesforce%20CLI-2.116.6-00A1E0?style=flat&logo=salesforce&logoColor=white)](https://developer.salesforce.com/tools/sfdxcli)
-[![Node.js](https://img.shields.io/badge/Node.js-18.20.4-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Salesforce](https://img.shields.io/badge/Salesforce-CLI-00A1E0?style=flat&logo=salesforce&logoColor=white)](https://developer.salesforce.com/tools/salesforcecli)
 [![CI](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions/workflows/robot-ci.yml/badge.svg)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions)
 [![Release](https://img.shields.io/github/v/release/b-vamsipunnam/salesforce-files-downloader-tool?style=flat&color=orange&logo=github&logoColor=white)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/releases)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat&logo=open-source-initiative&logoColor=white)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)](LICENSE)
 
----
+## Features
 
-## Introduction
-
-The Salesforce Files Bulk Downloader is an open-source, parallel-processing automation framework built with **Robot Framework** and **Python** for fast, reliable bulk downloads of Salesforce files using ContentDocument IDs.
-
-**Key features:**
-
-* Supports **any Salesforce org** (via Salesforce CLI authentication)
-* Downloads files using the secure **Shepherd endpoint**
-* Parallel execution using **Pabot**
-* Preserves original filenames and directory structure
-* Generates **Data Loader–ready Excel files**
-* Tracks failures with detailed logs
-* Fully isolated execution folders
-* CI/CD compatible
-
-**Additional Highlights**
-
-* A version of this framework has been successfully used to process millions of Salesforce files in enterprise environments.
-* Designed to operate within Salesforce API limits without retry amplification.
-* No paid AppExchange tools required.
-
-## When to Use This Tool
-
-**This tool is ideal when you need to:**
-
-* Migrate large volumes of Salesforce files
-* Perform org-to-org file migrations
-* Back up attachments and documents
-* Recover files after org refresh
-* Generate upload-ready datasets
-* Execute large downloads in parallel
-
-## Why This Exists
-
-Traditional Salesforce tools (Data Loader, Workbench, UI downloads) have limitations:
-
-* No reliable bulk download support
-* No parallel execution
-* Slow UI-based downloads
-* Limited retry and tracking
-
-This framework provides **deterministic, scalable downloads with failure tracking** optimized for enterprise environments.
-
-## Why Not Data Loader?
-
-* Does not support bulk file download
-* No parallel execution
-* Manual and error-prone for large datasets
-
-## Target Audience
-
-**This tool is designed for:**
-
-* Salesforce Developers and Architects
-* QA / Automation Engineers
-* DevOps Engineers
-* Data Migration Specialists
-* Compliance and Audit Teams
-
----
-
-## Architecture Overview
-
-**High-level architecture:**
-
-*Figure: Control plane (REST metadata) and data plane (browser download) separation.*
-
-<p align="center">
-  <img src="docs/architecture.png" width="700">
-</p>
-
----
+- Downloads Salesforce Files using 15-character or 18-character `ContentDocumentId` values
+- Uses Salesforce CLI authentication without storing usernames or passwords
+- Queries `ContentDocument` and `ContentDocumentLink` metadata in batches
+- Preserves every `ContentDocumentLink` associated with a file
+- Downloads each physical file only once
+- Runs in isolated, UUID-based download and artifact directories
+- Validates completion, file stability, and size against Salesforce `ContentSize`
+- Tracks failed IDs in a separate Excel workbook
+- Optionally generates ContentVersion and ContentDocumentLink import workbooks
+- Supports headless execution and Pabot-based parallel processing
 
 ## Quick Start
 
-1. Authenticate to your Salesforce org *(replace `<org_name>` with your org alias)*:
-   ### Windows
-   ```bash
-   sf org display --json --target-org <org_name> | Out-File -Encoding utf8 org_info.json
-   ```
-   ### Linux / macOS
-   ```bash
-   sf org display --json --target-org <org_name> > org_info.json
-   ```
-2. Run parallel downloads:
-   ```powershell
-   pabot --pabotlib --processes 2 --outputdir results src/robot/orchestrator/download.robot
-   ```
-3. Check results
-   ```text
-   Downloaded files: downloads/
-   Generated Excel files: artifacts/
-   Execution logs: results/
-   ```
----
+1. Clone the repository and install the dependencies:
 
-## Project Structure
-
-```
-salesforce-files-downloader-tool/
-├── .github/
-│   ├── workflows/
-│   │   └── robot-ci.yml                                   # GitHub Actions CI
-│   └── PULL_REQUEST_TEMPLATE.md                           # Pull request template
-├── artifacts/                                             # Runtime: Failed records + Data Loader-ready Excels
-│   └── <test_name>__<uuid>/                               # One folder per test case
-│       ├── <test_name>_Failed_IDs.xlsx
-│       ├── <test_name>_ContentVersion_Import.xlsx
-│       └── <test_name>_ContentDocumentLink_Import.xlsx
-├── ci/
-│   └── robot/
-│       └── smoke.robot
-├── docs/
-│   └── architecture.md                                    # High-level design documentation
-├── downloads/                                             # Runtime: downloaded Salesforce files
-│   └── <test_name>_<uuid>/                                # One folder per pabot process
-│       ├── 069xxxxxxxxxxxx/                               # ContentDocumentId folder
-│       │   └── <original_filename>
-│       └── 069yyyyyyyyyyyy/                               # ContentDocumentId folder
-│           └── <original_filename>
-├── input/                                                 # Input Excel files
-│   ├── Inputfile_1.xlsx
-│   └── Inputfile_2.xlsx
-├── results/                                               # Robot execution results
-│   ├── pabot_results/
-│   ├── log.html
-│   ├── output.xml
-│   └── report.html
-├── src/
-│   └── robot/
-│       ├── libraries/
-│       │   ├── ExcelLibrary.py
-│       │   ├── SalesforceSupport.py
-│       │   └── WebdriverManager.py
-│       ├── resources/
-│       │   └── keywords.robot
-│       └── orchestrator/
-│           └── download.robot
-├── .gitignore
-├── .pabotsuitenames                                       # Pabot suite cache file
-├── CODE_OF_CONDUCT.md
-├── CONTRIBUTING.md
-├── README.md
-├── requirements.txt
-└── SECURITY.md
-
-```
----
-
-## First-Time Setup Checklist
-
-**Before running:**
-
-* Python installed (3.10+)
-* Node.js installed
-* Salesforce CLI installed
-* Chrome installed
-* Virtual environment activated
-* Salesforce org authenticated
-
-#### Note: Install Salesforce CLI using npm command:
-
-```
-   npm install -g @salesforce/cli
-```
-
----
-## Setup
-
-1. Clone the repository
    ```bash
    git clone https://github.com/b-vamsipunnam/salesforce-files-downloader-tool.git
    cd salesforce-files-downloader-tool
-   ```
-   
-2. Create and activate a virtual environment
-
-   Environment Setup: 
-   ```bash
    python -m venv venv
-   ```
-   
-   Activate Virtual Environment: Linux / macOS
-   ```bash
-   source venv/bin/activate
-   ```
-   
-   Activate Virtual Environment: Windows (PowerShell / CMD)
-   ```bash
-   venv\Scripts\activate
-   ```
-   
-3. Install dependencies
-   ```bash 
    pip install -r requirements.txt
    ```
-   
-4. Authenticate to your Salesforce org
-   ```bash
-   sf org login web --alias <org_name>
-   ```
-   
-5. Check the org connection status
-   ```bash
-   sf org list
-   ```
-   
-## Connected Salesforce Org
 
-| Alias     | Username                  | Org Id           | Status    |
-|-----------|---------------------------|------------------|-----------|
-| org_name  | username@agentforce.com   | 00XXXXXXXXXXXXXX | Connected |
+2. Authenticate to Salesforce and generate `org_info.json`:
+
+   ```bash
+   sf org login web --alias <org_alias>
+   sf org display --json --target-org <org_alias> > org_info.json
+   ```
+
+3. Add ContentDocument IDs to the first column of `input/Inputfile_1.xlsx`. The default worksheet name is `Input`.
+
+4. Run the downloader:
+
+   ```bash
+   robot --outputdir results src/robot/orchestrator/download.robot
+   ```
+
+5. Review downloaded files in `downloads/`, migration workbooks in `artifacts/`, and execution reports in `results/`.
+
+## How It Works
+
+The framework separates metadata retrieval from binary download:
+
+1. Read and deduplicate ContentDocument IDs from Excel.
+2. Validate each ID and query Salesforce metadata in SOQL batches.
+3. Authenticate a headless Chrome session through Salesforce `frontdoor.jsp`.
+4. Download the latest file through the Shepherd endpoint.
+5. Validate the downloaded size and move the file into its ID-based folder.
+6. Write optional migration workbooks and a failed-ID report.
+
+For additional design details, see [Architecture Overview](docs/architecture.md) and the [technical walkthrough on Medium](https://medium.com/@b.vamsipunnam/how-i-built-an-enterprise-grade-salesforce-files-bulk-downloader-for-migration-and-backup-a7df0d60ddc3).
+
+## Project Layout
+
+```text
+salesforce-files-downloader-tool/
+├── ci/robot/                         # CI smoke test
+├── docs/                             # Architecture documentation
+├── input/                            # ContentDocument ID workbooks
+├── src/robot/
+│   ├── libraries/                    # Custom Python libraries
+│   ├── orchestrator/download.robot   # Batch definitions and execution
+│   └── resources/keywords.robot      # Download workflow keywords
+├── artifacts/                        # Migration workbooks and failed IDs
+├── downloads/                        # Downloaded Salesforce files
+├── results/                          # Robot Framework reports
+├── requirements.txt                  # Python dependencies
+└── README.md
+```
+
+## Prerequisites
+
+- Python 3.10 or later
+- Google Chrome
+- Node.js
+- Salesforce CLI
+- Access to a Salesforce org with permission to read the requested files and metadata
+
+Install Salesforce CLI if needed:
+
+```bash
+npm install --global @salesforce/cli
+```
+
+## Installation
+
+```bash
+git clone https://github.com/b-vamsipunnam/salesforce-files-downloader-tool.git
+cd salesforce-files-downloader-tool
+python -m venv venv
+```
+
+Activate the virtual environment.
+
+Windows:
+
+```powershell
+venv\Scripts\activate
+```
+
+Linux or macOS:
+
+```bash
+source venv/bin/activate
+```
+
+Install the dependencies:
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Salesforce Authentication
 
-Authenticate to your Salesforce org using Salesforce CLI and generate the org information file:
+Authenticate and assign an org alias:
 
+```bash
+sf org login web --alias <org_alias>
 ```
-   sf org display --json --target-org <OrgAlias> | Out-File -Encoding utf8 org_info.json
+
+Confirm the connection:
+
+```bash
+sf org display --target-org <org_alias>
 ```
 
-This generates `org_info.json`, which is used by the automation for:
-* Access token
-* Instance URL
-* API version
-* Org alias
+Generate the authentication file in the project root.
 
-**Note:** Never commit org_info.json containing real tokens. Add it to .gitignore.
+Windows PowerShell:
 
----
+```powershell
+sf org display --json --target-org <org_alias> | Out-File -Encoding utf8 org_info.json
+```
 
-## Input Data Format
+Linux or macOS:
 
-* Input files must be Excel `.xlsx` files
-* First column should contain Salesforce ContentDocument IDs
-* Sheet name must match the value configured in the test (`Input` by default)
+```bash
+sf org display --json --target-org <org_alias> > org_info.json
+```
 
-Example:
+> **Security warning:** `org_info.json` contains a temporary Salesforce access token. Never commit, publish, or share this file. It is excluded by `.gitignore`.
 
-| ContentDocumentId  |
-|--------------------|
+## Input Files
+
+Place the configured `.xlsx` files in `input/`. By default, the automation reads the first column of a worksheet named `Input`.
+
+| ContentDocumentId |
+|---|
 | 069XXXXXXXXXXXXXXX |
 | 069YYYYYYYYYYYYYYY |
-| 069ZZZZZZZZZZZZZZZ |
 
----
+The header is optional. Blank rows are ignored, duplicate IDs are removed, and invalid IDs are recorded as failures.
+
+Configure the input paths and worksheet in `src/robot/orchestrator/download.robot`:
+
+```robot
+${INPUT_EXCEL_PATH_1}    ${INPUT_FOLDER}${/}Inputfile_1.xlsx
+${SHEET_NAME}            Input
+```
+
+Add or remove batch test cases based on the number of input files.
+
+## Optional Migration Workbooks
+
+Control workbook generation in `src/robot/orchestrator/download.robot`:
+
+```robot
+${GENERATE_CONTENT_VERSION_FILE}            Yes
+${GENERATE_CONTENT_DOCUMENT_LINK_FILE}      Yes
+```
+
+Accepted values are `Yes` and `No`.
+
+## Configuration
+
+The primary settings are located in `src/robot/orchestrator/download.robot` and `src/robot/resources/keywords.robot`.
+
+| Setting | Default | Purpose |
+|---|---:|---|
+| `${SHEET_NAME}` | `Input` | Worksheet containing ContentDocument IDs |
+| `${GENERATE_CONTENT_VERSION_FILE}` | `Yes` | Generate the ContentVersion import workbook |
+| `${GENERATE_CONTENT_DOCUMENT_LINK_FILE}` | `Yes` | Generate the ContentDocumentLink import workbook |
+| `${METADATA_BATCH_SIZE}` | `200` | Number of IDs included in each metadata query batch |
+| `${DOWNLOAD_APPEAR_TIMEOUT}` | `60s` | Maximum time to wait for a completed file to appear |
+| `${DOWNLOAD_COMPLETE_TIMEOUT}` | `60s` | Maximum time to wait for download completion |
+| `${FILE_MOVE_TIMEOUT}` | `15s` | Maximum retry period for temporary file locks |
+
+Input workbook paths are configured through `${INPUT_EXCEL_PATH_1}`, `${INPUT_EXCEL_PATH_2}`, and the other batch variables in `download.robot`.
 
 ## Execution
 
-The automation supports parallel execution using pabot.
-
-### Run tests in parallel using the following pabot command: (Recommended)
-```
-   pabot --pabotlib --processes 2 --outputdir results src/robot/orchestrator/download.robot
-```
-* Note: Adjust --processes based on your machine (e.g., 2-8 recommended)
-
----
-
-### Run a Single Test (One Batch)
-
-To execute **only one batch** (for example, a single Excel input file) without parallel processing, or when debugging and troubleshooting, use the standard `robot` command instead of `pabot`.
-
-#### Prerequisite
-
-Ensure that only **one batch** is enabled under the **Test Cases** section in `download.robot` when running in single-test mode.
-
-#### Run All Batches Sequentially (Single Process)
+Run all batches sequentially:
 
 ```bash
 robot --outputdir results src/robot/orchestrator/download.robot
 ```
 
-This command runs all defined test cases sequentially in a single browser session.
+The following Pabot command also schedules at suite level. Because `download.robot` is one suite, its test cases remain sequential:
 
-#### Run a Specific Batch (Example: Batch 1)
+```bash
+pabot --pabotlib --processes 4 --outputdir results src/robot/orchestrator/download.robot
+```
 
-To execute only a specific test case from multiple batches, use the `--test` option:
+Run individual batch tests concurrently:
+
+```bash
+pabot --pabotlib --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
+```
+
+Test-level splitting starts a separate Robot and browser environment for each worker. It is most useful for larger, evenly distributed batches. For small inputs, startup and result-merging overhead can make sequential execution faster.
+
+Run one batch while debugging:
 
 ```bash
 robot --test Download_Batch_1 --outputdir results src/robot/orchestrator/download.robot
 ```
 
-This is useful when validating a single input file or isolating failures.
+Adjust `--processes` for available CPU, memory, disk throughput, network capacity, and Salesforce session limits.
 
----
+## Output
 
-## Execution details:
+Each batch receives unique download and artifact directories.
 
-Each pabot process creates a unique download folder under `downloads/`
-* Files are downloaded in headless Chrome sessions
-* Results are consolidated under the `results/` directory
-* Failed records are logged in `artifacts/<test_name>_Failed_IDs.xlsx`
+```text
+downloads/
+└── Download_Batch_1_<uuid>/
+    └── 069xxxxxxxxxxxxxxx/
+        └── original_filename.pdf
 
+artifacts/
+└── Download_Batch_1_<uuid>/
+    ├── Download_Batch_1_ContentVersion_Import.xlsx
+    ├── Download_Batch_1_ContentDocumentLink_Import.xlsx
+    └── Download_Batch_1_FAILED_IDs.xlsx
 
-## Execution Flow
-
-See [Architecture Overview](docs/architecture.md) for a visual execution flow and component breakdown.
-
-* Initialize Salesforce REST session using access token
-* Read ContentDocument IDs from Excel input
-* Create a unique download directory per process
-* Launch headless Chrome and authenticate via frontdoor URL
-* Build download URL for each ContentDocument
-* Download file and validate completion
-* Move file into a ContentDocument-specific folder
-* Generate upload-ready Excel files
-* Log failures and size mismatches
-* Clean up temporary and partial files
-
----
-
-## Download Validation Strategy
-
-The framework performs multiple validation layers before marking a file download successful:
-
-- Waits for file appearance in the download directory
-- Detects temporary browser download artifacts (`.crdownload`, `.tmp`, `.part`)
-- Handles delayed browser download completion scenarios
-- Validates downloaded file size against Salesforce `ContentSize`
-- Confirms file size stability before moving files
-- Supports files with and without file extensions
-- Handles browser-renamed download files gracefully
-
----
-
-## Generated Excel Files for Bulk Insert
-
-The tool automatically creates **two Excel files** in the `artifacts/` folder for every run. These files are designed to make it easy to **re-upload** or **associate** the downloaded files back into Salesforce (e.g., using Data Loader, Workbench, or Salesforce Flow).
-Both files are generated **per test case / batch** (named using the test name + timestamp), so each run produces isolated, traceable files.
-
-The generated Excel files are ready for bulk insert using tools like **Data Loader**, **Salesforce Import Wizard**, or **Workbench**. Below are the column details:
-
-## 1. ContentVersion Input File
-
-**Purpose**  
-Prepare an Excel file to perform bulk insert into the **ContentVersion** object (to upload files into Salesforce).
-
-**ContentVersion Input File Columns**
-
-| Column       | Description                                                    | Example Value                                           |
-|--------------|----------------------------------------------------------------|---------------------------------------------------------|
-| Title        | The title/name of the file (from original file metadata)       | Invoice_2025.pdf                                        |
-| VersionData  | Full local path to the downloaded file (ready for upload)      | C:\...\downloads\<test_name>_..\069...\Invoice_2025.pdf |
-| PathOnClient | Original filename (used as the client-side path during upload) | Invoice_2025.pdf                                        |
-
-**Usage**  
-* Open the file in Excel → Save As → CSV (UTF-8)
-* Use Data Loader / Salesforce Import Wizard / External Tools to insert into **ContentVersion**
-* After insert, you will get new **ContentVersion IDs** (needed for linking)
-
-## 2. ContentDocumentLink Input File
-
-**Purpose**  
-
-Prepare an Excel file to perform bulk insert into the **ContentDocumentLink** object (to associate uploaded files with records).
-
-**ContentDocumentLink Input File Columns**
-
-| Column            | Description                                                                 | Example Value                          |
-|-------------------|-----------------------------------------------------------------------------|----------------------------------------|
-| ContentDocumentId | ID of the ContentDocument (after upload/insert into ContentVersion)         | 069xxxxxxxxxxxxxxx                     |
-| LinkedEntityId    | ID of the record to link the file to (e.g., Account, Opportunity, Case ID)  | 001xxxxxxxxxxxxxxx                     |
-| ShareType         | Sharing type (V = Viewer, C = Collaborator, I = Inferred)                   | V                                      |
-| Visibility        | Visibility (AllUsers, InternalUsers, SharedUsers)                           | AllUsers                               |
-
-**Usage**  
-* After successful ContentVersion insert, copy the new **ContentDocumentId** values
-* Fill in **LinkedEntityId** (the record IDs where files should appear)
-* Save As CSV → Use Data Loader / Bulk API to insert into **ContentDocumentLink**
-
-**Important Notes**  
-* These files are **generated automatically** during each run.
-* They contain **only successful downloads** (failed ones are logged separately).
-* Use them for **recovery / re-upload** scenarios or to associate files with records after migration.
-* File names include the test/batch name for easy identification.
-
-Example generated files in `artifacts/`:
-* `Download_Batch_1_ContentVersion_Import.xlsx`
-* `Download_Batch_1_ContentDocumentLink_Import.xlsx`
-
----
-
-## 3. Optional Data Loader File Generation
-
-The framework supports optional generation of Salesforce Data Loader-ready Excel templates.
-
-```robot
-# Generate Data Loader-ready Excel files.
-# Accepted values: Yes / No
-
-${GENERATE_CONTENT_VERSION_FILE}           Yes
-${GENERATE_CONTENT_DOCUMENT_LINK_FILE}     Yes
+results/
+├── log.html
+├── output.xml
+└── report.html
 ```
 
-- `Yes` → generates the corresponding Data Loader Excel file
-- `No` → skips file generation completely
+### ContentVersion workbook
 
----
-## Output Files Generated
+Contains one row for every successfully downloaded file.
 
-| File Type                          | Location                                      | Purpose                              |
-|------------------------------------|-----------------------------------------------|--------------------------------------|
-| Failed Records Log                 | `artifacts/*_Failed_IDs.xlsx`                 | List of failed ContentDocument IDs   |
-| ContentVersion Insert Ready        | `artifacts/*_ContentVersion_Import.xlsx`      | Prepare bulk upload of files         |
-| ContentDocumentLink Insert Ready   | `artifacts/*_ContentDocumentLink_Import.xlsx` | Prepare linking files to records     |
+| Column | Description |
+|---|---|
+| `Title` | Original Salesforce file title |
+| `VersionData` | Full local path to the downloaded file |
+| `PathOnClient` | Full local path used for upload |
 
----
-## Error Handling and Logging
+### ContentDocumentLink workbook
 
-* Failed downloads are logged to a timestamped file under `artifacts/` (e.g., `<test_name>_Failed_IDs.xlsx`)
-* Partial, corrupted, or mismatched downloads are automatically cleaned
-* File size validation is performed post-download
-* Execution reports are generated in HTML and XML formats
+Contains one row for every original link associated with each successful file.
 
----
+| Column | Description |
+|---|---|
+| `ContentDocumentId` | Source ContentDocument ID |
+| `LinkedEntityId` | Record linked to the source file |
+| `ShareType` | Viewer, Collaborator, or Inferred sharing value |
+| `Visibility` | Salesforce visibility value |
 
-## Parallel Execution Strategy
+After inserting new ContentVersion records in the destination org, replace the source `ContentDocumentId` values with the newly created destination IDs before importing the ContentDocumentLink rows.
 
-* pabot is used to split execution across multiple processes
-* Each process uses an isolated download directory
-* UUID-based folder naming prevents file collisions
-* Suitable for large-scale migrations with thousands of files
+### Failed-ID workbook
 
----
+Contains unique IDs that failed validation, metadata retrieval, download, or final verification. If no file succeeds, empty migration workbooks are removed.
 
-## CI/CD Compatibility
+## Download Validation
 
-* Designed for headless execution
-* Suitable for GitHub Actions, Jenkins, Azure DevOps
-* No manual browser or driver setup required
+A download is marked successful only after the framework:
 
----
-
-## CI Smoke Test
-The CI pipeline runs a dedicated smoke test (ci/robot/Smoke.robot) to validate:
-* Robot Framework startup
-* Selenium + Chrome in headless CI
-* Custom ExcelLibrary keywords
-* The smoke test does not authenticate to Salesforce or download files
-
-This test is isolated from Salesforce authentication to ensure deterministic CI runs.
-
----
-
-## Troubleshooting
-
-* If you see ChromeDriver errors → ensure you're using SeleniumLibrary ≥6.0 (included in requirements.txt)
-* For network/proxy issues → add proxy arguments in WebdriverManager.py
-* Check results/pabot_results/log.html for detailed execution logs
-
-| Error | Cause | Fix |
-|-------|------|------|
-| WinError 10061 | PabotLib not running | Use --pabotlib |
-| No module ExcelLibrary | venv not active | Activate venv |
-| sf not found | CLI not installed | Reinstall CLI |
-| Session expired / frontdoor login failed | org_info.json outdated or token revoked/expired during long run | Re-run sf org display --json --target-org <alias> > org_info.json to refresh |
-
----
-
-##  Technology Stack
-
-* Robot Framework 7.0.1
-* SeleniumLibrary 6.8.0 (with built-in Selenium Manager support)
-* webdriver-manager 4.0.2 (automatic ChromeDriver handling)
-* pabot 2.18.0 (parallel test execution)
-* Custom ExcelLibrary wrapper based on openpyxl (Excel input reading and Excel files generation)
-
----
+- Detects a completed, non-temporary browser download
+- Rejects `.crdownload`, `.tmp`, and `.part` files
+- Verifies the downloaded size against Salesforce `ContentSize`
+- Confirms the file size is stable
+- Moves the file successfully, including retry handling for temporary Windows locks
+- Verifies the final destination file and size
 
 ## Security
 
-* No credentials are hardcoded.
-* Authentication is handled via Salesforce CLI.
-* Auth files must never be committed.
-* Sensitive files are excluded via .gitignore. 
-* Rotate credentials immediately if exposure is suspected.
+- Authentication is handled through Salesforce CLI.
+- Credentials are not hardcoded.
+- Token-bearing initialization steps are suppressed from ordinary Robot logs.
+- `org_info.json` and runtime outputs must remain excluded from version control.
+- Refresh the org information file if the Salesforce session expires.
 
----
+Use a dedicated Salesforce integration user with only the permissions required for the migration whenever possible.
 
-## Limitations & Trade-offs
+## Troubleshooting
 
-* Uses headless browser automation (Selenium + Chrome) to access the Shepherd endpoint. This provides reliable downloads with preserved original filenames, but consumes more CPU and memory per process than a pure REST-based approach would.
-* Parallel execution is limited by local system resources (CPU, memory). Recommended range: 2–8 processes per machine.
-* No native resume of partially completed downloads yet (planned in roadmap).
-* Requires Chrome browser installed for execution.
+| Problem | Recommended action |
+|---|---|
+| `sf` is not found | Install Salesforce CLI and confirm it is available on `PATH` |
+| `ExcelLibrary` cannot be imported | Activate the virtual environment and reinstall `requirements.txt` |
+| PabotLib connection fails | Include `--pabotlib` in the Pabot command |
+| Salesforce session or frontdoor login fails | Regenerate `org_info.json` from the authenticated org |
+| Chrome fails to start | Confirm Chrome is installed and compatible with the current Selenium setup |
+| Downloads time out | Check Salesforce access, network stability, file size, and timeout configuration |
 
----
+Review `results/log.html` and the batch-specific failed-ID workbook for detailed diagnostics.
+
+## CI
+
+The GitHub Actions workflow runs an isolated smoke test that validates Robot Framework, headless Chrome, SeleniumLibrary, and the custom Excel library. It does not authenticate to Salesforce or download Salesforce files.
+
+## Limitations
+
+- Browser-based downloads consume more CPU and memory than a pure REST implementation.
+- Effective parallelism depends on workstation resources, network throughput, and Salesforce behavior.
+- Partially downloaded files cannot currently resume from checkpoints.
+- Chrome is required.
+
 ## Roadmap
 
-**Planned enhancements:**
+- Checkpoint and resume support
+- Direct S3 or Azure Blob export
+- OAuth-based non-CLI authentication
+- Command-line wrapper
+- Docker support
 
-* OAuth-based auth (non-CLI)
-* Resume from checkpoint
-* S3 / Azure Blob export
-* CLI wrapper
-* Docker support
+## Contributing and Support
 
----
+Contributions are welcome. Review [CONTRIBUTING.md](CONTRIBUTING.md), open an issue for defects or enhancements, and follow the existing project conventions when submitting a pull request.
 
-## Notes
-
-* Browser runs in headless mode by default (optimized for CI/CD and servers)
-* All ChromeDriver management is automatic — no need to download or maintain chromedriver.exe
-* Designed for scalability: tested with large-scale datasets across multiple parallel processes
-* Secure handling of authentication via Salesforce CLI (no hardcoded credentials)
-
-## Contributing
-
-**Contributions are welcome!**
-
-* Open issues for bugs
-* Submit pull requests for improvements
-* Follow existing coding patterns
-
-## Support
-
-If this project helps you:
-
-- Star ⭐ the repository  
-- Share feedback  
-- Open issues for improvements  
-
-Your support helps improve and maintain the project.
----
+If the project is useful, consider starring the repository and sharing feedback.
 
 ## Author
 
-**Name:** **Bhimeswara Vamsi Punnam**
-
-**Role:** Lead Software Development Engineer in Test (SDET)
- 
-**Contact:** [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/bvamsipunnam)
-
----
+Created and maintained by [Bhimeswara Vamsi Punnam](https://www.linkedin.com/in/bvamsipunnam), Lead Software Development Engineer in Test.
 
 ## License
 
-This project is licensed under the MIT License.  
-See the [LICENSE](LICENSE) file for full terms and conditions.
+Licensed under the [MIT License](LICENSE).
