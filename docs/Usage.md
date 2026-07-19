@@ -1,8 +1,10 @@
 # Usage
 
+A successful execution produces isolated download, artifact, and Robot Framework report directories similar to the following:
+
 ## Basic execution
 
-Refresh `org_info.json`, populate the configured input workbooks, and run all batches sequentially:
+Refresh `org_info.json`, populate the configured input workbooks with `ContentDocumentId` values, and run all configured batches sequentially:
 
 ```bash
 robot --outputdir results src/robot/orchestrator/download.robot
@@ -22,7 +24,7 @@ Because `download.robot` is one suite, this command creates Pabot infrastructure
 pabot --pabotlib --processes 4 --outputdir results src/robot/orchestrator/download.robot
 ```
 
-Use test-level splitting to execute batch tests concurrently:
+Add `--testlevelsplit` to execute the configured batch tests concurrently:
 
 ```bash
 pabot --pabotlib --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
@@ -54,7 +56,7 @@ results/
 
 The ContentVersion workbook contains `Title`, `VersionData`, and `PathOnClient` for each successful file. The ContentDocumentLink workbook contains source `ContentDocumentId`, `LinkedEntityId`, `ShareType`, and `Visibility` for every original link. After inserting ContentVersion records into a destination org, replace source document IDs with the new destination IDs before importing links.
 
-The failed-ID workbook contains unique IDs rejected during validation, metadata retrieval, download, or final verification. If no file succeeds, empty import workbooks are removed. Robot's `log.html` contains execution detail.
+The failed-ID workbook contains unique IDs rejected during validation, metadata retrieval, download, or final verification. If no file succeeds, empty import workbooks are removed. Robot Framework's `log.html`, `report.html`, and `output.xml` provide detailed execution and diagnostic information.
 
 ---
 

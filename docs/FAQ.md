@@ -2,7 +2,7 @@
 
 ## Why use Selenium?
 
-Selenium configures and controls the authenticated Chrome session used for Salesforce Shepherd downloads. REST remains responsible for structured metadata queries.
+Selenium establishes and manages the authenticated Chrome session required for Salesforce Shepherd downloads. REST remains responsible for structured metadata queries.
 
 ## Why use Robot Framework?
 
@@ -18,7 +18,7 @@ Yes. Metadata retrieval uses REST API query calls, including pagination when req
 
 ## How are duplicate ContentDocument IDs handled?
 
-Repeated IDs in one input workbook are removed before processing. Overlapping IDs in separate batch workbooks can still be processed by separate workers.
+Duplicate IDs within the same input workbook are removed before processing. Overlapping IDs in separate batch workbooks can still be processed by separate workers.
 
 ## How are multiple ContentDocumentLink records handled?
 
@@ -26,7 +26,7 @@ The metadata query retrieves all visible links for each requested document. When
 
 ## Can interrupted executions be resumed?
 
-Failed IDs can be rerun from the generated failure workbook. A partial binary cannot resume from its previous byte offset, and there is no automatic execution checkpoint.
+Failed IDs can be rerun from the generated failure workbook. Downloads always restart from the beginning; partially downloaded files are not resumed automatically.
 
 ## How are downloads validated?
 
@@ -34,7 +34,7 @@ The downloader rejects temporary browser extensions, waits for completion and st
 
 ## Are Salesforce access tokens written to logs?
 
-Token-bearing initialization and request operations suppress ordinary Robot logging. The token remains in the local `org_info.json`, which must not be committed or shared. Operators should still sanitize diagnostic output before publishing it.
+Token-bearing initialization and request operations suppress ordinary Robot logging. The token remains in the local `org_info.json`, which must not be committed or shared. Users should still sanitize diagnostic output before sharing logs publicly.
 
 ## Can files be uploaded directly to S3?
 
@@ -46,7 +46,7 @@ The documentation provides environment commands for Windows, Linux, and macOS. C
 
 ## How many workers should be used?
 
-There is no universal value. Start with a small count and measure CPU, memory, disk, network, Salesforce response behavior, and failure rate. Review the [performance guidance](Performance.md) before increasing workers.
+There is no universal value. Start with a small number of workers and increase gradually while monitoring CPU, memory, disk, network, Salesforce response behavior, and failure rate. Review the [performance guidance](Performance.md) before increasing workers.
 
 ---
 

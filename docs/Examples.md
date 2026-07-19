@@ -26,13 +26,13 @@ ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}    No
 
 ## Run four batch workers
 
-Distribute the four configured test cases across up to four processes:
+Execute the four configured batch tests across up to four parallel worker processes:
 
 ```bash
 pabot --pabotlib --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
 ```
 
-Use balanced workbooks where practical. A small batch can finish while another worker continues processing a much larger input.
+Where practical, distribute a similar number of IDs across input workbooks to improve parallel execution efficiency. A small batch can finish while another worker continues processing a much larger input.
 
 ## Retry failures
 
@@ -50,12 +50,12 @@ The following numbers are an example only; they are not benchmark results or gua
 - 247 ContentVersion workbook rows
 - 412 ContentDocumentLink workbook rows because some files have multiple links
 - 3 failed IDs written to the failure workbook for review and rerun
-- Validation completed successfully for every file reported as downloaded
+- Every downloaded file passed validation
 
-## Prepare migration links
+## Prepare Migration Workbooks
 
 1. Import the generated ContentVersion workbook into the destination org.
-2. obtain the destination `ContentDocumentId` for every inserted file.
+2. Obtain the destination `ContentDocumentId` for every inserted file.
 3. Map source IDs in the generated ContentDocumentLink workbook to those destination IDs.
 4. Import the remapped link rows.
 

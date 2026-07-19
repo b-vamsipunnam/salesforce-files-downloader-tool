@@ -6,7 +6,7 @@
 - Robot Framework (installed by `requirements.txt`)
 - Salesforce CLI (`sf`)
 - Google Chrome
-- Node.js, when installing Salesforce CLI through npm
+- Node.js (only if installing Salesforce CLI via npm)
 - Read access to the requested Salesforce files and metadata
 
 ## Environment preparation
@@ -50,7 +50,7 @@ sf --version
 
 ## Chrome
 
-Install a current Google Chrome release and confirm it can start in the execution environment. The project's browser helper configures Chrome for headless downloads; no separate driver setup is documented by this project.
+Install a current version of Google Chrome and confirm it starts successfully in the execution environment. The project's browser helper configures Chrome for headless downloads; no separate driver setup is documented by this project.
 
 ## Verify the environment
 
@@ -61,7 +61,7 @@ pabot --version
 sf --version
 ```
 
-Continue with Salesforce authentication before running the suite.
+Continue with the Authentication guide before running the downloader.
 
 ---
 

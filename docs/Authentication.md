@@ -4,6 +4,11 @@ Authenticate through Salesforce CLI and assign an alias:
 
 ```bash
 sf org login web --alias <org_alias>
+```
+
+(Optional) Verify the authenticated org:
+
+```bash
 sf org display --target-org <org_alias>
 ```
 
@@ -21,11 +26,13 @@ Linux or macOS:
 sf org display --json --target-org <org_alias> > org_info.json
 ```
 
-The file supplies the instance URL, access token, API version, and alias. REST requests use the token as a Bearer credential. Chrome receives the authenticated session through a Salesforce `frontdoor.jsp` URL before Shepherd downloads begin.
+`org_info.json` provides the instance URL, access token, API version, and authenticated org alias used during execution.
 
-> **Security:** `org_info.json` contains an access token. It is excluded by `.gitignore`; never commit, publish, attach, or include it in logs. Regenerate it if the session expires. Prefer a dedicated user with only the permissions required for the migration.
+> **Security:** `org_info.json` contains an access token. It is excluded by `.gitignore`; never commit, publish, attach, or include it in logs. Regenerate the file whenever the Salesforce session expires or a new access token is required. Prefer a dedicated user with only the permissions required for the migration.
 
-Authentication is external to the downloader. The framework does not store a username or password and does not refresh an expired session during execution.
+Authentication is managed entirely through Salesforce CLI. The downloader never stores Salesforce usernames or passwords and does not refresh expired sessions during execution.
+
+Access tokens are short-lived, and their lifetime depends on your Salesforce organization's session timeout settings. If authentication fails because the session has expired, regenerate `org_info.json` before rerunning the downloader.
 
 ---
 

@@ -14,7 +14,7 @@ Batch inputs and optional workbook flags are defined in `src/robot/orchestrator/
 | `${BASE_DOWNLOAD_FOLDER}`                         | `downloads/`         | Validated binary output root                 |
 | `${OUTPUT_FOLDER}`                                | `artifacts/`         | Workbook output root                         |
 
-Workbook flags accept `Yes` or `No`. Add, remove, or edit batch test cases in `download.robot` to match the input files being processed.
+Workbook generation flags accept `Yes` or `No` to enable or disable creation of the corresponding migration workbooks. Add, remove, or edit batch test cases in `download.robot` to match the number of input workbooks being processed.
 
 ## Processing controls
 
@@ -28,11 +28,16 @@ Workbook flags accept `Yes` or `No`. Add, remove, or edit batch test cases in `d
 | `${FILE_MOVE_TIMEOUT}`         | `15s`   | Maximum period for move retries          |
 | `${FILE_MOVE_RETRY_INTERVAL}`  | `500ms` | Delay after a temporary file lock        |
 
+The default metadata batch size of 200 balances SOQL request efficiency with reliable query execution for large migrations.
+
 Increase timeouts only after checking file access, browser behavior, network throughput, and disk performance. Larger SOQL batches reduce request count but make each query longer.
 
 ## Input workbook format
 
-Put IDs in the first column. A `ContentDocumentId` header is optional. Blank values are ignored and repeated IDs are removed.
+Place one `ContentDocumentId` in the first column of the worksheet. A `ContentDocumentId` header is optional. Blank rows are ignored, and duplicate IDs are processed only once per batch.
+
+Both 15-character and 18-character Salesforce `ContentDocumentId` values are supported.
+
 
 | ContentDocumentId    |
 |----------------------|
