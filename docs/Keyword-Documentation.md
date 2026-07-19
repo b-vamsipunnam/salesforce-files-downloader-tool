@@ -2,6 +2,8 @@
 
 `src/robot/resources/keywords.robot` imports the resource files below. Robot Framework exposes their keywords when that entry point is imported. Most callers should use the orchestration keyword rather than assemble the internal workflow directly.
 
+This page summarizes the primary public keywords and their responsibilities. For implementation details, refer to the corresponding resource files.
+
 ## Salesforce CLI and authentication
 
 **Source**
@@ -103,10 +105,12 @@ ${content_ids}=    Read Content IDs From Excel Sheet    ${INPUT_EXCEL_PATH_1}   
 
 `src/robot/resources/download_workflow.robot`
 
-| Keyword                                     | Purpose                           | Arguments                                                                                                                     | Return value               | Important behavior                                                                                        |
-|---------------------------------------------|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------|
-| `Download Files Using Content Document IDs` | Run one complete input batch.     | `${input_excel_path}`, `${sheet_name}`, `${GENERATE_CONTENT_VERSION_FILE}`, `${GENERATE_CONTENT_DOCUMENT_LINK_FILE}`          | None; test passes or fails | Initializes state, queries metadata, processes IDs, writes reports, and always performs teardown actions. |
-| `Process ContentDocument Download`          | Prepare and process one document. | `${content_id}`, `${content_doc}`, `${content_links}`, `${record_number}`, `${cv_row}`, `${cdl_row}`, `${download_directory}` | `PASS` or `FAIL`           | Builds a safe filename and URL, then delegates transfer and validation.                                   |
+Unless otherwise noted, most projects should call Download Files Using Content Document IDs rather than lower-level helper keywords.
+
+| Keyword                                     | Purpose                           | Arguments                                                                                                                     | Return value                                      | Important behavior                                                                                        |
+|---------------------------------------------|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
+| `Download Files Using Content Document IDs` | Run one complete input batch.     | `${input_excel_path}`, `${sheet_name}`, `${GENERATE_CONTENT_VERSION_FILE}`, `${GENERATE_CONTENT_DOCUMENT_LINK_FILE}`          | No return value; controls overall test execution. | Initializes state, queries metadata, processes IDs, writes reports, and always performs teardown actions. |
+| `Process ContentDocument Download`          | Prepare and process one document. | `${content_id}`, `${content_doc}`, `${content_links}`, `${record_number}`, `${cv_row}`, `${cdl_row}`, `${download_directory}` | `PASS` or `FAIL`                                  | Builds a safe filename and URL, then delegates transfer and validation.                                   |
 
 ```robot
 Download Files Using Content Document IDs
@@ -133,6 +137,8 @@ Download Files Using Content Document IDs
 **Source**
 
 `src/robot/resources/cleanup.robot`
+
+These keywords are typically executed during suite teardown and normally do not require direct invocation.
 
 | Keyword                     | Purpose                                    | Arguments | Return value | Important behavior                                                  |
 |-----------------------------|--------------------------------------------|-----------|--------------|---------------------------------------------------------------------|

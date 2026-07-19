@@ -2,7 +2,7 @@
 
 ## Benchmark results
 
-The verified project benchmark used 10,000 Salesforce files totaling approximately 6.4 GB across 18 file types on a single machine.
+The following benchmark was performed using 10,000 Salesforce files totaling approximately 6.4 GB across 18 file types on a single machine.
 
 | Workers | Runtime     | Speedup | Efficiency |
 |---------|-------------|---------|------------|
@@ -10,6 +10,9 @@ The verified project benchmark used 10,000 Salesforce files totaling approximate
 | 2       | 121 minutes | 1.98×   | 99.17%     |
 | 4       | 61 minutes  | 3.93×   | 98.36%     |
 | 8       | 31 minutes  | 7.74×   | 96.75%     |
+
+
+### Runtime Scaling
 
 ```mermaid
 flowchart LR
@@ -30,7 +33,7 @@ pabot --pabotlib --testlevelsplit --processes 4 --outputdir results src/robot/or
 
 ## Worker scaling
 
-Start with a small worker count and observe CPU, memory, disk latency, network use, Salesforce behavior, and failure rate. Increase `--processes` gradually. Similarly sized input workbooks use workers more evenly; startup and result merging can make parallel execution slower for small inputs.
+Start with a small worker count and observe CPU, memory, disk latency, network use, Salesforce behavior, and failure rate. Increase `--processes` gradually. Distributing a similar number of IDs across input workbooks generally results in better worker utilization. Startup overhead and result merging can make parallel execution less efficient for very small workloads.
 
 ## Download validation
 
@@ -38,11 +41,11 @@ A download succeeds only after the framework detects a non-temporary file, obser
 
 ## Retry behavior
 
-File movement retries temporary locks until `${FILE_MOVE_TIMEOUT}` expires, waiting `${FILE_MOVE_RETRY_INTERVAL}` between attempts. Appearance, completion, and stability use separate bounds. Failed downloads are not retried indefinitely.
+File movement retries temporary locks until `${FILE_MOVE_TIMEOUT}` expires, waiting `${FILE_MOVE_RETRY_INTERVAL}` between attempts. Appearance, completion, and stability use separate bounds. Failed downloads are retried only within the configured timeout limits.
 
 ## Recovery and failure reporting
 
-Failures are deduplicated into a batch-specific Excel workbook. After correcting access, session, capacity, or network problems, use those IDs in a new run. Successful outputs remain in their isolated directories. Partial binary transfer does not resume at the previous byte offset.
+Failures are deduplicated into a batch-specific Excel workbook. After resolving permission, authentication, capacity, or network issues, use those IDs in a new run. Successful outputs remain in their isolated directories. Partial binary transfer does not resume at the previous byte offset.
 
 ## Benchmark limitations
 

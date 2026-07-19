@@ -44,7 +44,7 @@ The access token in `org_info.json` expired or was revoked.
 
 Regenerate `org_info.json` from the authenticated alias and rerun failed IDs. The tool does not refresh a token during execution.
 
-## Chrome or ChromeDriver mismatch
+## Chrome startup or browser compatibility issues
 
 **Symptoms**
 
@@ -98,7 +98,7 @@ The transfer is incomplete, source metadata changed during processing, or a file
 
 **Resolution**
 
-Do not accept the file as successful. Verify the source, disk, and network, then rerun the ID from the failure report.
+Treat the download as failed. Verify the source metadata, local storage, and network conditions before rerunning the affected ID.
 
 ## Missing ContentDocumentLink metadata
 
@@ -160,7 +160,7 @@ Free space or move the configured output roots to a larger volume. Allow capacit
 
 **Symptoms**
 
-Workers appear to process overlapping source IDs or a shared authentication file disappears during execution.
+Multiple workers process the same ContentDocumentId, or shared runtime files disappear unexpectedly.
 
 **Likely cause**
 
@@ -182,7 +182,7 @@ A dependency, Robot resource import, headless Chrome startup, SeleniumLibrary in
 
 **Resolution**
 
-Inspect the failing Actions step and reproduce `ci/robot/smoke.robot` with the pinned dependencies. The smoke test does not require org credentials or download Salesforce files.
+Review the failing GitHub Actions step and reproduce `ci/robot/smoke.robot` locally using the pinned dependencies. The smoke test does not require org credentials or download Salesforce files.
 
 ---
 

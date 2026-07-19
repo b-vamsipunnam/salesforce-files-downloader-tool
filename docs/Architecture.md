@@ -3,6 +3,8 @@
 
 The downloader uses a hybrid control and data flow. Salesforce REST APIs retrieve structured metadata, while Salesforce Shepherd endpoints deliver binaries through an authenticated browser session.
 
+### High-Level Workflow
+
 ```mermaid
 flowchart TD
     INPUT[Excel Input]
@@ -23,11 +25,16 @@ flowchart TD
     REPORT --> CLEANUP
 ```
 
+### Detailed Architecture Diagram
+
+The following diagram provides a more detailed visual representation of the components and their interactions.
+
 <p align="center">
   <img src="architecture.png" width="700" alt="Salesforce Files Bulk Downloader architecture">
 </p>
 
-## Component responsibilities
+
+## Component Responsibilities
 
 - **Salesforce CLI** supplies the instance URL, access token, API version, and org alias through `org_info.json`.
 - **Salesforce REST API** executes paginated SOQL queries for `ContentDocument` and `ContentDocumentLink` metadata.
@@ -59,7 +66,7 @@ Robot Framework provides keyword-driven orchestration for a workflow that combin
 - **Recoverable reporting:** failure workbooks provide input for controlled reruns.
 - **Minimal exposure of sensitive authentication data:** token-bearing operations suppress ordinary logs and authentication files remain uncommitted.
 
-## Runtime locations
+## Runtime Locations
 
 | Location                  | Responsibility                                            |
 |---------------------------|-----------------------------------------------------------|

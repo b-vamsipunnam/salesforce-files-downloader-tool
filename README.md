@@ -47,7 +47,7 @@ pip install -r requirements.txt
 sf org login web --alias <org_alias>
 ```
 
-Generate `org_info.json` by following the Authentication guide [Authentication](docs/Authentication.md), add ContentDocument IDs to the first column of `input/Inputfile_1.xlsx`, and run:
+Generate `org_info.json` by following the [Authentication](docs/Authentication.md) guide, add `ContentDocumentId` values to the first column of `input/Inputfile_1.xlsx`, and run:
 
 ```bash
 robot --outputdir results src/robot/orchestrator/download.robot
@@ -57,7 +57,7 @@ Downloaded files appear in `downloads/`, migration and failure workbooks in `art
 
 ## Architecture
 
-The tool uses Salesforce REST APIs for metadata and an authenticated Selenium browser for Shepherd file downloads. Robot Framework coordinates validation and reporting, while Pabot can isolate and run batches in parallel. See the [architecture documentation](docs/Architecture.md) for the full flow and existing diagram.
+The tool uses Salesforce REST APIs for metadata and an authenticated Selenium browser for Shepherd file downloads. Robot Framework coordinates validation and reporting, while Pabot can isolate and run batches in parallel. See the [Architecture](docs/Architecture.md) guide for the complete workflow and detailed component diagram.
 
 ## Contents
 
@@ -81,7 +81,7 @@ The tool uses Salesforce REST APIs for metadata and an authenticated Selenium br
 ## Repository Structure
 
 ```text
-.
+
 ├── docs/
 ├── src/
 │   └── robot/
@@ -104,7 +104,7 @@ The tool uses Salesforce REST APIs for metadata and an authenticated Selenium br
 - `src/robot/libraries/` contains custom Python libraries used by Robot Framework.
 - `src/robot/orchestrator/` defines executable download batches.
 - `src/robot/resources/` contains configuration and reusable workflow keywords.
-- `input/` contains Excel workbooks listing source ContentDocument IDs.
+- `input/` contains Excel workbooks listing source `ContentDocumentIds`.
 - `downloads/` stores validated file binaries in isolated batch directories.
 - `artifacts/` stores migration and failed-ID workbooks.
 - `results/` receives Robot Framework and Pabot execution reports.
@@ -112,7 +112,7 @@ The tool uses Salesforce REST APIs for metadata and an authenticated Selenium br
 
 ## Contributing
 
-Bug reports, documentation improvements, and code contributions are welcome. Read the [contributor guide](docs/Contributing.md), [code of conduct](CODE_OF_CONDUCT.md), and [security policy](SECURITY.md) before contributing.
+Bug reports, documentation improvements, and code contributions are welcome. Please read the [Contributing](docs/Contributing.md) guide, [Code of Conduct](CODE_OF_CONDUCT.md), and [Security Policy](SECURITY.md) before opening issues or pull requests.
 
 ## License
 

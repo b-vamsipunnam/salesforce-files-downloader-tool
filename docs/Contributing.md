@@ -14,7 +14,7 @@ Fork and clone the repository, create a virtual environment, and install depende
 git checkout -b feature/short-description
 ```
 
-Follow the existing Robot Framework and Python patterns. Prefer descriptive reusable keywords, variables over hard-coded paths, focused commits, and documentation updates when behavior changes.
+Keep changes consistent with the existing project structure and naming conventions. Prefer descriptive reusable keywords, variables over hard-coded paths, focused commits, and documentation updates when behavior changes.
 
 ## Verification
 
@@ -34,9 +34,9 @@ The GitHub Actions workflow runs an isolated smoke test for Robot Framework, hea
 
 ## Pull requests
 
-Keep the change focused, use a meaningful commit message, link related issues, describe user-visible behavior, and state verification results. Never commit access tokens, passwords, `org_info.json`, runtime downloads, or customer data.
+Keep each pull request focused on a single change. Use meaningful commit messages, link related issues, describe user-visible behavior, and summarize the verification performed. Never commit access tokens, passwords, `org_info.json`, runtime downloads, or customer data.
 
-The root [CONTRIBUTING.md](../CONTRIBUTING.md) remains the repository policy reference.
+For repository policies and contribution expectations, refer to the root [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ---
 

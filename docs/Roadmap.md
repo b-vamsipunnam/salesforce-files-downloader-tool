@@ -4,18 +4,18 @@ This roadmap records areas for improvement and exploration. It does not commit t
 
 ## Near-Term
 
-- Improve automated test coverage
 - Expand CI validation
+- Improve automated test coverage
 - Improve error categorization
-- Add more execution examples
-- Add checksum reporting
 - Improve resumable batch execution
+- Add checksum reporting
+- Add more execution examples
 
 ## Future Exploration
 
 - Enhanced migration reconciliation
 - Structured JSON reporting
-- Configurable storage and retention workflows
+- Configurable storage organization and retention workflows
 - Additional browser compatibility research
 - Performance profiling and worker-scaling improvements
 - Additional validation and reporting options
