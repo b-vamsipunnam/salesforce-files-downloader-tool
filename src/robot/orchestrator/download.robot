@@ -1,9 +1,9 @@
 *** Settings ***
-Documentation       Automates bulk download of Salesforce files using ContentDocument IDs and stores them locally in ID-based folders.
+Documentation       Automates bulk downloads of Salesforce files using ContentDocument IDs and stores them in dedicated ID-based folders.
 
 Resource            ../resources/keywords.robot
 
-Suite Teardown      Cleanup Suite
+Suite Teardown      Cleanup Download Suite
 
 
 *** Variables ***
