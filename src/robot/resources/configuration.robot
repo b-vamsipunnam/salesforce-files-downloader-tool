@@ -32,3 +32,8 @@ ${FILE_MOVE_RETRY_INTERVAL}     500ms
 
 # Number of ContentDocument IDs processed per SOQL metadata batch query.
 ${METADATA_BATCH_SIZE}          200
+
+# Failed ContentDocument retry controls.
+${ENABLE_FAILED_ID_RETRY}       ${TRUE}
+${FAILED_ID_RETRY_COUNT}        2
+${FAILED_ID_RETRY_DELAY}        5s

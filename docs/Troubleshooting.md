@@ -72,6 +72,8 @@ The browser session is invalid, the user lacks file access, the Shepherd request
 
 Refresh authentication, verify the same user can access the file, and inspect browser and Robot errors before increasing the timeout.
 
+When failed-ID retry is enabled, the downloader attempts an eligible ID again after the primary pass. Repeated `RETRY FAILED` messages usually indicate that the problem is not a brief browser delay and needs investigation.
+
 ## Temporary download never completes
 
 **Symptoms**
@@ -85,6 +87,22 @@ The transfer stalled, local storage is full, or browser/network activity was int
 **Resolution**
 
 Check network stability and free disk space, remove abandoned temporary output after the run, and retry the failed ID.
+
+The automatic retry starts a fresh download; it does not continue the abandoned temporary file.
+
+## Automatic retries do not recover an ID
+
+**Symptoms**
+
+The log shows `PERMANENT FAILURE`, or an ID appears in the failed-ID workbook after multiple attempts.
+
+**Likely cause**
+
+The underlying issue lasted through every attempt, or the ID was not retryable because it was invalid or lacked required metadata. An expired Salesforce session also remains expired because the retry pass uses the existing session.
+
+**Resolution**
+
+Use the failure reason in `log.html` to address access, authentication, network, browser, disk, or metadata problems. Regenerate `org_info.json` when the session has expired, then rerun the remaining IDs. Increase retry counts or delays only when failures are genuinely temporary; extra attempts cannot correct invalid IDs or missing permissions.
 
 ## File validation failure
 

@@ -36,7 +36,15 @@ Where practical, distribute a similar number of IDs across input workbooks to im
 
 ## Retry failures
 
-Copy the IDs from `<batch>_FAILED_IDs.xlsx` into a configured input workbook, refresh `org_info.json`, and run that batch again. The current implementation retries whole IDs; it does not continue a partially downloaded binary.
+Retries are enabled by default. After the normal download pass, each eligible failed ID receives up to two additional attempts with a five-second delay between retry attempts:
+
+```robot
+${ENABLE_FAILED_ID_RETRY}    ${TRUE}
+${FAILED_ID_RETRY_COUNT}     2
+${FAILED_ID_RETRY_DELAY}     5s
+```
+
+Each attempt downloads the complete file again; a partial binary is never resumed. Invalid IDs and IDs missing required metadata are not retryable. If an ID still fails, it is written to `<batch>_FAILED_IDs.xlsx`. Once the underlying access, authentication, network, or storage issue is resolved, copy those remaining IDs into an input workbook and run the batch again.
 
 ## Illustrative enterprise batch
 
@@ -49,7 +57,7 @@ The following numbers are an example only; they are not benchmark results or gua
 - 247 files downloaded and validated
 - 247 ContentVersion workbook rows
 - 412 ContentDocumentLink workbook rows because some files have multiple links
-- 3 failed IDs written to the failure workbook for review and rerun
+- 3 IDs still failed after automatic retries and were written to the failure workbook
 - Every downloaded file passed validation
 
 ## Prepare Migration Workbooks

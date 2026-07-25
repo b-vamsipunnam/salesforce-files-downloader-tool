@@ -5,6 +5,7 @@ Library             OperatingSystem
 Library             Collections
 Library             Process
 Library             json
+Library             ../libraries/SalesforceSupport.py
 Resource            configuration.robot
 
 
@@ -56,18 +57,14 @@ Load Org Context
     Log To Console    Connected to ${ORG_ALIAS} (API v${CLI_API_VERSION})
 
 Safe Parse Sf Json
-    [Documentation]     Extracts and parses the first JSON object or array from Salesforce CLI output. Supports output containing leading warnings or banners and fails when no JSON content is found.
+    [Documentation]     Parses the first valid JSON object or array from Salesforce CLI output without logging the raw output.
     [Arguments]    ${raw_output}
-    ${obj_start}=    Evaluate    $raw_output.find('{')
-    ${arr_start}=    Evaluate    $raw_output.find('[')
-    ${start}=    Set Variable    ${obj_start}
-    IF    ${start} == -1
-        ${start}=    Set Variable    ${arr_start}
+    TRY
+        ${data}=    Parse First Json Value
+        ...    ${raw_output}
+    EXCEPT
+        Log To Console
+        ...    Unable to parse Salesforce CLI JSON output.
+        Fail    Invalid sf CLI JSON output
     END
-    IF    ${start} == -1
-        Log To Console    No JSON found in output:\n${raw_output}
-        Fail    Invalid sf CLI output - no JSON block
-    END
-    ${json_text}=    Evaluate    $raw_output[$start:]
-    ${data}=    Evaluate    json.loads($json_text)    modules=json
     RETURN    ${data}

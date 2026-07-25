@@ -56,7 +56,9 @@ results/
 
 The ContentVersion workbook contains `Title`, `VersionData`, and `PathOnClient` for each successful file. The ContentDocumentLink workbook contains source `ContentDocumentId`, `LinkedEntityId`, `ShareType`, and `Visibility` for every original link. After inserting ContentVersion records into a destination org, replace source document IDs with the new destination IDs before importing links.
 
-The failed-ID workbook contains unique IDs rejected during validation, metadata retrieval, download, or final verification. If no file succeeds, empty import workbooks are removed. Robot Framework's `log.html`, `report.html`, and `output.xml` provide detailed execution and diagnostic information.
+After the primary pass, the downloader automatically retries eligible failed downloads when retry is enabled. An ID that succeeds during retry is treated like any other successful download and is removed from the failure list. The failed-ID workbook therefore contains only unique IDs that were invalid, lacked required metadata, or still failed after all configured attempts.
+
+If no file succeeds, empty import workbooks are removed. Robot Framework's `log.html`, `report.html`, and `output.xml` show each retry attempt and provide detailed diagnostic information.
 
 ---
 

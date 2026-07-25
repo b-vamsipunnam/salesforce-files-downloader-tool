@@ -52,9 +52,10 @@ Create ContentDocument ID Folder
     RETURN    ${content_id_folder}
 
 Sanitize Filename
-    [Documentation]     Converts a Salesforce file title into a valid local filename by replacing operating-system-restricted characters with underscores and removing surrounding whitespace.
+    [Documentation]     Converts a Salesforce file title into a valid local filename, including protection for Windows reserved names, trailing periods or spaces, and empty results.
     [Arguments]    ${name}
-    ${safe}=    Evaluate    re.sub(r'[\\\\/:*?"<>|]', '_', str($name)).strip()    modules=re
+    ${safe}=    Sanitize Local Filename
+    ...    ${name}
     RETURN    ${safe}
 
 Download And Validate Content File
@@ -355,7 +356,16 @@ Validate And Move Downloaded File
                 ...    ${current_cdl_row} + 1
             END
         END
-        Append To List    ${successful_content_ids}    ${content_id}
+        ${already_recorded_success}=    Run Keyword And Return Status
+        ...    List Should Contain Value
+        ...    ${successful_content_ids}
+        ...    ${content_id}
+
+        IF    not ${already_recorded_success}
+            Append To List
+            ...    ${successful_content_ids}
+            ...    ${content_id}
+        END
         Log To Console
         ...    SUCCESS: ${file_name} downloaded and moved to ${content_id}
         ${source_still_exists}=    Run Keyword And Return Status
@@ -379,19 +389,39 @@ Validate And Move Downloaded File
     END
 
 Cleanup Download Directory
-    [Documentation]     Removes files remaining in the active browser download directory while preserving ContentDocument-specific subfolders containing successfully downloaded files.
+    [Documentation]    Removes all top-level files remaining in the isolated active browser download directory after processing. Preserves ContentDocument-specific subdirectories containing successfully stored files.
     [Arguments]    ${download_directory}
-    ${download_dir_path}=    Normalize Path    ${download_directory}
-    Directory Should Exist    ${download_dir_path}
+    ${download_dir_path}=    Normalize Path
+    ...    ${download_directory}
+    Directory Should Exist
+    ...    ${download_dir_path}
     ${list_files}=    Evaluate
-    ...    [f for f in os.listdir(r'${download_dir_path}') if os.path.isfile(os.path.join(r'${download_dir_path}', f))]
+    ...    (lambda path: [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))])($download_dir_path)
     ...    modules=os
-    ${file_count}=    Evaluate    len($list_files)    modules=os
-    Log    Found ${file_count} files to delete.
+    ${file_count}=    Get Length
+    ...    ${list_files}
+    Log    Found ${file_count} leftover files to delete.
     FOR    ${file}    IN    @{list_files}
-        ${full_path}=    Evaluate    os.path.join(r'${download_dir_path}', $file)    modules=os
-        ${keyword_status}=    Run Keyword And Ignore Error    Evaluate    os.remove($full_path)    modules=os
-        ${is_file_deleted}=    Set Variable    ${keyword_status}[0]
-        IF    '${is_file_deleted}' == 'PASS'    Log    DELETED : ${file}
-        IF    '${is_file_deleted}' == 'FAIL'    Remove File    ${full_path}
+        ${full_path}=    Evaluate
+        ...    os.path.join($download_dir_path, $file)
+        ...    modules=os
+        ${status}    ${message}=    Run Keyword And Ignore Error
+        ...    Remove File
+        ...    ${full_path}
+        IF    '${status}' == 'PASS'
+            Log
+            ...    Deleted leftover download file: ${file}
+        ELSE
+            ${file_still_exists}=    Run Keyword And Return Status
+            ...    File Should Exist
+            ...    ${full_path}
+            IF    ${file_still_exists}
+                Fail
+                ...    Unable to delete leftover download file '${file}': ${message}
+            ELSE
+                Log
+                ...    Leftover download file '${file}' disappeared before deletion completed.
+                ...    WARN
+            END
+        END
     END

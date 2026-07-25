@@ -26,7 +26,11 @@ The metadata query retrieves all visible links for each requested document. When
 
 ## Can interrupted executions be resumed?
 
-Failed IDs can be rerun from the generated failure workbook. Downloads always restart from the beginning; partially downloaded files are not resumed automatically.
+An individual failed download can be attempted again automatically during the same run. Downloads always restart from the beginning; partially downloaded files are not resumed. If the whole Robot execution is interrupted, or an ID remains unsuccessful after its configured attempts, rerun the IDs from the generated failure workbook.
+
+## Which failures are retried automatically?
+
+Valid ContentDocument IDs with the required metadata are eligible for another full download attempt. Invalid IDs and IDs missing ContentDocument or required ContentDocumentLink metadata are kept in the failure report without retrying. The retry pass reuses the metadata and authenticated sessions created for the batch; it does not refresh an expired session or repeat the metadata queries.
 
 ## How are downloads validated?
 

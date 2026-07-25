@@ -8,13 +8,15 @@ Resource            configuration.robot
 
 *** Keywords ***
 Cleanup Runtime Artifacts
-    [Documentation]     Removes recognized temporary files and UUID-named temporary files from the execution directory.
+    [Documentation]     Removes recognized temporary files and strictly named downloader-generated temporary files from the execution directory.
     ${items}=    List Directory    ${EXECDIR}
     FOR    ${item}    IN    @{items}
         ${full_path}=    Set Variable    ${EXECDIR}${/}${item}
-        ${is_uuid}=    Evaluate    len($item) == 32 and all(c in "0123456789abcdef" for c in $item)
+        ${is_generated_temp}=    Evaluate
+        ...    re.fullmatch(r"salesforce_downloader_tmp_[0-9a-f]{32}", str($item)) is not None
+        ...    modules=re
         ${is_known_temp}=    Evaluate    $item in $TEMP_FILES
-        IF    ${is_uuid} or ${is_known_temp}
+        IF    ${is_generated_temp} or ${is_known_temp}
             ${is_file}=    Run Keyword And Return Status    File Should Exist    ${full_path}
             IF    ${is_file}
                 Log    Removing temp file: ${item}
