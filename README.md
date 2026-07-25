@@ -9,9 +9,20 @@
 
 Salesforce Files Bulk Downloader is an open-source utility built with Robot Framework and Python for downloading Salesforce Files in bulk from `ContentDocumentId` lists.
 
+Designed for enterprise migration and backup scenarios involving thousands to millions of Salesforce Files.
+
+**Built with**
+
+- Robot Framework
+- Python
+- SeleniumLibrary
+- Salesforce REST API
+- Salesforce CLI
+- Google Chrome
+
 ## Why this tool exists
 
-Salesforce Files combine a logical file (`ContentDocument`), version and binary metadata (`ContentVersion`), and record associations (`ContentDocumentLink`). Enterprise migration work must preserve these relationships while managing API limits, sessions, binary volume, validation, parallel workers, and failure reporting.
+Salesforce Files combine a logical file (`ContentDocument`), version and binary metadata (`ContentVersion`), and record associations (`ContentDocumentLink`). Enterprise migration work must preserve these relationships while managing API limits, sessions, binary volume, validation, bounded retry handling, parallel workers, and failure reporting.
 
 This project separates metadata retrieval from binary transfer and provides isolated batch outputs, size validation, failed-ID reporting, and optional Data Loader-ready workbooks. See the [Introduction](docs/Introduction.md) for the data model and migration challenges.
 
@@ -34,7 +45,8 @@ This project separates metadata retrieval from binary transfer and provides isol
 - Downloads each physical file once into a ContentDocument-specific directory
 - Isolates download and artifact directories for each batch and worker
 - Checks completion, stability, and final size against Salesforce `ContentSize`
-- Writes failed IDs and optional ContentVersion and ContentDocumentLink import workbooks
+- Automatically retries transient download failures and writes only unresolved IDs to the failed-ID workbook
+- Creates optional ContentVersion and ContentDocumentLink import workbooks
 - Supports headless Chrome and Pabot test-level parallel execution
 
 ## Quick Start
@@ -47,7 +59,7 @@ pip install -r requirements.txt
 sf org login web --alias <org_alias>
 ```
 
-Generate `org_info.json` by following the [Authentication](docs/Authentication.md) guide, add `ContentDocumentId` values to the first column of `input/Inputfile_1.xlsx`, and run:
+Follow the [Authentication](docs/Authentication.md) guide to generate `org_info.json`. Then add `ContentDocumentId` values to the first column of `input/Inputfile_1.xlsx` and run:
 
 ```bash
 robot --outputdir results src/robot/orchestrator/download.robot
@@ -56,6 +68,8 @@ robot --outputdir results src/robot/orchestrator/download.robot
 Downloaded files appear in `downloads/`, migration and failure workbooks in `artifacts/`, and Robot Framework reports in `results/`.
 
 ## Architecture
+
+![Salesforce Files Bulk Downloader execution architecture](docs/architecture.svg)
 
 The tool uses Salesforce REST APIs for metadata and an authenticated Selenium browser for Shepherd file downloads. Robot Framework coordinates validation and reporting, while Pabot can isolate and run batches in parallel. See the [Architecture](docs/Architecture.md) guide for the complete workflow and detailed component diagram.
 
@@ -81,7 +95,7 @@ The tool uses Salesforce REST APIs for metadata and an authenticated Selenium br
 ## Repository Structure
 
 ```text
-
+salesforce-files-downloader-tool/
 ├── docs/
 ├── src/
 │   └── robot/

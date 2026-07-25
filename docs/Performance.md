@@ -41,11 +41,16 @@ A download succeeds only after the framework detects a non-temporary file, obser
 
 ## Retry behavior
 
-File movement retries temporary locks until `${FILE_MOVE_TIMEOUT}` expires, waiting `${FILE_MOVE_RETRY_INTERVAL}` between attempts. Appearance, completion, and stability use separate bounds. Failed downloads are retried only within the configured timeout limits.
+The downloader has two separate retry layers:
+
+- File movement retries temporary filesystem locks until `${FILE_MOVE_TIMEOUT}` expires, waiting `${FILE_MOVE_RETRY_INTERVAL}` between attempts.
+- After the primary batch pass, failed downloads receive up to `${FAILED_ID_RETRY_COUNT}` additional full-download attempts when `${ENABLE_FAILED_ID_RETRY}` is enabled. `${FAILED_ID_RETRY_DELAY}` is applied between those additional attempts.
+
+Appearance, completion, and file stability still use their own bounds on every attempt. Automatic retries increase total runtime when Salesforce, the browser, the network, or local storage is unreliable, so include that extra time when estimating a large migration.
 
 ## Recovery and failure reporting
 
-Failures are deduplicated into a batch-specific Excel workbook. After resolving permission, authentication, capacity, or network issues, use those IDs in a new run. Successful outputs remain in their isolated directories. Partial binary transfer does not resume at the previous byte offset.
+Only unresolved failures are deduplicated into the batch-specific Excel workbook. IDs recovered by automatic retry are counted as successful and are not included in that workbook. After resolving permission, authentication, capacity, or network issues, use the remaining IDs in a new run. Successful outputs remain in their isolated directories. Partial binary transfer does not resume at the previous byte offset.
 
 ## Benchmark limitations
 

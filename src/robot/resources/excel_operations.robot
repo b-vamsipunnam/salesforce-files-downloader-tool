@@ -120,7 +120,9 @@ Write Failed ContentDocument IDs
     [Documentation]     Creates an Excel workbook containing the supplied failed ContentDocument IDs under the ContentDocumentId header for reporting or later retry.
     [Arguments]    ${unique_failed_content_ids}    ${excel_file}
     ${uuid}=    Evaluate    __import__('uuid').uuid4().hex
-    Create Excel Document    ${uuid}
+    ${temp_doc_id}=    Set Variable
+    ...    salesforce_downloader_tmp_${uuid}
+    Create Excel Document    ${temp_doc_id}
     Write Excel Cell    row_num=1    col_num=1    value=ContentDocumentId
     ${row}=    Set Variable    2
     FOR    ${id}    IN    @{unique_failed_content_ids}

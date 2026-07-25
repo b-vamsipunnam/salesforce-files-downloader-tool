@@ -27,10 +27,15 @@ Workbook generation flags accept `Yes` or `No` to enable or disable creation of 
 | `${FILE_STABILITY_INTERVAL}`   | `0.25s` | Delay between stability checks           |
 | `${FILE_MOVE_TIMEOUT}`         | `15s`   | Maximum period for move retries          |
 | `${FILE_MOVE_RETRY_INTERVAL}`  | `500ms` | Delay after a temporary file lock        |
+| `${ENABLE_FAILED_ID_RETRY}`    | `${TRUE}` | Retry failed downloads before reporting them |
+| `${FAILED_ID_RETRY_COUNT}`     | `2`     | Additional attempts for each retryable ID |
+| `${FAILED_ID_RETRY_DELAY}`     | `5s`    | Delay between additional retry attempts  |
 
 The default metadata batch size of 200 balances SOQL request efficiency with reliable query execution for large migrations.
 
 Increase timeouts only after checking file access, browser behavior, network throughput, and disk performance. Larger SOQL batches reduce request count but make each query longer.
+
+Failed-ID retry is intended for temporary download problems, such as a slow browser response or an interrupted transfer. It does not repeat metadata queries, so invalid IDs and IDs without the required ContentDocument or ContentDocumentLink metadata remain failed. Set `${ENABLE_FAILED_ID_RETRY}` to `${FALSE}` to keep the original single-attempt behavior. `${FAILED_ID_RETRY_COUNT}` counts additional attempts after the first download attempt.
 
 ## Input workbook format
 

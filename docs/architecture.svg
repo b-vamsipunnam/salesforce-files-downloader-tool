@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1150" viewBox="0 0 1600 1150">
+  <defs>
+    <style>
+      .title { font: 700 32px Arial, sans-serif; fill: #172033; }
+      .heading { font: 700 22px Arial, sans-serif; fill: #172033; }
+      .body { font: 17px Arial, sans-serif; fill: #334155; }
+      .small { font: 15px Arial, sans-serif; fill: #475569; }
+      .label { font: 700 15px Arial, sans-serif; fill: #334155; }
+      .box { stroke: #475569; stroke-width: 2; rx: 14; }
+      .flow { stroke: #52647a; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .support { stroke: #64748b; stroke-width: 2.5; stroke-dasharray: 9 7; fill: none; marker-end: url(#arrow); }
+      .retry { stroke: #c46b19; stroke-width: 3; fill: none; marker-end: url(#arrow-orange); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#52647a"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#c46b19"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="1150" fill="#f8fafc"/>
+  <text x="800" y="50" text-anchor="middle" class="title">Salesforce Files Bulk Downloader — Execution Architecture</text>
+
+  <rect x="70" y="90" width="280" height="110" class="box" fill="#e0f2fe"/>
+  <text x="210" y="132" text-anchor="middle" class="heading">Excel Input</text>
+  <text x="210" y="164" text-anchor="middle" class="body">ContentDocumentId list</text>
+
+  <rect x="660" y="90" width="330" height="110" class="box" fill="#fef3c7"/>
+  <text x="825" y="127" text-anchor="middle" class="heading">REST Metadata</text>
+  <text x="825" y="158" text-anchor="middle" class="body">File metadata and link relationships</text>
+  <text x="825" y="184" text-anchor="middle" class="small">Batched SOQL queries</text>
+
+  <rect x="1250" y="90" width="280" height="110" class="box" fill="#ede9fe"/>
+  <text x="1390" y="127" text-anchor="middle" class="heading">Salesforce CLI</text>
+  <text x="1390" y="158" text-anchor="middle" class="body">Authentication and org context</text>
+  <text x="1390" y="184" text-anchor="middle" class="small">Raw output is never logged</text>
+
+  <path d="M350 145 H660" class="flow"/>
+  <path d="M1250 165 H990" class="flow"/>
+
+  <rect x="180" y="245" width="1240" height="90" class="box" fill="#eef2ff"/>
+  <text x="800" y="280" text-anchor="middle" class="heading">Robot Framework Workflow Orchestration</text>
+  <text x="800" y="311" text-anchor="middle" class="body">Input validation · metadata mapping · download control · retry state · reporting and cleanup</text>
+  <path d="M825 200 V245" class="flow"/>
+
+  <rect x="80" y="385" width="340" height="125" class="box" fill="#dcfce7"/>
+  <text x="250" y="422" text-anchor="middle" class="heading">Python Support Utilities</text>
+  <text x="250" y="454" text-anchor="middle" class="body">Safe Salesforce CLI JSON parsing</text>
+  <text x="250" y="482" text-anchor="middle" class="small">Portable filename and path handling</text>
+
+  <rect x="540" y="385" width="360" height="125" class="box" fill="#e0f2fe"/>
+  <text x="720" y="425" text-anchor="middle" class="heading">Authenticated Browser Download</text>
+  <text x="720" y="457" text-anchor="middle" class="body">Selenium + Chrome</text>
+  <text x="720" y="485" text-anchor="middle" class="small">Salesforce Shepherd full-file delivery</text>
+
+  <rect x="1060" y="385" width="360" height="125" class="box" fill="#dcfce7"/>
+  <text x="1240" y="425" text-anchor="middle" class="heading">Validation and Local Storage</text>
+  <text x="1240" y="457" text-anchor="middle" class="body">Completion • Stability • ContentSize validation</text>
+  <text x="1240" y="485" text-anchor="middle" class="small">Single download per ContentDocumentId</text>
+
+  <path d="M800 335 V360 H720 V385" class="flow"/>
+  <path d="M900 447 H1060" class="flow"/>
+  <path d="M250 385 V350 H1390 V200" class="support"/>
+  <path d="M420 447 H540" class="support"/>
+  <path d="M250 510 V535 H1240 V510" class="support"/>
+
+  <polygon points="1240,565 1380,650 1240,735 1100,650" fill="#fff7ed" stroke="#c46b19" stroke-width="3"/>
+  <text x="1240" y="640" text-anchor="middle" class="heading">Download</text>
+  <text x="1240" y="669" text-anchor="middle" class="heading">successful?</text>
+  <path d="M1240 510 V565" class="flow"/>
+
+  <rect x="90" y="805" width="400" height="130" class="box" fill="#ecfdf5"/>
+  <text x="290" y="845" text-anchor="middle" class="heading">Successful Outputs</text>
+  <text x="290" y="878" text-anchor="middle" class="body">Validated downloaded files</text>
+  <text x="290" y="907" text-anchor="middle" class="small">Optional migration-ready Excel workbooks</text>
+
+  <polygon points="800,770 950,860 800,950 650,860" fill="#fff7ed" stroke="#c46b19" stroke-width="3"/>
+  <text x="800" y="850" text-anchor="middle" class="heading">Eligible for</text>
+  <text x="800" y="879" text-anchor="middle" class="heading">another retry?</text>
+
+  <rect x="1110" y="800" width="350" height="120" class="box" fill="#ffedd5"/>
+  <text x="1285" y="838" text-anchor="middle" class="heading">Configurable Retry</text>
+  <text x="1285" y="870" text-anchor="middle" class="body">Start fresh download attempt</text>
+  <text x="1285" y="898" text-anchor="middle" class="small">Bounded count and delay</text>
+
+  <rect x="570" y="1010" width="460" height="90" class="box" fill="#fee2e2"/>
+  <text x="800" y="1048" text-anchor="middle" class="heading">Unresolved Failed-ID Workbook</text>
+  <text x="800" y="1077" text-anchor="middle" class="small">Invalid, non-retryable, or attempts exhausted</text>
+
+  <path d="M1100 650 H290 V805" class="flow"/>
+  <text x="690" y="635" class="label">Yes</text>
+  <path d="M1240 735 V750 H800 V770" class="retry"/>
+  <text x="1010" y="737" class="label">No</text>
+  <path d="M950 860 H1110" class="retry"/>
+  <text x="1015" y="844" class="label">Yes</text>
+  <path d="M1285 800 V760 H1515 V355 H940 V410 H900" class="retry"/>
+  <text x="1330" y="744" class="label">Retry loop</text>
+  <path d="M800 950 V1010" class="flow"/>
+  <text x="818" y="986" class="label">No</text>
+
+  <line x1="90" y1="1120" x2="140" y2="1120" stroke="#52647a" stroke-width="3"/>
+  <text x="150" y="1125" class="small">Primary flow</text>
+  <line x1="290" y1="1120" x2="340" y2="1120" stroke="#c46b19" stroke-width="3"/>
+  <text x="350" y="1125" class="small">Retry and failure decisions</text>
+  <line x1="600" y1="1120" x2="650" y2="1120" stroke="#64748b" stroke-width="2.5" stroke-dasharray="9 7"/>
+  <text x="660" y="1125" class="small">Supporting utility relationship</text>
+  <text x="1510" y="1125" text-anchor="end" class="small">Pabot can isolate batches across workers.</text>
+</svg>
