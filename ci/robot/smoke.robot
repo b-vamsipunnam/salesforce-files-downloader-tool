@@ -78,6 +78,34 @@ CI Smoke – Sanitizes Trailing Periods And Spaces
     ${safe}=    Sanitize Filename    report...
     Should Be Equal    ${safe}    report
 
+CI Smoke – Sanitizes Windows Invalid Characters
+    ${safe}=    Sanitize Filename    Download Files: Batch 1?*
+    Should Be Equal    ${safe}    Download Files_ Batch 1__
+
+CI Smoke – Limits Sanitized Filename Length
+    ${safe}=    Sanitize Local Filename    abcdefghijklmnop.txt    max_length=12
+    Should Be Equal    ${safe}    abcdefgh.txt
+
+CI Smoke – Prevents Reserved Name After Truncation
+    ${safe}=    Sanitize Local Filename    CONSOLE    max_length=3
+    Should Be Equal    ${safe}    _CO
+
+CI Smoke – Normalizes Reserved Stem Before Extension
+    ${safe}=    Sanitize Local Filename    CON${SPACE}.txt
+    Should Be Equal    ${safe}    _CON.txt
+
+CI Smoke – Sanitizes Reserved Fallback
+    ${safe}=    Sanitize Local Filename    ...    fallback=AUX.txt
+    Should Be Equal    ${safe}    _AUX.txt
+
+CI Smoke – Uses Fallback For None
+    ${safe}=    Sanitize Local Filename    ${NONE}
+    Should Be Equal    ${safe}    salesforce_file
+
+CI Smoke – Handles One Character Limit
+    ${safe}=    Sanitize Local Filename    CON    max_length=1
+    Should Be Equal    ${safe}    C
+
 CI Smoke – Cleans Directory With Apostrophe
     ${directory}=    Set Variable
     ...    ${EXECDIR}${/}.review_O'Brien
@@ -93,10 +121,24 @@ CI Smoke – Cleans Directory With Apostrophe
 
 *** Keywords ***
 Open Browser For Smoke
+    [Documentation]    Opens headless Chrome with bounded retries for transient startup exits.
     ${opts}=    Evaluate    __import__("selenium.webdriver").webdriver.ChromeOptions()
     Call Method    ${opts}    add_argument    --headless\=new
     Call Method    ${opts}    add_argument    --no-sandbox
     Call Method    ${opts}    add_argument    --disable-dev-shm-usage
     Call Method    ${opts}    add_argument    --disable-gpu
+    Call Method    ${opts}    add_argument    --disable-extensions
+    Call Method    ${opts}    add_argument    --disable-background-networking
+    Call Method    ${opts}    add_argument    --no-first-run
+    Call Method    ${opts}    add_argument    --no-default-browser-check
+    Call Method    ${opts}    add_argument    --remote-debugging-port\=0
     Call Method    ${opts}    add_argument    --window-size\=1920,1080
+    Wait Until Keyword Succeeds    3x    2s
+    ...    Open Chrome For Smoke
+    ...    ${opts}
+
+Open Chrome For Smoke
+    [Documentation]    Clears any failed Selenium state before one Chrome startup attempt.
+    [Arguments]    ${opts}
+    Run Keyword And Ignore Error    Close All Browsers
     Open Browser    ${URL}    chrome    options=${opts}

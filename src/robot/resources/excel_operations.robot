@@ -5,6 +5,7 @@ Library             OperatingSystem
 Library             Collections
 Library             String
 Library             ../libraries/ExcelLibrary.py
+Library             ../libraries/SalesforceSupport.py
 Resource            configuration.robot
 
 
@@ -40,7 +41,7 @@ Read Content IDs From Excel Sheet
 Create ContentVersion Excel File
     [Documentation]     Creates a ContentVersion Data Loader workbook in the supplied output directory, writes the required import headers, and returns the first available data row and generated workbook path.
     [Arguments]    ${download_directory}
-    ${proper_test_name}=    Replace String    ${TEST NAME}    ${SPACE}    _
+    ${proper_test_name}=    Sanitize Local Filename    ${TEST NAME}    max_length=80
     ${cv_file_name}=    Set Variable    ${download_directory}${/}${proper_test_name}_ContentVersion_Import.xlsx
     Create Excel Document    doc_id=CV_DOC
     Write Excel Cell    row_num=1    col_num=1    value=Title
@@ -56,7 +57,7 @@ Create ContentVersion Excel File
 Create ContentDocumentLink Excel File
     [Documentation]     Creates a ContentDocumentLink Data Loader workbook in the supplied output directory, writes the required import headers, and returns the first available data row and generated workbook path.
     [Arguments]    ${download_directory}
-    ${proper_test_name}=    Replace String    ${TEST NAME}    ${SPACE}    _
+    ${proper_test_name}=    Sanitize Local Filename    ${TEST NAME}    max_length=80
     ${cdl_file_name}=    Set Variable    ${download_directory}${/}${proper_test_name}_ContentDocumentLink_Import.xlsx
     Create Excel Document    doc_id=CDL_DOC
     Write Excel Cell    row_num=1    col_num=1    value=ContentDocumentId
@@ -71,8 +72,8 @@ Create ContentDocumentLink Excel File
 Write Failed ContentDocument IDs To Excel
     [Documentation]     Creates a test-specific failed-ID workbook in the supplied output directory when one or more ContentDocument downloads have failed.
     [Arguments]    ${unique_failed_content_ids}    ${output_directory}
-    ${test_name}=    Replace String    ${TEST NAME}    ${SPACE}    _
-    ${excel_file}=    Set Variable    ${output_directory}${/}${test_name}_FAILED_IDs.xlsx
+    ${safe_test_name}=    Sanitize Local Filename    ${TEST NAME}    max_length=80
+    ${excel_file}=    Set Variable    ${output_directory}${/}${safe_test_name}_FAILED_IDs.xlsx
     ${no_of_records}=    Get Length    ${unique_failed_content_ids}
     IF    '${no_of_records}' != '0'
         Write Failed ContentDocument IDs    ${unique_failed_content_ids}    ${excel_file}
