@@ -1,8 +1,8 @@
-# Keyword Documentation
+# Keyword documentation
 
 `src/robot/resources/keywords.robot` imports the resource files below. Robot Framework exposes their keywords when that entry point is imported. Most callers should use the orchestration keyword rather than assemble the internal workflow directly.
 
-This page summarizes the primary public keywords and their responsibilities. For implementation details, refer to the corresponding resource files.
+This page covers the keywords that callers and maintainers are most likely to use. In each table, **What it does and when to use it** explains the intended role, while **Important behavior** calls out state changes, assumptions, and limits. Most projects should start with the orchestration keyword and use lower-level keywords only when extending or testing the workflow.
 
 ## Salesforce CLI and authentication
 
@@ -10,13 +10,18 @@ This page summarizes the primary public keywords and their responsibilities. For
 
 `src/robot/resources/salesforce_cli.robot` and `src/robot/resources/salesforce_api.robot`
 
-| Keyword                         | Purpose                                     | Arguments       | Return value  | Important behavior                                                      |
+| Keyword                         | What it does and when to use it              | Arguments       | Return value  | Important behavior                                                      |
 |---------------------------------|---------------------------------------------|-----------------|---------------|-------------------------------------------------------------------------|
 | `Check Prerequisites`           | Validate the CLI and org context.           | `${ORG_ALIAS}`  | None          | Calls CLI resolution, version validation, and org loading.              |
 | `Resolve Salesforce CLI`        | Find `sf` on `PATH`.                        | None            | None          | Sets suite variable `${sf_cli_path}`; fails when missing.               |
 | `Validate Salesforce CLI`       | Verify the resolved CLI runs.               | None            | None          | Requires `${sf_cli_path}` and a zero exit code.                         |
-| `Load Org Context`              | Validate an alias and read its API version. | `${ORG_ALIAS}`  | None          | Sets `${CLI_API_VERSION}` at suite scope.                               |
+| `Load Org Context`              | Validate an alias and read its org context. | `${ORG_ALIAS}`  | None          | Sets the API version, org ID, and target alias at suite scope.          |
+| `Initialize Salesforce CLI Context From Org Info` | Load worker context from `org_info.json` during suite setup. | None | None | Sets the alias, org ID, and API version without running `sf org display`; resolves the CLI path for the capacity check. |
+| `Get Salesforce Daily API Limits` | Read `DailyApiRequests` before a batch. | None | Maximum and remaining requests | Captures output in memory, runs under a PabotLib lock, and retries bounded CLI or response failures. |
+| `Estimate Metadata API Requests` | Estimate batched metadata calls. | ID count and ContentDocumentLink generation flag | Batch and request counts | Uses `${METADATA_BATCH_SIZE}` and does not predict pagination. |
+| `Check Salesforce API Capacity` | Run the preflight capacity guard. | ID count and ContentDocumentLink generation flag | None | Includes the limits call itself and fails before artifact creation when estimated use, buffer, and reserve exceed remaining capacity. |
 | `Safe Parse Sf Json`            | Parse JSON from CLI output.                 | `${raw_output}` | Parsed object | Finds the first valid object or array without logging raw CLI output.   |
+| `Try Parse First Json Value`    | Probe CLI output when invalid JSON is an expected retry condition. | `${raw_output}` | Boolean status and parsed value | Returns `${FALSE}` and `${NONE}` instead of raising for empty or invalid output. |
 | `Initialize Salesforce Session` | Create an authenticated REST session.       | None            | Session alias | Reads `org_info.json`; uses a unique RequestsLibrary alias.             |
 | `Get Salesforce Login Info`     | Prepare frontdoor browser authentication.   | None            | Login URL     | Sets `${org_domain}` and reads the token without ordinary log exposure. |
 
@@ -33,7 +38,7 @@ ${session}=    Initialize Salesforce Session
 
 `src/robot/resources/salesforce_api.robot`
 
-| Keyword                                | Purpose                                      | Arguments                                         | Return value                      | Important behavior                                                         |
+| Keyword                                | What it does and when to use it               | Arguments                                         | Return value                      | Important behavior                                                         |
 |----------------------------------------|----------------------------------------------|---------------------------------------------------|-----------------------------------|----------------------------------------------------------------------------|
 | `Send Safe Salesforce GET Request`     | Send a REST GET through an existing session. | `${session_alias}`, `${url}`, `${params}=${NONE}` | Response or `${NONE}`             | Suppresses request logging and sanitizes failures.                         |
 | `Execute SOQL Query`                   | Retrieve all records for a SOQL query.       | `${soql}`, `${session_alias}`                     | List of records                   | Follows `nextRecordsUrl`; enforces a 10,000-page safety bound.             |
@@ -54,7 +59,7 @@ ${documents}=    Get ContentDocument Metadata Map    ${content_ids}    200
 
 `src/robot/resources/excel_operations.robot` and `src/robot/libraries/ExcelLibrary.py`
 
-| Keyword                                 | Purpose                         | Arguments                                                 | Return value            | Important behavior                                             |
+| Keyword                                 | What it does and when to use it | Arguments                                                 | Return value            | Important behavior                                             |
 |-----------------------------------------|---------------------------------|-----------------------------------------------------------|-------------------------|----------------------------------------------------------------|
 | `Read Content IDs From Excel Sheet`     | Read IDs from the first column. | `${input_excel_path}`, `${sheet_name}`                    | Deduplicated ID list    | Removes an optional header, blanks, and whitespace.            |
 | `Create ContentVersion Excel File`      | Create an import workbook.      | `${download_directory}`                                   | First data row and path | Writes `Title`, `VersionData`, and `PathOnClient` headers.     |
@@ -74,7 +79,7 @@ ${content_ids}=    Read Content IDs From Excel Sheet    ${INPUT_EXCEL_PATH_1}   
 
 `src/robot/resources/download_operations.robot`
 
-| Keyword                              | Purpose                                  | Arguments                                                                                | Return value                    | Important behavior                                                                   |
+| Keyword                              | What it does and when to use it          | Arguments                                                                                | Return value                    | Important behavior                                                                   |
 |--------------------------------------|------------------------------------------|------------------------------------------------------------------------------------------|---------------------------------|--------------------------------------------------------------------------------------|
 | `Initialize Output Directory`        | Create isolated artifact output.         | None                                                                                     | Directory path                  | Uses the test name and a UUID.                                                       |
 | `Initialize Download Directory`      | Create isolated browser output.          | None                                                                                     | Directory path                  | Uses the test name and a UUID.                                                       |
@@ -93,10 +98,10 @@ ${content_ids}=    Read Content IDs From Excel Sheet    ${INPUT_EXCEL_PATH_1}   
 
 `src/robot/resources/download_operations.robot`
 
-| Keyword                                            | Purpose                                    | Arguments                                                                                          | Return value     | Important behavior                                           |
+| Keyword                                            | What it does and when to use it            | Arguments                                                                                          | Return value     | Important behavior                                           |
 |----------------------------------------------------|--------------------------------------------|----------------------------------------------------------------------------------------------------|------------------|--------------------------------------------------------------|
 | `Download Directory Should Contain Completed File` | Assert that a completed file exists.       | `${download_directory}`                                                                            | None             | Fails when only temporary or no files are present.           |
-| `Wait Until Download File Appears`                 | Wait for an initial completed candidate.   | `${timeout}`, `${download_directory}`                                                              | None             | Uses Robot polling and the configured appearance bound.      |
+| `Wait Until Download File Appears`                 | Wait for an initial completed candidate.   | `${timeout}`, `${download_directory}`                                                              | None             | Uses a non-assertive Python wait so temporary states do not create expected `FAIL` entries. |
 | `Wait Until File Download Completes`               | Wait for temporary state to end.           | `${download_directory}`                                                                            | None             | Polls until a file without a recognized temporary suffix appears. |
 | `Move Downloaded File With Retry`                  | Move a file through temporary locks.       | `${src}`, `${dst}`                                                                                 | None             | Retries until `${FILE_MOVE_TIMEOUT}`.                        |
 | `Validate And Move Downloaded File`                | Verify size, move, and verify destination. | Source file, destination, expected size, document ID, link/workbook state, flags, and result lists | `PASS` or `FAIL` | Success is recorded only after final destination validation. |
@@ -107,9 +112,9 @@ ${content_ids}=    Read Content IDs From Excel Sheet    ${INPUT_EXCEL_PATH_1}   
 
 `src/robot/resources/download_workflow.robot`
 
-Unless otherwise noted, most projects should call Download Files Using Content Document IDs rather than lower-level helper keywords.
+Unless otherwise noted, call `Download Files Using Content Document IDs` rather than assembling the lower-level workflow.
 
-| Keyword                                     | Purpose                           | Arguments                                                                                                                                        | Return value                                                | Important behavior                                                                                                  |
+| Keyword                                     | What it does and when to use it   | Arguments                                                                                                                                        | Return value                                                | Important behavior                                                                                                  |
 |---------------------------------------------|-----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
 | `Download Files Using Content Document IDs` | Run one complete input batch.     | `${input_excel_path}`, `${sheet_name}`, `${GENERATE_CONTENT_VERSION_FILE}`, `${GENERATE_CONTENT_DOCUMENT_LINK_FILE}`                             | No return value; controls overall test execution.           | Initializes state, queries metadata, processes IDs, retries eligible failures, writes reports, and performs cleanup. |
 | `Retry Failed ContentDocument IDs`          | Retry eligible failed downloads.  | `${content_doc_map}`, `${cdl_map}`, `${cv_row}`, `${cdl_row}`, `${download_directory}`                                                           | Updated ContentVersion and ContentDocumentLink row numbers  | Preserves non-retryable and unresolved IDs while removing successful retries from the failure list.                 |
@@ -129,7 +134,7 @@ Download Files Using Content Document IDs
 
 `src/robot/resources/download_operations.robot` and `src/robot/resources/excel_operations.robot`
 
-| Keyword                                     | Purpose                            | Arguments                                                                                              | Return value | Important behavior                                           |
+| Keyword                                     | What it does and when to use it    | Arguments                                                                                              | Return value | Important behavior                                           |
 |---------------------------------------------|------------------------------------|--------------------------------------------------------------------------------------------------------|--------------|--------------------------------------------------------------|
 | `Handle Download Failure`                   | Isolate a failed document.         | `${content_id}`, `${reason}`, `${failed_content_ids}`, `${content_id_folder}`, `${download_directory}` | `FAIL`       | Records the ID, logs a reason, and cleans incomplete output. |
 | `Write Failed ContentDocument IDs To Excel` | Create the batch failure workbook. | `${unique_failed_content_ids}`, `${output_directory}`                                                  | None         | Writes only when at least one ID exists.                     |
@@ -143,9 +148,9 @@ Download Files Using Content Document IDs
 
 These keywords are typically executed during suite teardown and normally do not require direct invocation.
 
-| Keyword                     | Purpose                                    | Arguments | Return value | Important behavior                                                  |
+| Keyword                     | What it does and when to use it            | Arguments | Return value | Important behavior                                                  |
 |-----------------------------|--------------------------------------------|-----------|--------------|---------------------------------------------------------------------|
-| `Cleanup Runtime Artifacts` | Remove recognized temporary runtime files. | None      | None         | Limits removal to known names and strictly named downloader-generated files in `${EXECDIR}`. |
+| `Cleanup Runtime Artifacts` | Remove recognized temporary runtime files. | None      | None         | Limits removal to known generated names in `${EXECDIR}` and intentionally preserves shared `org_info.json`. |
 | `Cleanup Download Suite`    | Perform suite teardown.                    | None      | None         | Closes browsers and cleans runtime artifacts.                       |
 
 ---

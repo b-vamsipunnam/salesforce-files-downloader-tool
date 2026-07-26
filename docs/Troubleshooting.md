@@ -20,7 +20,7 @@ Install Salesforce CLI, restart the shell if needed, and confirm `sf --version` 
 
 **Symptoms**
 
-Prerequisite validation reports that the alias is not authenticated or accessible.
+The API-capacity lookup reports that the alias is not authenticated or accessible, or later Salesforce requests fail authentication.
 
 **Likely cause**
 
@@ -28,7 +28,7 @@ The alias is misspelled, belongs to another CLI environment, or its authorizatio
 
 **Resolution**
 
-Run `sf org login web --alias <org_alias>`, then verify `sf org display --target-org <org_alias>`.
+Run `sf org login web --alias <org_alias>`, verify `sf org display --target-org <org_alias>`, and regenerate `org_info.json`.
 
 ## Expired Salesforce session
 
@@ -73,6 +73,36 @@ The browser session is invalid, the user lacks file access, the Shepherd request
 Refresh authentication, verify the same user can access the file, and inspect browser and Robot errors before increasing the timeout.
 
 When failed-ID retry is enabled, the downloader attempts an eligible ID again after the primary pass. Repeated `RETRY FAILED` messages usually indicate that the problem is not a brief browser delay and needs investigation.
+
+## Insufficient Salesforce API capacity
+
+**Symptoms**
+
+The batch stops before creating download or artifact directories and reports the remaining, estimated, buffered, and reserved API request counts.
+
+**Likely cause**
+
+The org's `DailyApiRequests` allocation cannot accommodate the estimated metadata calls while retaining the configured safety buffer and minimum reserve.
+
+**Resolution**
+
+Reduce the input batch, wait for API capacity to reset, or review `${API_REQUEST_SAFETY_BUFFER}` and `${MINIMUM_API_REQUESTS_REMAINING}` with the owners of other org integrations. Do not disable the check unless API consumption is managed externally. Parallel Pabot workers do not share a reservation counter, so use additional buffer when their combined demand approaches the limit.
+
+The limits lookup automatically retries transient CLI failures using `${API_LIMIT_LOOKUP_MAX_ATTEMPTS}` and `${API_LIMIT_LOOKUP_RETRY_DELAY}`. Investigate Salesforce CLI authentication and local process behavior if every attempt fails.
+
+## Salesforce org identity mismatch
+
+**Symptoms**
+
+The alias, org ID, username, or instance URL in `org_info.json` does not match the intended source org.
+
+**Likely cause**
+
+The alias was reassigned, the authentication file is stale, or multiple local aliases were confused. Different aliases are safe when they resolve to the same Salesforce org ID.
+
+**Resolution**
+
+Before starting Robot or Pabot, compare `result.id`, `result.username`, and `result.instanceUrl` from `sf org display --target-org <alias> --json`. Regenerate `org_info.json` from the intended org before rerunning the downloader. Worker setup deliberately does not repeat this CLI call because concurrent `sf org display` processes can contend for shared Salesforce CLI state.
 
 ## Temporary download never completes
 
@@ -180,15 +210,15 @@ Free space or move the configured output roots to a larger volume. Allow capacit
 
 **Symptoms**
 
-Multiple workers process the same ContentDocumentId, or shared runtime files disappear unexpectedly.
+Multiple workers process the same ContentDocumentId, shared runtime files disappear unexpectedly, or parallel workers report invalid Salesforce CLI JSON while sequential execution succeeds.
 
 **Likely cause**
 
-Input workbooks overlap, custom output paths are shared, or worker teardown removes `org_info.json` before all workers finish.
+Input workbooks overlap, custom output paths are shared, a custom worker teardown removes `org_info.json` before all workers finish, or an older project version runs Salesforce CLI commands concurrently without a cross-process lock.
 
 **Resolution**
 
-Use non-overlapping input batches, retain UUID-based output paths, and remove the shared authentication file only after the complete Pabot run.
+Use non-overlapping input batches, retain UUID-based output paths, include `--pabotlib` in the Pabot command, and remove the shared authentication file only after the complete Pabot run. Current worker setup reads org context directly from `org_info.json`, and the limits lookup uses a PabotLib lock.
 
 ## GitHub Actions smoke-test failure
 

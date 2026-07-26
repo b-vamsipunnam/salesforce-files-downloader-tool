@@ -7,9 +7,7 @@
 [![Release](https://img.shields.io/github/v/release/b-vamsipunnam/salesforce-files-downloader-tool.svg?style=flat&color=orange)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/releases/latest)
 [![License](https://img.shields.io/github/license/b-vamsipunnam/salesforce-files-downloader-tool?style=flat)](LICENSE)
 
-Salesforce Files Bulk Downloader is an open-source utility built with Robot Framework and Python for downloading Salesforce Files in bulk from `ContentDocumentId` lists.
-
-Designed for enterprise migration and backup scenarios involving thousands to millions of Salesforce Files.
+Salesforce Files Bulk Downloader uses Robot Framework and Python to download Salesforce Files in bulk from `ContentDocumentId` lists. It is intended for migration, backup, and archival work ranging from small batches to large data sets.
 
 **Built with**
 
@@ -26,7 +24,7 @@ Salesforce Files combine a logical file (`ContentDocument`), version and binary 
 
 This project separates metadata retrieval from binary transfer and provides isolated batch outputs, size validation, failed-ID reporting, and optional Data Loader-ready workbooks. See the [Introduction](docs/Introduction.md) for the data model and migration challenges.
 
-## Typical Use Cases
+## Typical use cases
 
 - Enterprise file migration projects
 - Salesforce org consolidation
@@ -42,6 +40,7 @@ This project separates metadata retrieval from binary transfer and provides isol
 - Accepts 15- and 18-character `ContentDocumentId` values and removes duplicates
 - Uses Salesforce CLI authentication without storing usernames or passwords
 - Queries `ContentDocument` and all associated `ContentDocumentLink` records in batches
+- Checks remaining Salesforce daily API capacity before creating batch artifacts
 - Downloads each physical file once into a ContentDocument-specific directory
 - Isolates download and artifact directories for each batch and worker
 - Checks completion, stability, and final size against Salesforce `ContentSize`
@@ -49,7 +48,7 @@ This project separates metadata retrieval from binary transfer and provides isol
 - Creates optional ContentVersion and ContentDocumentLink import workbooks
 - Supports headless Chrome and Pabot test-level parallel execution
 
-## Quick Start
+## Quick start
 
 ```bash
 git clone https://github.com/b-vamsipunnam/salesforce-files-downloader-tool.git
@@ -92,7 +91,7 @@ The tool uses Salesforce REST APIs for metadata and an authenticated Selenium br
 | [Roadmap](docs/Roadmap.md)                             | Planned improvements and future direction                                            |
 | [Contributing](docs/Contributing.md)                   | Development workflow and contribution guidelines                                     |
 
-## Repository Structure
+## Repository structure
 
 ```text
 salesforce-files-downloader-tool/

@@ -14,7 +14,7 @@ This project uses REST and SOQL for metadata and Shepherd for file delivery. Bul
 
 ## Does the tool consume Salesforce API calls?
 
-Yes. Metadata retrieval uses REST API query calls, including pagination when required. Binary transfer uses Shepherd rather than REST binary requests. API consumption depends on input volume, `${METADATA_BATCH_SIZE}`, query pagination, and failures.
+Yes. Each batch normally uses one limits request for its API-capacity preflight, followed by REST API queries for metadata. A transient CLI failure can cause the limits request to be attempted again, and metadata pagination can add query calls. Binary transfer uses Shepherd rather than REST binary requests. API consumption therefore depends on input volume, `${METADATA_BATCH_SIZE}`, whether ContentDocumentLink metadata is requested, retry activity, and query pagination.
 
 ## How are duplicate ContentDocument IDs handled?
 
@@ -38,7 +38,7 @@ The downloader rejects temporary browser extensions, waits for completion and st
 
 ## Are Salesforce access tokens written to logs?
 
-Token-bearing initialization and request operations suppress ordinary Robot logging. The token remains in the local `org_info.json`, which must not be committed or shared. Users should still sanitize diagnostic output before sharing logs publicly.
+Token-bearing initialization and request operations suppress ordinary Robot logging. The token remains in the local `org_info.json`, which must not be committed or shared. Review generated XML and HTML reports before sharing them because customer IDs, filenames, and diagnostic details may still be sensitive. Revoke the Salesforce session immediately if a token is ever exposed.
 
 ## Can files be uploaded directly to S3?
 

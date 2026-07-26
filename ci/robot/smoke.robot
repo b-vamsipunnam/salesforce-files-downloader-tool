@@ -66,6 +66,38 @@ CI Smoke – Rejects Malformed JSON
     ...    Safe Parse Sf Json
     ...    {"status":
 
+CI Smoke – Estimates Metadata API Requests With Links
+    ${batches}    ${requests}=    Estimate Metadata API Requests    401    Yes
+    Should Be Equal As Integers    ${batches}    3
+    Should Be Equal As Integers    ${requests}    6
+
+CI Smoke – Estimates Metadata API Requests Without Links
+    ${batches}    ${requests}=    Estimate Metadata API Requests    401    No
+    Should Be Equal As Integers    ${batches}    3
+    Should Be Equal As Integers    ${requests}    3
+
+CI Smoke – Allows Disabled API Capacity Check
+    Set Test Variable    ${ENABLE_API_CAPACITY_CHECK}    ${FALSE}
+    Check Salesforce API Capacity    100    Yes
+
+CI Smoke – Pabot Lock Is Available
+    pabot.PabotLib.Acquire Lock    smoke_salesforce_cli_lock
+    TRY
+        Log    Cross-process lock acquired.
+    FINALLY
+        pabot.PabotLib.Release Lock    smoke_salesforce_cli_lock
+    END
+
+CI Smoke – Logs API Capacity Values
+    Set Test Variable    ${SF_ORG_ALIAS}    DemoHub
+    Log To Console    Org Alias: ${SF_ORG_ALIAS}
+    Log To Console    Daily API Maximum: 100000
+    Log To Console    Daily API Remaining: 99999
+    Log To Console    Estimated Metadata Requests: 2
+    Log To Console    API Capacity Check Requests: 1
+    Log To Console    Estimated Tool Requests: 3
+    Log To Console    Projected API Requests Remaining: 99996
+
 CI Smoke – Sanitizes Windows Reserved Filename
     ${safe}=    Sanitize Filename    CON.txt
     Should Be Equal    ${safe}    _CON.txt

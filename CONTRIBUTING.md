@@ -1,242 +1,116 @@
-
 # Contributing to Salesforce Files Downloader Tool
 
-Thank you for your interest in contributing to this project!
-We welcome bug reports, feature requests, documentation improvements, and code contributions.
+Bug reports, documentation fixes, and focused code contributions are welcome. This guide covers the checks and conventions used to keep changes easy to review and safe to merge.
 
-Please read this guide before submitting any contributions.
+## Before you start
 
----
+For a substantial behavior or architecture change, open an issue first so the approach can be discussed before implementation. Security vulnerabilities must follow the private process in [SECURITY.md](SECURITY.md).
 
-## Getting Started
+## Set up the project
 
-### 1. Fork the Repository
-
-- Click the **Fork** button on GitHub
-- Clone your fork locally:
+Fork the repository, clone your fork, and create a virtual environment:
 
 ```bash
 git clone https://github.com/your-username/salesforce-files-downloader-tool.git
 cd salesforce-files-downloader-tool
+python -m venv venv
 ```
 
----
-
-### 2. Set Up the Environment
-
-Make sure you have the following installed:
-
-* Python 3.10+
-* Node.js (18+)
-* Robot Framework
-* Salesforce CLI
-
-Install dependencies:
+Activate the environment and install the pinned dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Configure Salesforce org authentication:
+Python 3.10 or later is required. Authenticated download runs also require Salesforce CLI and Google Chrome; see [Installation](docs/Installation.md) and [Authentication](docs/Authentication.md).
+
+## Make a focused change
+
+Create a branch whose name describes the work:
 
 ```bash
-sf org login web
+git checkout -b fix/download-timeout
 ```
 
----
+Keep the change limited to one concern. Follow the existing Robot Framework and Python patterns, avoid hardcoded paths, and update documentation whenever behavior or configuration changes.
 
-## Running Tests
+Use a concise conventional commit subject:
 
-Before submitting changes, ensure all tests pass:
+```bash
+git commit -m "fix: handle invalid ContentDocumentId"
+```
+
+Common types include `fix`, `feat`, `docs`, `test`, and `refactor`.
+
+## Verify the change
+
+Run the offline unit and smoke suites before opening a pull request:
+
+```bash
+python -m unittest discover -s ci/tests -v
+robot --outputdir results/smoke ci/robot/smoke.robot
+```
+
+When the change affects the authenticated workflow, also run:
 
 ```bash
 robot --outputdir results src/robot/orchestrator/download.robot
 ```
 
-For parallel execution:
+This suite requires an authenticated Salesforce CLI alias, a current `org_info.json`, Chrome, and valid input workbooks. To exercise worker isolation, use test-level Pabot splitting:
 
 ```bash
-pabot --pabotlib --processes 2 --outputdir results src/robot/orchestrator/download.robot
+pabot --pabotlib --testlevelsplit --processes 2 --outputdir results src/robot/orchestrator/download.robot
 ```
 
----
-## Development Workflow
+Review `output.xml`, `log.html`, and `report.html` before sharing them. Remove customer data, tokens, org identifiers, filenames, and other sensitive values.
 
-1. Create a feature branch
-2. Implement changes
-3. Run tests locally
-4. Update documentation
-5. Submit pull request
+## Report a bug
 
----
+Search existing issues before opening a new one. Include:
 
-## How to Contribute
+- A concise description of the observed and expected behavior
+- Minimal steps to reproduce the problem
+- Python, Robot Framework, Salesforce CLI, Chrome, and operating-system versions
+- Sanitized logs or screenshots
+- A small sample input when it can be shared safely
 
-### Reporting Bugs
+## Suggest an enhancement
 
-If you find a bug:
+Describe the problem first, then the proposed change and a representative use case. Calling out compatibility, migration, security, or performance constraints helps reviewers assess the proposal.
 
-1. Check existing issues first
-2. Create a new issue with:
+## Open a pull request
 
-   * Clear description
-   * Steps to reproduce
-   * Logs/screenshots
-   * Environment details
-
----
-
-### Suggesting Enhancements
-
-We welcome feature ideas! Open an issue with:
-
-* Problem statement
-* Proposed solution
-* Use cases
-
----
-
-## Submitting Code Changes
-
-### 1. Create a Branch
+Push your branch and open a pull request against the repository:
 
 ```bash
-git checkout -b feature/your-feature-name
+git push origin fix/download-timeout
 ```
 
-Examples:
+The pull request should explain:
 
-* `feature/download-timeout`
-* `feature/batch-retry`
-* `feature/update-readme`
+- What changed and why
+- Which issue it addresses, if applicable
+- How the change was tested
+- Any operational, compatibility, or documentation impact
 
----
+All required CI checks must pass. A maintainer may request changes before merge.
 
-### 2. Make Your Changes
+## Code and documentation conventions
 
-* Follow existing coding patterns
-* Keep commits focused
-* Add comments where needed
-* Update documentation if required
+For Robot Framework changes:
 
----
+- Use descriptive keyword names and explicit arguments.
+- Keep reusable behavior in resource files or Python libraries.
+- Prefer return values for expected states; reserve assertions for actual failures.
+- Avoid exposing authentication data through logs.
+- Preserve per-worker directory and workbook isolation.
 
-### 3. Commit Guidelines
+For documentation changes:
 
-Use meaningful commit messages:
+- Use short, practical explanations and sentence-case headings.
+- Keep examples aligned with the current commands and configuration.
+- Link to the detailed guide instead of repeating the same explanation.
+- Update [Keyword documentation](docs/Keyword-Documentation.md) when a public keyword changes.
 
-```bash
-git commit -m "Fix: Handle invalid ContentDocumentId"
-```
-
-Format:
-
-```
-Type: Short description
-
-Examples:
-Fix: ...
-Feat: ...
-Docs: ...
-Refactor: ...
-```
-
----
-
-### 4. Push and Create Pull Request
-
-```bash
-git push origin feature/your-feature-name
-```
-
-Then open a Pull Request on GitHub.
-
-Your PR should include:
-
-* Description of changes
-* Related issue number (if any)
-* Testing details
-
----
-
-## Code Style Guidelines
-
-### Robot Framework
-
-* Use descriptive keyword names
-* Keep keywords reusable
-* Avoid hardcoded paths
-* Use variables wherever possible
-
-Example:
-
-```robot
-Download Salesforce File
-    [Arguments]    ${content_id}
-    Log    Downloading ${content_id}
-```
----
-
-## Security
-
-Never commit:
-
-* Access tokens
-* Passwords
-* `org_info.json` with secrets
-
-Guidelines:
-
-* Use `.gitignore` for sensitive files
-* Report vulnerabilities privately
-
----
-
-## Documentation
-
-If your change impacts usage:
-
-* Update `README.md`
-* Add examples
-* Update comments
-
-Good documentation is highly valued!
-
-See also:
-* README.md
-* docs/architecture.md
-* SECURITY.md
-
----
-
-## Community Guidelines
-
-Please be respectful and constructive.
-
-We follow these principles:
-
-* Be professional
-* Be inclusive
-* Be helpful
-* Accept feedback gracefully
-
----
-## Review Process
-
-* All pull requests are reviewed by the maintainer
-* Feedback may be requested
-* Changes must pass CI before merge
-
----
-
-## Contact
-
-For major changes or discussions, please open an issue first.
-
-Maintainer: **Bhimeswara Vamsi Punnam**
-
----
-
-###   Thank you for contributing!
-
----
+Please follow the [Code of Conduct](CODE_OF_CONDUCT.md) in all project interactions.

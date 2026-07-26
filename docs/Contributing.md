@@ -30,7 +30,7 @@ For parallel behavior:
 pabot --pabotlib --testlevelsplit --processes 2 --outputdir results src/robot/orchestrator/download.robot
 ```
 
-The GitHub Actions workflow runs isolated smoke tests for Robot Framework, headless Chrome, SeleniumLibrary, the custom Excel library, safe CLI JSON parsing, filename sanitization, and filesystem path handling. It does not connect to Salesforce or download customer files.
+The GitHub Actions workflow runs Linux smoke tests plus Python library tests, and runs focused library and Robot dry-run validation on Windows. Coverage includes headless Chrome startup, SeleniumLibrary, Excel transactions and rollback, safe CLI JSON parsing, filename sanitization, path handling, API-request estimation, and download polling. CI does not connect to Salesforce or download customer files.
 
 ## Pull requests
 
