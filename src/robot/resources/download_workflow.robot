@@ -25,6 +25,7 @@ Download Files Using Content Document IDs
     Set Test Variable    ${GENERATE_CONTENT_VERSION_FILE}
     Set Test Variable    ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
     ${content_ids}=    Create List
+    ${pending_content_ids}=    Create List
     ${successful_content_ids}=    Create List
     ${failed_content_ids}=    Create List
     ${unique_failed_content_ids}=    Create List
@@ -45,6 +46,7 @@ Download Files Using Content Document IDs
         ...    ${input_excel_path}
         ...    ${sheet_name}
         ${total_records}=    Get Length    ${content_ids}
+        ${pending_content_ids}=    Copy List    ${content_ids}
         Set Test Variable    ${total_records}
         IF    ${total_records} == 0
             Log To Console
@@ -101,6 +103,7 @@ Download Files Using Content Document IDs
                     Append To List
                     ...    ${failed_content_ids}
                     ...    ${content_id}
+                    Remove Values From List    ${pending_content_ids}    ${content_id}
                     ${current_content_id}=    Set Variable    ${NONE}
                     CONTINUE
                 END
@@ -123,12 +126,14 @@ Download Files Using Content Document IDs
                     Append To List
                     ...    ${failed_content_ids}
                     ...    ${content_id}
+                    Remove Values From List    ${pending_content_ids}    ${content_id}
                 ELSE IF    '${GENERATE_CONTENT_DOCUMENT_LINK_FILE.lower()}' == 'yes' and $content_links is None
                     Log To Console
                     ...    FAILED: ${content_id} - ContentDocumentLink metadata not found
                     Append To List
                     ...    ${failed_content_ids}
                     ...    ${content_id}
+                    Remove Values From List    ${pending_content_ids}    ${content_id}
                 ELSE
                     ${download_status}=    Process ContentDocument Download
                     ...    ${content_id}
@@ -139,6 +144,7 @@ Download Files Using Content Document IDs
                     ...    ${cdl_row}
                     ...    ${download_directory}
 
+                    Remove Values From List    ${pending_content_ids}    ${content_id}
                     IF    '${download_status}' == 'PASS'
                         IF    '${GENERATE_CONTENT_VERSION_FILE.lower()}' == 'yes'
                             ${cv_row}=    Evaluate    ${cv_row} + 1
@@ -167,10 +173,10 @@ Download Files Using Content Document IDs
         END
     EXCEPT    AS    ${error}
         ${unexpected_error}=    Set Variable    ${error}
-        IF    $current_content_id is not None
+        FOR    ${unprocessed_content_id}    IN    @{pending_content_ids}
             Append To List
             ...    ${failed_content_ids}
-            ...    ${current_content_id}
+            ...    ${unprocessed_content_id}
         END
         Log To Console
         ...    UNEXPECTED ERROR: ${unexpected_error}
@@ -431,18 +437,16 @@ Process ContentDocument Download
     ${safe_file_title}=    Sanitize Filename    ${file_title}
     Set Test Variable    ${safe_file_title}
 
-    ${file_name}=    Set Variable    ${safe_file_title}
+    ${raw_file_name}=    Set Variable    ${file_title}
     ${has_extension}=    Evaluate
     ...    str($file_extension).strip() not in ['', 'None', 'none', 'NULL', 'null']
 
     IF    ${has_extension}
-        ${file_name}=    Catenate
+        ${raw_file_name}=    Catenate
         ...    SEPARATOR=.
-        ...    ${safe_file_title}
+        ...    ${file_title}
         ...    ${file_extension}
     END
-
-    Set Test Variable    ${file_name}
 
     ${download_url}=    Build ContentDocument Download URL
     ...    ${org_domain}
@@ -455,6 +459,13 @@ Process ContentDocument Download
     ...    ${download_directory}
 
     Set Test Variable    ${content_id_folder}
+
+    ${file_name}=    Sanitize Local Filename For Directory
+    ...    ${raw_file_name}
+    ...    ${content_id_folder}
+    ...    max_filename_length=180
+    ...    max_path_length=240
+    Set Test Variable    ${file_name}
 
     ${download_result}=    Download And Validate Content File
     ...    ${content_id}

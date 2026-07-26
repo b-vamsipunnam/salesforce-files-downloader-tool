@@ -15,7 +15,7 @@ Resource            excel_operations.robot
 Initialize Output Directory
     [Documentation]     Creates and returns a unique output directory for the current test. The directory stores generated ContentVersion, ContentDocumentLink, and failed-ID Excel files without conflicting with parallel executions.
     ${uuid}=    Evaluate    __import__('uuid').uuid4().hex
-    ${safe_test_name}=    Replace String    ${TEST NAME}    ${SPACE}    _
+    ${safe_test_name}=    Sanitize Local Filename    ${TEST NAME}    max_length=80
     ${output_directory}=    Set Variable    ${OUTPUT_FOLDER}/${safe_test_name}_${uuid}
     Create Directory    ${output_directory}
     Directory Should Exist    ${output_directory}
@@ -24,7 +24,7 @@ Initialize Output Directory
 Initialize Download Directory
     [Documentation]     Creates and returns a unique browser download directory for the current test. The test name and a random identifier isolate downloads during parallel execution.
     ${uuid}=    Evaluate    __import__('uuid').uuid4().hex
-    ${safe_test_name}=    Replace String    ${TEST NAME}    ${SPACE}    _
+    ${safe_test_name}=    Sanitize Local Filename    ${TEST NAME}    max_length=80
     ${download_directory}=    Set Variable    ${BASE_DOWNLOAD_FOLDER}/${safe_test_name}_${uuid}
     Create Directory    ${download_directory}
     Directory Should Exist    ${download_directory}
@@ -338,24 +338,16 @@ Validate And Move Downloaded File
         ${is_file_size_matching}=    Set Variable    ${FALSE}
     END
     IF    ${target_file_exists} and ${is_file_size_matching}
-        IF    '${GENERATE_CONTENT_VERSION_FILE.lower()}' == 'yes'
-            Write ContentVersion Row
-            ...    ${cv_row}
-            ...    ${dst}
-            ...    ${cv_file_name}
-            ...    ${file_title}
-        END
-        IF    '${GENERATE_CONTENT_DOCUMENT_LINK_FILE.lower()}' == 'yes'
-            ${current_cdl_row}=    Set Variable    ${cdl_row}
-            FOR    ${content_link}    IN    @{content_links}
-                Write ContentDocumentLink Row
-                ...    ${current_cdl_row}
-                ...    ${content_link}
-                ...    ${cdl_file_name}
-                ${current_cdl_row}=    Evaluate
-                ...    ${current_cdl_row} + 1
-            END
-        END
+        Write Migration Rows Atomically
+        ...    ${cv_file_name}
+        ...    ${cv_row}
+        ...    ${file_title}
+        ...    ${dst}
+        ...    ${cdl_file_name}
+        ...    ${cdl_row}
+        ...    ${content_links}
+        ...    write_content_version=${GENERATE_CONTENT_VERSION_FILE}
+        ...    write_content_document_links=${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
         ${already_recorded_success}=    Run Keyword And Return Status
         ...    List Should Contain Value
         ...    ${successful_content_ids}
