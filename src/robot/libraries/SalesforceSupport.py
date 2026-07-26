@@ -6,9 +6,11 @@ import json
 import os
 import platform
 import re
+import time
 from typing import Any
 
 import selenium
+from robot.utils import timestr_to_secs
 
 
 _INVALID_FILENAME_CHARACTERS = re.compile(r'[<>:"/\\|?*\x00-\x1F]')
@@ -63,6 +65,16 @@ class SalesforceSupport:
             "No valid JSON object or array found in Salesforce CLI output."
         )
 
+    def try_parse_first_json_value(
+        self,
+        raw_output: str,
+    ) -> tuple[bool, Any | None]:
+        """Try to parse CLI JSON without raising for expected invalid output."""
+        try:
+            return True, self.parse_first_json_value(raw_output)
+        except (TypeError, ValueError):
+            return False, None
+
     def sanitize_local_filename(
         self,
         filename: str | None,
@@ -109,6 +121,37 @@ class SalesforceSupport:
             fallback=fallback,
             max_length=bounded_length,
         )
+
+    def wait_for_completed_download(
+        self,
+        download_directory: str,
+        timeout: str | float,
+        temp_suffixes: list[str],
+        interval: str | float = "0.5s",
+    ) -> bool:
+        """Wait without emitting transient assertion failures into Robot logs."""
+        timeout_seconds = float(timestr_to_secs(timeout))
+        interval_seconds = float(timestr_to_secs(interval))
+        if timeout_seconds < 0 or interval_seconds <= 0:
+            raise ValueError(
+                "Download timeout cannot be negative and interval must be positive."
+            )
+
+        directory = os.path.abspath(str(download_directory))
+        suffixes = tuple(str(value).lower() for value in temp_suffixes)
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            if os.path.isdir(directory):
+                for name in os.listdir(directory):
+                    path = os.path.join(directory, name)
+                    if os.path.isfile(path) and not name.lower().endswith(suffixes):
+                        return True
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    "No completed download appeared within "
+                    f"{timeout_seconds:g} seconds."
+                )
+            time.sleep(min(interval_seconds, max(0, deadline - time.monotonic())))
 
     @staticmethod
     def _normalize_filename_candidate(

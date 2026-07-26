@@ -5,8 +5,8 @@ Library             SeleniumLibrary
 Library             OperatingSystem
 Library             Collections
 Library             String
-Library             pabot.PabotLib
 Resource            configuration.robot
+Resource            salesforce_cli.robot
 Resource            salesforce_api.robot
 Resource            excel_operations.robot
 Resource            download_operations.robot
@@ -52,6 +52,10 @@ Download Files Using Content Document IDs
             Log To Console
             ...    No ContentDocumentIds found. Skipping download and Data Loader file generation.
         ELSE
+            Check Salesforce API Capacity
+            ...    ${total_records}
+            ...    ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
+
             ${output_directory}=    Initialize Output Directory
             ${output_directory}=    Normalize Path    ${output_directory}
             Set Test Variable    ${output_directory}
@@ -158,7 +162,6 @@ Download Files Using Content Document IDs
                 END
                 ${current_content_id}=    Set Variable    ${NONE}
             END
-
             IF    ${ENABLE_FAILED_ID_RETRY}
                 ${cv_row}    ${cdl_row}=    Retry Failed ContentDocument IDs
                 ...    ${content_doc_map}
@@ -184,9 +187,9 @@ Download Files Using Content Document IDs
         Run Keyword And Ignore Error    Close All Excel Documents
         Run Keyword And Ignore Error    Close All Browsers
         IF    $download_directory is not None
-            ${download_directory_exists}=    Run Keyword And Return Status
-            ...    Directory Should Exist
-            ...    ${download_directory}
+            ${download_directory_exists}=    Evaluate
+            ...    os.path.isdir($download_directory)
+            ...    modules=os
             IF    ${download_directory_exists}
                 Run Keyword And Ignore Error
                 ...    Cleanup Download Directory    ${download_directory}
@@ -251,10 +254,8 @@ Retry Failed ContentDocument IDs
     ...    int($FAILED_ID_RETRY_COUNT) + 1
     TRY
         FOR    ${content_id}    IN    @{original_failed_ids}
-            ${already_successful}=    Run Keyword And Return Status
-            ...    List Should Contain Value
-            ...    ${successful_content_ids}
-            ...    ${content_id}
+            ${already_successful}=    Evaluate
+            ...    $content_id in $successful_content_ids
             IF    ${already_successful}
                 Log
                 ...    Skipping retry for ${content_id} because it already completed successfully.
@@ -262,15 +263,12 @@ Retry Failed ContentDocument IDs
             END
             ${is_valid}=    Is Valid ContentDocument ID
             ...    ${content_id}
-
             IF    not ${is_valid}
                 Log To Console
                 ...    NOT RETRYABLE: ${content_id} - Invalid ContentDocumentId format
-
                 Append To List
                 ...    ${final_failed_content_ids}
                 ...    ${content_id}
-
                 CONTINUE
             END
             ${content_doc}=    Get From Dictionary
@@ -369,11 +367,8 @@ Retry Failed ContentDocument IDs
                 END
             END
         END
-        ${final_failed_content_ids}=    Remove Duplicates
-        ...    ${final_failed_content_ids}
-
+        ${final_failed_content_ids}=    Remove Duplicates    ${final_failed_content_ids}
         Evaluate    $failed_content_ids.clear()
-
         FOR    ${content_id}    IN    @{final_failed_content_ids}
             Append To List
             ...    ${failed_content_ids}
@@ -382,37 +377,27 @@ Retry Failed ContentDocument IDs
     EXCEPT    AS    ${retry_error}
         Log To Console
         ...    RETRY PROCESSING ERROR: ${retry_error}
-
         ${unresolved_failed_ids}=    Create List
-
         FOR    ${content_id}    IN    @{original_failed_ids}
-            ${was_successful}=    Run Keyword And Return Status
-            ...    List Should Contain Value
-            ...    ${successful_content_ids}
-            ...    ${content_id}
-
+            ${was_successful}=    Evaluate
+            ...    $content_id in $successful_content_ids
             IF    not ${was_successful}
                 Append To List
                 ...    ${unresolved_failed_ids}
                 ...    ${content_id}
             END
         END
-
         ${unresolved_failed_ids}=    Remove Duplicates
         ...    ${unresolved_failed_ids}
-
         Evaluate    $failed_content_ids.clear()
-
         FOR    ${content_id}    IN    @{unresolved_failed_ids}
             Append To List
             ...    ${failed_content_ids}
             ...    ${content_id}
         END
-
         Fail
         ...    Failed ContentDocument retry processing stopped unexpectedly: ${retry_error}
     END
-
     RETURN    ${cv_row}    ${cdl_row}
 
 Process ContentDocument Download
@@ -433,40 +418,31 @@ Process ContentDocument Download
     Set Test Variable    ${content_version_id}    ${content_doc}[LatestPublishedVersionId]
     Set Test Variable    ${expected_file_size}    ${content_doc}[ContentSize]
     Set Test Variable    ${description}    ${content_doc}[Description]
-
     ${safe_file_title}=    Sanitize Filename    ${file_title}
     Set Test Variable    ${safe_file_title}
-
     ${raw_file_name}=    Set Variable    ${file_title}
     ${has_extension}=    Evaluate
     ...    str($file_extension).strip() not in ['', 'None', 'none', 'NULL', 'null']
-
     IF    ${has_extension}
         ${raw_file_name}=    Catenate
         ...    SEPARATOR=.
         ...    ${file_title}
         ...    ${file_extension}
     END
-
     ${download_url}=    Build ContentDocument Download URL
     ...    ${org_domain}
     ...    ${content_doc_id}
-
     Set Test Variable    ${download_url}    ${download_url}
-
     ${content_id_folder}=    Create ContentDocument ID Folder
     ...    ${content_id}
     ...    ${download_directory}
-
     Set Test Variable    ${content_id_folder}
-
     ${file_name}=    Sanitize Local Filename For Directory
     ...    ${raw_file_name}
     ...    ${content_id_folder}
     ...    max_filename_length=180
     ...    max_path_length=240
     Set Test Variable    ${file_name}
-
     ${download_result}=    Download And Validate Content File
     ...    ${content_id}
     ...    ${download_url}
@@ -485,10 +461,8 @@ Process ContentDocument Download
     ...    ${GENERATE_CONTENT_VERSION_FILE}
     ...    ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
     ...    ${successful_content_ids}
-
     ${is_retry}=    Evaluate
     ...    str($record_number).startswith('Retry-')
-
     IF    ${is_retry}
         Log To Console
         ...    Completed retry processing for ${content_id}\n
@@ -496,5 +470,4 @@ Process ContentDocument Download
         Log To Console
         ...    Completed Downloading the record ${record_number} of ${total_records}\n
     END
-
     RETURN    ${download_result}

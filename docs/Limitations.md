@@ -11,6 +11,8 @@
 - Some failures require manual review using Robot Framework logs and the generated failure workbooks.
 - Large executions require enough local disk space for binaries, workbooks, temporary files, and reports.
 - Authentication is not refreshed automatically during an active execution.
+- API-capacity checks are per batch and do not reserve requests globally across simultaneous Pabot workers. The PabotLib lock serializes CLI access, not capacity allocation.
+- Daily API usage reported by Salesforce may not reflect every request immediately.
 - Destination-org inserts and source-to-destination ContentDocument ID mapping are outside this downloader.
 
 ---

@@ -2,7 +2,7 @@
 
 This roadmap records areas for improvement and exploration. It does not commit to delivery dates or final designs.
 
-## Near-Term
+## Near-term
 
 - Expand CI validation
 - Improve automated test coverage
@@ -11,7 +11,7 @@ This roadmap records areas for improvement and exploration. It does not commit t
 - Add checksum reporting
 - Add more execution examples
 
-## Future Exploration
+## Future exploration
 
 - Enhanced migration reconciliation
 - Structured JSON reporting

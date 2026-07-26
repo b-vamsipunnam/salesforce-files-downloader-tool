@@ -175,6 +175,33 @@ class ExcelLibraryLifecycleTests(unittest.TestCase):
         self.assertIsNone(library._current_id)
 
 
+class SalesforceSupportJsonTests(unittest.TestCase):
+    def setUp(self):
+        self.support = SalesforceSupport()
+
+    def test_try_parse_returns_false_for_empty_output(self):
+        parsed, value = self.support.try_parse_first_json_value("")
+
+        self.assertFalse(parsed)
+        self.assertIsNone(value)
+
+    def test_try_parse_returns_false_for_invalid_output(self):
+        parsed, value = self.support.try_parse_first_json_value(
+            "Salesforce CLI warning without JSON"
+        )
+
+        self.assertFalse(parsed)
+        self.assertIsNone(value)
+
+    def test_try_parse_returns_first_valid_json_value(self):
+        parsed, value = self.support.try_parse_first_json_value(
+            'Warning\n{"status": 0}\nTrailing text'
+        )
+
+        self.assertTrue(parsed)
+        self.assertEqual(value, {"status": 0})
+
+
 class SalesforceSupportPathTests(unittest.TestCase):
     def test_complete_filename_respects_destination_path_budget(self):
         support = SalesforceSupport()
@@ -202,4 +229,36 @@ class SalesforceSupportPathTests(unittest.TestCase):
                 "file.txt",
                 "x" * 30,
                 max_path_length=10,
+            )
+
+
+class SalesforceSupportDownloadWaitTests(unittest.TestCase):
+    def setUp(self):
+        self.temp_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_directory.cleanup)
+        self.support = SalesforceSupport()
+
+    def test_accepts_completed_file_without_transient_failures(self):
+        completed_path = os.path.join(self.temp_directory.name, "complete.pdf")
+        with open(completed_path, "wb") as completed_file:
+            completed_file.write(b"complete")
+
+        result = self.support.wait_for_completed_download(
+            self.temp_directory.name,
+            0,
+            [".crdownload", ".tmp", ".part"],
+        )
+
+        self.assertTrue(result)
+
+    def test_times_out_when_only_temporary_file_exists(self):
+        temporary_path = os.path.join(self.temp_directory.name, "pending.tmp")
+        with open(temporary_path, "wb") as temporary_file:
+            temporary_file.write(b"pending")
+
+        with self.assertRaisesRegex(TimeoutError, "No completed download"):
+            self.support.wait_for_completed_download(
+                self.temp_directory.name,
+                0,
+                [".crdownload", ".tmp", ".part"],
             )

@@ -32,6 +32,8 @@ pabot --pabotlib --testlevelsplit --processes 4 --outputdir results src/robot/or
 
 Each worker starts its own Robot and Chrome environment. Do not remove the shared `org_info.json` in worker-level teardown; remove it only after the complete Pabot run.
 
+Suite setup reads the alias, org ID, and API version directly from `org_info.json` and resolves the Salesforce CLI executable. It does not run `sf org display`, which avoids concurrent access to shared CLI state when Pabot starts several workers. The API-capacity lookup remains per batch because the remaining allocation can change during execution. A PabotLib lock serializes that CLI command across workers, and bounded retries handle empty, invalid, or failed CLI responses while browser downloads continue in parallel.
+
 ## Expected directory structure
 
 ```text

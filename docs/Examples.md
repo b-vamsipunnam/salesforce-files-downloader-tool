@@ -46,6 +46,20 @@ ${FAILED_ID_RETRY_DELAY}     5s
 
 Each attempt downloads the complete file again; a partial binary is never resumed. Invalid IDs and IDs missing required metadata are not retryable. If an ID still fails, it is written to `<batch>_FAILED_IDs.xlsx`. Once the underlying access, authentication, network, or storage issue is resolved, copy those remaining IDs into an input workbook and run the batch again.
 
+## Configure API capacity protection
+
+The capacity preflight is enabled by default. This example retains 100 requests for other integrations and adds a 25-request estimation buffer:
+
+```robot
+${ENABLE_API_CAPACITY_CHECK}          ${TRUE}
+${API_REQUEST_SAFETY_BUFFER}          25
+${MINIMUM_API_REQUESTS_REMAINING}     100
+${API_LIMIT_LOOKUP_MAX_ATTEMPTS}      3
+${API_LIMIT_LOOKUP_RETRY_DELAY}       2s
+```
+
+Each batch counts one successful limits request plus estimated metadata requests. The limits lookup is serialized across Pabot workers and retries transient CLI or response failures. Failed lookup attempts and metadata pagination can consume additional calls, and parallel workers do not share a reservation counter, so increase the buffer when operating near the daily limit.
+
 ## Illustrative enterprise batch
 
 The following numbers are an example only; they are not benchmark results or guaranteed output.
@@ -60,7 +74,7 @@ The following numbers are an example only; they are not benchmark results or gua
 - 3 IDs still failed after automatic retries and were written to the failure workbook
 - Every downloaded file passed validation
 
-## Prepare Migration Workbooks
+## Prepare migration workbooks
 
 1. Import the generated ContentVersion workbook into the destination org.
 2. Obtain the destination `ContentDocumentId` for every inserted file.

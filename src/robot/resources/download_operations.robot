@@ -150,7 +150,8 @@ Download And Validate Content File
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
     END
-    ${is_name_match}=    Run Keyword And Return Status    Should Start With    ${latest_filename}    ${safe_file_title}
+    ${is_name_match}=    Evaluate
+    ...    str($latest_filename).startswith(str($safe_file_title))
     IF    not ${is_name_match}
         Log
         ...    WARNING: Downloaded filename does not match the sanitized expected title. Expected: ${safe_file_title}, Actual: ${latest_filename}, Expected size: ${expected_file_size}, Actual size: ${downloaded_size}
@@ -193,11 +194,10 @@ Download Directory Should Contain Completed File
 Wait Until Download File Appears
     [Documentation]     Waits until a completed, non-temporary file appears in the active download directory or fails when the supplied timeout expires.
     [Arguments]    ${timeout}    ${download_directory}
-    Wait Until Keyword Succeeds
-    ...    ${timeout}
-    ...    1s
-    ...    Download Directory Should Contain Completed File
+    Wait For Completed Download
     ...    ${download_directory}
+    ...    ${timeout}
+    ...    ${TEMP_FILE_SUFFIXES}
 
 Wait Until File Download Completes
     [Documentation]     Polls the active download directory until a completed file is detected. Continues checking while only temporary or partial files are present and fails when the configured completion timeout expires.
@@ -283,7 +283,7 @@ Validate And Move Downloaded File
     ...    ${successful_content_ids}
     ${src}=    Set Variable    ${download_directory}${/}${downloaded_filename}
     ${dst}=    Set Variable    ${content_id_folder}${/}${file_name}
-    ${is_source_file_exists}=    Run Keyword And Return Status    File Should Exist    ${src}
+    ${is_source_file_exists}=    Evaluate    os.path.isfile($src)    modules=os
     IF    not ${is_source_file_exists}
         ${status}=    Handle Download Failure    ${content_id}    Downloaded source file missing before move
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
@@ -307,7 +307,7 @@ Validate And Move Downloaded File
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
     END
-    ${is_source_file_exists}=    Run Keyword And Return Status    File Should Exist    ${src}
+    ${is_source_file_exists}=    Evaluate    os.path.isfile($src)    modules=os
     IF    not ${is_source_file_exists}
         ${status}=    Handle Download Failure    ${content_id}    Downloaded source file disappeared before move
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
@@ -324,9 +324,7 @@ Validate And Move Downloaded File
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
     END
-    ${target_file_exists}=    Run Keyword And Return Status
-    ...    File Should Exist
-    ...    ${dst}
+    ${target_file_exists}=    Evaluate    os.path.isfile($dst)    modules=os
     IF    ${target_file_exists}
         ${actual_file_size}=    Get File Size    ${dst}
     ELSE
@@ -348,10 +346,8 @@ Validate And Move Downloaded File
         ...    ${content_links}
         ...    write_content_version=${GENERATE_CONTENT_VERSION_FILE}
         ...    write_content_document_links=${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
-        ${already_recorded_success}=    Run Keyword And Return Status
-        ...    List Should Contain Value
-        ...    ${successful_content_ids}
-        ...    ${content_id}
+        ${already_recorded_success}=    Evaluate
+        ...    $content_id in $successful_content_ids
 
         IF    not ${already_recorded_success}
             Append To List
@@ -360,16 +356,18 @@ Validate And Move Downloaded File
         END
         Log To Console
         ...    SUCCESS: ${file_name} downloaded and moved to ${content_id}
-        ${source_still_exists}=    Run Keyword And Return Status
-        ...    File Should Exist
-        ...    ${src}
+        ${source_still_exists}=    Evaluate
+        ...    os.path.isfile($src)
+        ...    modules=os
         IF    ${source_still_exists}
             Run Keyword And Ignore Error    Remove File    ${src}
         END
         Cleanup Download Directory    ${download_directory}
         RETURN    PASS
     ELSE
-        ${source_still_exists}=    Run Keyword And Return Status    File Should Exist    ${src}
+        ${source_still_exists}=    Evaluate
+        ...    os.path.isfile($src)
+        ...    modules=os
         IF    ${source_still_exists}
             Run Keyword And Ignore Error    Remove File    ${src}
         END
@@ -404,9 +402,9 @@ Cleanup Download Directory
             Log
             ...    Deleted leftover download file: ${file}
         ELSE
-            ${file_still_exists}=    Run Keyword And Return Status
-            ...    File Should Exist
-            ...    ${full_path}
+            ${file_still_exists}=    Evaluate
+            ...    os.path.isfile($full_path)
+            ...    modules=os
             IF    ${file_still_exists}
                 Fail
                 ...    Unable to delete leftover download file '${file}': ${message}

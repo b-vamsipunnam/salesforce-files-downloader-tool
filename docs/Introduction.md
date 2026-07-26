@@ -22,7 +22,7 @@ flowchart TD
 
 `ContentDocument` represents the logical file, `ContentVersion` stores each version and its binary metadata, and `ContentDocumentLink` associates the file with Salesforce records, users, groups, or libraries.
 
-## Enterprise Migration Challenges
+## Migration challenges
 
 Files may need to move during org consolidation, divestiture, sandbox preparation, platform migration, archival, backup, or disaster-recovery work. Common challenges include:
 
@@ -33,7 +33,7 @@ Files may need to move during org consolidation, divestiture, sandbox preparatio
 - **Download validation:** a successful request does not prove that the complete file reached disk.
 - **Parallel execution:** workers need isolated browsers, directories, logs, and workbooks.
 - **Migration reporting:** operators need successful file paths and precise failed-ID lists.
-- **Enterprise-scale reliability:** network errors, file locks, partial downloads, and reruns need predictable handling.
+- **Operational reliability:** network errors, file locks, partial downloads, and reruns need predictable handling.
 
 ## Why this project exists
 

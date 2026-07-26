@@ -1,117 +1,54 @@
-# Security Policy
+# Security policy
 
-## Reporting Security Vulnerabilities
+## Report a vulnerability
 
-We take the security of the Salesforce Files Downloader Tool seriously.
+Do not disclose a suspected vulnerability in a public issue, discussion, social-media post, or shared log. Contact the maintainer privately through GitHub or the repository contact method. If no private channel is available, open a minimal issue asking the maintainer to contact you; do not include exploit details.
 
-If you discover a security vulnerability, please report it responsibly.
+Include the following where available:
 
-### Please Do NOT
+- A description of the vulnerability and its impact
+- Affected versions or commits
+- Minimal reproduction steps
+- A proof of concept
+- Suggested mitigations or fixes
 
-- Open a public GitHub issue
-- Share the vulnerability on social media
-- Exploit the vulnerability
+The project aims to acknowledge a report within 72 hours and provide updates while it is investigated. Do not exploit the issue beyond what is necessary to demonstrate it.
 
----
+## Protect credentials and data
 
-## How to Report
+This tool handles Salesforce access tokens, org identifiers, file metadata, and downloaded customer content. Treat its working directories and generated reports as sensitive.
 
-Please report security issues by contacting the project maintainer directly.
+- Never commit access tokens, passwords, OAuth secrets, or `org_info.json`.
+- Use least-privilege Salesforce accounts and avoid production administrator credentials where possible.
+- Keep `org_info.json` readable only by trusted users.
+- Delete `org_info.json` only after every sequential or parallel worker has finished.
+- Log out unused Salesforce sessions and rotate credentials according to your organization’s policy.
+- Protect `downloads/`, `artifacts/`, and `results/` with appropriate filesystem permissions and retention rules.
 
-**Maintainer:** Bhimeswara Vamsi Punnam  
-**Preferred Method:** GitHub private message or repository contact
+Token-bearing operations are normally suppressed from Robot Framework logs. That protection does not remove the need to inspect `output.xml`, `log.html`, `report.html`, screenshots, and console output before sharing them. Unexpected failures or future regressions can expose tokens, customer IDs, filenames, or failure details.
 
-If GitHub messaging is unavailable, please open a minimal issue requesting private contact.
+If a token appears in a published artifact, remove the artifact where possible and revoke the Salesforce session immediately:
 
-We aim to acknowledge reports within **72 hours** and provide regular status updates during investigation.
+```bash
+sf org logout --target-org <org_alias> --no-prompt
+sf org login web --alias <org_alias>
+```
 
-When reporting, please include:
+Generate a new `org_info.json` before the next run.
 
-- Description of the vulnerability
-- Steps to reproduce
-- Proof of concept (if available)
-- Impact assessment
-- Affected versions
-- Any suggested fixes
+## Maintain a secure environment
 
-This helps us resolve issues faster and more effectively.
+- Keep Python, Salesforce CLI, Chrome, ChromeDriver, and project dependencies current.
+- Install packages only from trusted sources.
+- Monitor dependencies for published vulnerabilities.
+- Avoid processing sensitive data on public or shared machines.
+- Encrypt stored files when required by organizational policy.
+- Apply operating-system and endpoint-security updates.
 
----
+## Disclosure and updates
 
-## Security Best Practices
+After a report is verified, maintainers will assess the impact, develop and test a fix, publish an update, and disclose details when appropriate. Reporter credit is provided with permission. Security releases and advisories are published through GitHub Releases and repository documentation; a CVE may be requested for a qualifying issue.
 
-To help keep your environment secure:
+## Warranty
 
-### Credentials & Secrets
-
-- Never commit:
-  - Access tokens
-  - OAuth secrets
-  - Passwords
-  - `org_info.json` with credentials
-- Use environment variables or secure vaults
-- Add sensitive files to `.gitignore`
-
----
-
-### Salesforce Access
-
-- Use least-privilege Salesforce accounts
-- Avoid using production admin credentials
-- Rotate tokens regularly
-- Log out unused sessions
-
----
-
-### Dependencies
-
-- Keep dependencies updated
-- Monitor for known vulnerabilities
-- Use trusted packages only
-
----
-
-### Local Environment
-
-- Protect your local machine
-- Avoid running tools on public or shared systems
-- Encrypt sensitive files if needed
-- Restrict access to configuration files
-
----
-
-## Disclosure Policy
-
-We follow a responsible disclosure process:
-
-1. Receive report privately
-2. Verify vulnerability
-3. Develop fix
-4. Release patch
-5. Publicly disclose (if appropriate)
-
-Reporters will be credited when possible (with permission).
-
----
-
-## Security Updates
-
-Security patches and advisories will be announced via:
-
-- GitHub Releases
-- Repository changelog
-- Project documentation
-
-For critical vulnerabilities, CVE identifiers may be requested when appropriate.
-
----
-
-## Disclaimer
-
-This tool is provided "as-is" without warranty.
-
-Users are responsible for securing their own environments, credentials, and data.
-
----
-
-Thank you for helping keep this project secure!
+This project is provided under the terms of the [MIT License](LICENSE). Users are responsible for securing their environments, credentials, downloaded data, and generated artifacts.

@@ -83,9 +83,9 @@ Remove Empty Import Files
     [Documentation]     Removes generated ContentVersion and ContentDocumentLink workbooks when no files were downloaded successfully. Ignores workbooks that were not requested or do not exist.
     [Arguments]    ${cv_file_name}    ${cdl_file_name}
     IF    $cv_file_name is not None
-        ${cv_file_exists}=    Run Keyword And Return Status
-        ...    File Should Exist
-        ...    ${cv_file_name}
+        ${cv_file_exists}=    Evaluate
+        ...    os.path.isfile($cv_file_name)
+        ...    modules=os
         IF    ${cv_file_exists}
             ${cv_remove_status}    ${cv_remove_message}=    Run Keyword And Ignore Error
             ...    Remove File
@@ -100,9 +100,9 @@ Remove Empty Import Files
         END
     END
     IF    $cdl_file_name is not None
-        ${cdl_file_exists}=    Run Keyword And Return Status
-        ...    File Should Exist
-        ...    ${cdl_file_name}
+        ${cdl_file_exists}=    Evaluate
+        ...    os.path.isfile($cdl_file_name)
+        ...    modules=os
         IF    ${cdl_file_exists}
             ${cdl_remove_status}    ${cdl_remove_message}=    Run Keyword And Ignore Error
             ...    Remove File

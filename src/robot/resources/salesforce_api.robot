@@ -14,38 +14,60 @@ Resource            configuration.robot
 Initialize Salesforce Session
     [Documentation]     Reads Salesforce authentication information from the configured org_info.json file, creates a uniquely named RequestsLibrary session with Bearer authentication, stores the API version for the current test, and returns the session alias.
     [Tags]    robot:flatten
-    ${uuid}=    Evaluate    __import__('uuid').uuid4().hex
-    ${session_alias}=    Set Variable    salesforce_${uuid}
-    Set Test Variable    ${session_alias}
-    ${json_text}=    OperatingSystem.Get File    ${ORG_INFO_FILE}    encoding=UTF-8-sig
-    ${org_dict}=    Evaluate    json.loads($json_text)    modules=json
-    ${token}=    Set Variable    ${org_dict['result']['accessToken']}
-    ${instance}=    Set Variable    ${org_dict['result']['instanceUrl']}
-    ${api_version}=    Set Variable    ${org_dict['result']['apiVersion']}
-    ${org_alias}=    Set Variable    ${org_dict['result']['alias']}
-    Set Test Variable    ${api_version}
-    ${headers}=    Create Dictionary
-    ...    Authorization=Bearer ${token}
-    ...    Content-Type=application/json
-    Create Session
-    ...    ${session_alias}
-    ...    ${instance}
-    ...    headers=${headers}
-    ...    verify=${TRUE}
+    ${previous_level}=    Set Log Level    NONE
+    TRY
+        ${uuid}=    Evaluate    __import__('uuid').uuid4().hex
+        ${session_alias}=    Set Variable    salesforce_${uuid}
+        Set Test Variable    ${session_alias}
+        ${json_text}=    OperatingSystem.Get File
+        ...    ${ORG_INFO_FILE}
+        ...    encoding=UTF-8-sig
+        ${org_dict}=    Evaluate    json.loads($json_text)    modules=json
+        ${token}=    Set Variable    ${org_dict['result']['accessToken']}
+        ${instance}=    Set Variable    ${org_dict['result']['instanceUrl']}
+        ${api_version}=    Set Variable    ${org_dict['result']['apiVersion']}
+        Set Test Variable    ${api_version}
+        ${headers}=    Create Dictionary
+        ...    Authorization=Bearer ${token}
+        ...    Content-Type=application/json
+        Create Session
+        ...    ${session_alias}
+        ...    ${instance}
+        ...    headers=${headers}
+        ...    verify=${TRUE}
+    FINALLY
+        Set Log Level    ${previous_level}
+    END
     RETURN    ${session_alias}
 
 Get Salesforce Login Info
     [Documentation]     Reads the Salesforce instance URL and access token from org_info.json, determines the organization domain, constructs the authenticated frontdoor login URL, and returns the URL for browser initialization.
     [Tags]    robot:flatten
-    ${json_text}=    OperatingSystem.Get File    ${ORG_INFO_FILE}    encoding=UTF-8-sig
-    ${org_dict}=    Evaluate    json.loads($json_text)    modules=json
-    ${instance_url}=    Set Variable    ${org_dict['result']['instanceUrl']}
-    ${access_token}=    Set Variable    ${org_dict['result']['accessToken']}
-    ${parsed}=    Evaluate    urllib.parse.urlparse($instance_url)    modules=urllib.parse
-    ${netloc}=    Set Variable    ${parsed.netloc}
-    ${org_domain}=    Replace String    ${netloc}    .my.salesforce.com    ${EMPTY}
-    ${login_url}=    Catenate    SEPARATOR=    ${instance_url}/secur/frontdoor.jsp?sid=${access_token}
-    Set Test Variable    ${org_domain}
+    ${previous_level}=    Set Log Level    NONE
+    TRY
+        ${json_text}=    OperatingSystem.Get File
+        ...    ${ORG_INFO_FILE}
+        ...    encoding=UTF-8-sig
+        ${org_dict}=    Evaluate    json.loads($json_text)    modules=json
+        ${instance_url}=    Set Variable
+        ...    ${org_dict['result']['instanceUrl']}
+        ${access_token}=    Set Variable
+        ...    ${org_dict['result']['accessToken']}
+        ${parsed}=    Evaluate
+        ...    urllib.parse.urlparse($instance_url)
+        ...    modules=urllib.parse
+        ${netloc}=    Set Variable    ${parsed.netloc}
+        ${org_domain}=    Replace String
+        ...    ${netloc}
+        ...    .my.salesforce.com
+        ...    ${EMPTY}
+        ${login_url}=    Catenate
+        ...    SEPARATOR=
+        ...    ${instance_url}/secur/frontdoor.jsp?sid=${access_token}
+        Set Test Variable    ${org_domain}
+    FINALLY
+        Set Log Level    ${previous_level}
+    END
     RETURN    ${login_url}
 
 Send Safe Salesforce GET Request

@@ -26,9 +26,11 @@ Linux or macOS:
 sf org display --json --target-org <org_alias> > org_info.json
 ```
 
-`org_info.json` provides the instance URL, access token, API version, and authenticated org alias used during execution.
+`org_info.json` provides the instance URL, access token, API version, org ID, and authenticated alias used during execution. Pabot workers read this context directly instead of running concurrent `sf org display` commands.
 
 > **Security:** `org_info.json` contains an access token. It is excluded by `.gitignore`; never commit, publish, attach, or include it in logs. Regenerate the file whenever the Salesforce session expires or a new access token is required. Prefer a dedicated user with only the permissions required for the migration.
+
+The downloader does not remove `org_info.json` during suite teardown because parallel workers share it. Delete it manually only after the complete Robot or Pabot execution has finished.
 
 Authentication is managed entirely through Salesforce CLI. The downloader never stores Salesforce usernames or passwords and does not refresh expired sessions during execution.
 

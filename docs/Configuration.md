@@ -11,6 +11,7 @@ Batch inputs and optional workbook flags are defined in `src/robot/orchestrator/
 | `${GENERATE_CONTENT_VERSION_FILE}`                | `Yes`                | Create a ContentVersion import workbook      |
 | `${GENERATE_CONTENT_DOCUMENT_LINK_FILE}`          | `Yes`                | Create a ContentDocumentLink import workbook |
 | `${ORG_INFO_FILE}`                                | `org_info.json`      | Salesforce CLI authentication data           |
+| `${INPUT_FOLDER}`                                 | `input/`             | Root directory for configured input workbooks |
 | `${BASE_DOWNLOAD_FOLDER}`                         | `downloads/`         | Validated binary output root                 |
 | `${OUTPUT_FOLDER}`                                | `artifacts/`         | Workbook output root                         |
 
@@ -21,6 +22,11 @@ Workbook generation flags accept `Yes` or `No` to enable or disable creation of 
 | Setting                        | Default | Purpose                                  |
 |--------------------------------|---------|------------------------------------------|
 | `${METADATA_BATCH_SIZE}`       | `200`   | IDs per metadata query group             |
+| `${ENABLE_API_CAPACITY_CHECK}` | `${TRUE}` | Check DailyApiRequests before processing |
+| `${API_REQUEST_SAFETY_BUFFER}` | `25`    | Extra API requests reserved for estimation variance |
+| `${MINIMUM_API_REQUESTS_REMAINING}` | `100` | Required API capacity left after estimated metadata calls |
+| `${API_LIMIT_LOOKUP_MAX_ATTEMPTS}` | `3` | Maximum Salesforce CLI limits-command attempts |
+| `${API_LIMIT_LOOKUP_RETRY_DELAY}` | `2s` | Delay between failed limits-command attempts |
 | `${DOWNLOAD_APPEAR_TIMEOUT}`   | `60s`   | Wait for a browser download to appear    |
 | `${DOWNLOAD_COMPLETE_TIMEOUT}` | `60s`   | Wait for temporary download state to end |
 | `${FILE_STABILITY_MAX_CHECKS}` | `60`    | Maximum file stability checks            |
@@ -32,6 +38,10 @@ Workbook generation flags accept `Yes` or `No` to enable or disable creation of 
 | `${FAILED_ID_RETRY_DELAY}`     | `5s`    | Delay between additional retry attempts  |
 
 The default metadata batch size of 200 balances SOQL request efficiency with reliable query execution for large migrations.
+
+The API-capacity preflight reads `DailyApiRequests` through Salesforce CLI before creating output directories or workbooks. The limits command is serialized across Pabot workers and retried when it returns a nonzero exit code, empty output, invalid JSON, or no `DailyApiRequests` entry. Its estimate counts one successful limits request, one `ContentDocument` query per metadata batch, and a second query per batch when ContentDocumentLink output is enabled. Failed CLI attempts may also consume requests, so retain a safety buffer appropriate for the expected relationship volume.
+
+Suite setup reads org context from `org_info.json` and resolves the CLI path once per Robot process. Each batch still performs its own capacity lookup. This is a conservative per-batch check, not a global reservation across simultaneous workers. Use non-overlapping inputs and increase the buffer when parallel executions approach the org's daily API limit.
 
 Increase timeouts only after checking file access, browser behavior, network throughput, and disk performance. Larger SOQL batches reduce request count but make each query longer.
 
