@@ -52,15 +52,16 @@ ${documents}=    Get ContentDocument Metadata Map    ${content_ids}    200
 
 **Source**
 
-`src/robot/resources/excel_operations.robot`
+`src/robot/resources/excel_operations.robot` and `src/robot/libraries/ExcelLibrary.py`
 
 | Keyword                                 | Purpose                         | Arguments                                                 | Return value            | Important behavior                                             |
 |-----------------------------------------|---------------------------------|-----------------------------------------------------------|-------------------------|----------------------------------------------------------------|
 | `Read Content IDs From Excel Sheet`     | Read IDs from the first column. | `${input_excel_path}`, `${sheet_name}`                    | Deduplicated ID list    | Removes an optional header, blanks, and whitespace.            |
 | `Create ContentVersion Excel File`      | Create an import workbook.      | `${download_directory}`                                   | First data row and path | Writes `Title`, `VersionData`, and `PathOnClient` headers.     |
 | `Create ContentDocumentLink Excel File` | Create a relationship workbook. | `${download_directory}`                                   | First data row and path | Writes document, entity, share type, and visibility headers.   |
-| `Write ContentVersion Row`              | Record a successful local file. | `${cv_row}`, `${dst}`, `${cv_file_name}`, `${file_title}` | None                    | Saves and closes the workbook after the row.                   |
-| `Write ContentDocumentLink Row`         | Record one source relationship. | `${cdl_row}`, `${content_link}`, `${cdl_file_name}`       | None                    | Writes one row for each supplied link.                         |
+| `Write Migration Rows Atomically`       | Record one completed document.  | Workbook paths, starting rows, title, local path, links, and generation flags | None | Stages all requested rows and rolls back committed workbooks if a later replacement fails. |
+| `Write ContentVersion Row`              | Write one version row directly. | `${cv_row}`, `${dst}`, `${cv_file_name}`, `${file_title}` | None                    | Compatibility keyword; the main workflow uses the atomic writer. |
+| `Write ContentDocumentLink Row`         | Write one relationship directly. | `${cdl_row}`, `${content_link}`, `${cdl_file_name}`      | None                    | Compatibility keyword; the main workflow uses the atomic writer. |
 | `Remove Empty Import Files`             | Remove unused import workbooks. | `${cv_file_name}`, `${cdl_file_name}`                     | None                    | Deletes existing files only when invoked after zero successes. |
 
 ```robot
@@ -81,6 +82,7 @@ ${content_ids}=    Read Content IDs From Excel Sheet    ${INPUT_EXCEL_PATH_1}   
 | `Build ContentDocument Download URL` | Build a Shepherd document URL.           | `${org_domain}`, `${document_id}`                                                        | URL                             | Targets the ContentDocument download endpoint.                                       |
 | `Create ContentDocument ID Folder`   | Create a final per-ID directory.         | `${content_id}`, `${download_directory}`                                                 | Directory path                  | Verifies that the directory exists.                                                  |
 | `Sanitize Filename`                  | Make a title safe for local storage.     | `${name}`                                                                                | Sanitized name                  | Handles invalid characters, Windows reserved names, trailing dots or spaces, and empty values. |
+| `Sanitize Local Filename For Directory` | Bound a complete filename for its destination. | `${filename}`, `${directory}`, optional fallback and length limits | Sanitized name | Preserves the extension while keeping the complete destination path within its configured limit. |
 | `Download And Validate Content File` | Coordinate one transfer and its outputs. | Document ID, URL, metadata/link rows, paths, filenames, flags, and success/failure lists | `PASS` or `FAIL`                | Cleans the workspace, triggers navigation, validates, reports, and isolates failure. |
 | `Find Completed Download File`       | Select a completed browser file.         | `${recent_files}`                                                                        | None                             | Sets test-scoped `${latest_filename}` and `${is_filename_proper}`. Does not return a value. Excludes recognized temporary suffixes. |
 | `Cleanup Download Directory`         | Clear isolated download workspace files. | `${download_directory}`                                                                  | None                            | Removes top-level leftover files while preserving ContentDocument-specific subdirectories. |

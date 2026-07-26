@@ -160,6 +160,8 @@ The file is open in Excel, indexed by another process, or blocked by antivirus o
 
 Close the workbook, verify directory permissions, and retry after the locking process releases it.
 
+Migration workbook updates are staged and committed together. If the log reports an incomplete rollback, preserve the named `*_rollback_recovery_*.xlsx` file and use it to restore the affected workbook before rerunning the ID.
+
 ## Insufficient disk space
 
 **Symptoms**
