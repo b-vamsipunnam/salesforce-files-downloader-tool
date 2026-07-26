@@ -46,7 +46,7 @@ No. This repository writes downloaded files to local storage and does not upload
 
 ## Which operating systems are supported?
 
-The documentation provides environment commands for Windows, Linux, and macOS. Chrome is the primary browser path. Actual compatibility depends on Python, Chrome, Salesforce CLI, filesystem permissions, and headless-browser support in the environment; CI does not validate every operating system.
+The documentation provides environment commands for Windows, Linux, and macOS. Chrome is the primary browser path. CI runs the smoke suite on Linux and focused library and Robot validation on Windows. Actual compatibility still depends on Python, Chrome, Salesforce CLI, filesystem permissions, and headless-browser support in the deployment environment.
 
 ## How many workers should be used?
 

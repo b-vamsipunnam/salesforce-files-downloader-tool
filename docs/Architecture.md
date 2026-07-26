@@ -1,40 +1,27 @@
-
-## Architecture
+# Architecture
 
 The downloader uses a hybrid control and data flow. Salesforce REST APIs retrieve structured metadata, while Salesforce Shepherd endpoints deliver binaries through an authenticated browser session.
 
 ### High-Level Workflow
 
 ```mermaid
-flowchart TD
-    INPUT[Excel Input]
-    CLI[Salesforce CLI Authentication]
-    API[Salesforce REST API Metadata]
-    ROBOT[Robot Framework Workflow Orchestration]
-    SUPPORT[Python Support Utilities<br/>Safe CLI JSON Parsing and Filename Handling]
-    BROWSER[Authenticated Selenium Browser]
-    VALIDATE[Validation and Local Storage<br/>Single Download per ContentDocumentId]
-    SUCCESS{Download successful?}
-    RETRYABLE{Eligible for another retry?}
-    RETRY[Configurable Full-File Retry]
-    OUTPUT[Validated Files and Optional Migration Workbooks]
-    FAILED[Unresolved Failed-ID Workbook]
-    CLEANUP[Cleanup]
+flowchart TB
+    INPUT[(Excel ContentDocument IDs)]
+    AUTH[Authenticate with Salesforce CLI]
+    META[Query REST API metadata]
+    DOWNLOAD[Download through authenticated browser]
+    VALIDATE[Validate size and store locally]
+    VALID{Download valid?}
+    RETRY{Retries remaining?}
+    OUTPUT[Validated files<br/>and migration workbooks]
+    FAILED[Unresolved failed-ID workbook]
+    CLEANUP[Close sessions and clean temporary files]
 
-    INPUT --> API
-    CLI --> API
-    API --> ROBOT
-    ROBOT --> BROWSER
-    BROWSER --> VALIDATE
-    SUPPORT -. JSON parsing .-> CLI
-    SUPPORT -. Filename and path handling .-> BROWSER
-    SUPPORT -. Filename and path handling .-> VALIDATE
-    VALIDATE --> SUCCESS
-    SUCCESS -- Yes --> OUTPUT
-    SUCCESS -- No --> RETRYABLE
-    RETRYABLE -- Yes --> RETRY
-    RETRY --> BROWSER
-    RETRYABLE -- No --> FAILED
+    INPUT --> AUTH --> META --> DOWNLOAD --> VALIDATE --> VALID
+    VALID -- Yes --> OUTPUT
+    VALID -- No --> RETRY
+    RETRY -- Yes --> DOWNLOAD
+    RETRY -- No --> FAILED
     OUTPUT --> CLEANUP
     FAILED --> CLEANUP
 ```
@@ -56,7 +43,7 @@ The editable source for the detailed diagram is [`architecture.svg`](architectur
 - **Salesforce REST API** executes paginated SOQL queries for `ContentDocument` and `ContentDocumentLink` metadata.
 - **Selenium and Chrome** establish the Salesforce session through `frontdoor.jsp` and initiate Shepherd downloads.
 - **Robot Framework** coordinates input validation, metadata mapping, downloads, validation, retry state, reporting, and teardown.
-- **Python libraries** provide safe Salesforce CLI JSON parsing, portable filename handling, Chrome configuration, Excel operations, and filesystem support used by Robot keywords.
+- **Python libraries** provide safe Salesforce CLI JSON parsing, destination-aware filename handling, Chrome configuration, transactional Excel updates, and filesystem support used by Robot keywords.
 - **Pabot** can split batch tests across processes. UUID-based download and artifact directories separate their output.
 
 After a download appears, the workflow rejects temporary file suffixes, waits for completion and stable size, compares the binary with Salesforce `ContentSize`, moves it to a `ContentDocumentId` directory, and verifies the destination. Each unique ID is downloaded once during the primary pass; eligible failures receive bounded, full-file retry attempts.
