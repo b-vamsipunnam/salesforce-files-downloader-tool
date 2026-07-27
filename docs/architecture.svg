@@ -1,109 +1,142 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1150" viewBox="0 0 1600 1150">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1160" viewBox="0 0 1200 1160" role="img" aria-labelledby="title description">
+  <title id="title">Salesforce Files Bulk Downloader execution architecture</title>
+  <desc id="description">A top-to-bottom workflow showing input normalization, API preflight, metadata retrieval, browser download, validation, atomic workbook updates, and retry or failure handling.</desc>
+
   <defs>
     <style>
-      .title { font: 700 32px Arial, sans-serif; fill: #172033; }
-      .heading { font: 700 22px Arial, sans-serif; fill: #172033; }
-      .body { font: 17px Arial, sans-serif; fill: #334155; }
-      .small { font: 15px Arial, sans-serif; fill: #475569; }
-      .label { font: 700 15px Arial, sans-serif; fill: #334155; }
-      .box { stroke: #475569; stroke-width: 2; rx: 14; }
-      .flow { stroke: #52647a; stroke-width: 3; fill: none; marker-end: url(#arrow); }
-      .support { stroke: #64748b; stroke-width: 2.5; stroke-dasharray: 9 7; fill: none; marker-end: url(#arrow); }
-      .retry { stroke: #c46b19; stroke-width: 3; fill: none; marker-end: url(#arrow-orange); }
+      .title { font: 700 32px "Segoe UI", Arial, sans-serif; fill: #172033; }
+      .subtitle { font: 16px "Segoe UI", Arial, sans-serif; fill: #475569; }
+      .section { font: 700 15px "Segoe UI", Arial, sans-serif; fill: #475569; letter-spacing: 1.5px; }
+      .heading { font: 700 21px "Segoe UI", Arial, sans-serif; fill: #172033; }
+      .decision { font: 700 15px "Segoe UI", Arial, sans-serif; fill: #172033; }
+      .body { font: 16px "Segoe UI", Arial, sans-serif; fill: #334155; }
+      .small { font: 14px "Segoe UI", Arial, sans-serif; fill: #475569; }
+      .step { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #ffffff; }
+      .label { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #334155; }
+      .retry-note { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #9a4d08; }
+      .panel { fill: #ffffff; stroke: #d6e0eb; stroke-width: 2; }
+      .box { stroke: #52647a; stroke-width: 2; }
+      .flow { fill: none; stroke: #52647a; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .retry { fill: none; stroke: #b95f0b; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-orange); }
     </style>
-    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto">
-      <path d="M0,0 L10,5 L0,10 z" fill="#52647a"/>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#64748b" flood-opacity="0.14"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0 L9 5 L0 10 Z" fill="#52647a"/>
     </marker>
-    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto">
-      <path d="M0,0 L10,5 L0,10 z" fill="#c46b19"/>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0 L9 5 L0 10 Z" fill="#b95f0b"/>
     </marker>
   </defs>
 
-  <rect width="1600" height="1150" fill="#f8fafc"/>
-  <text x="800" y="50" text-anchor="middle" class="title">Salesforce Files Bulk Downloader — Execution Architecture</text>
+  <rect width="1200" height="1160" fill="#f6f8fb"/>
+  <text x="600" y="48" text-anchor="middle" class="title">Salesforce Files Bulk Downloader — Execution Architecture</text>
+  <text x="600" y="76" text-anchor="middle" class="subtitle">Capacity-aware extraction with validated binaries and consistent migration outputs</text>
 
-  <rect x="70" y="90" width="280" height="110" class="box" fill="#e0f2fe"/>
-  <text x="210" y="132" text-anchor="middle" class="heading">Excel Input</text>
-  <text x="210" y="164" text-anchor="middle" class="body">ContentDocumentId list</text>
+  <!-- Shared context -->
+  <rect x="45" y="105" width="1110" height="130" rx="18" class="panel"/>
+  <text x="70" y="136" class="section">SHARED RUNTIME CONTEXT</text>
 
-  <rect x="660" y="90" width="330" height="110" class="box" fill="#fef3c7"/>
-  <text x="825" y="127" text-anchor="middle" class="heading">REST Metadata</text>
-  <text x="825" y="158" text-anchor="middle" class="body">File metadata and link relationships</text>
-  <text x="825" y="184" text-anchor="middle" class="small">Batched SOQL queries</text>
+  <rect x="70" y="158" width="320" height="55" rx="11" class="box" fill="#ede9fe"/>
+  <text x="230" y="181" text-anchor="middle" class="heading">Salesforce CLI</text>
+  <text x="230" y="202" text-anchor="middle" class="small">Org context, authentication, and daily limits</text>
 
-  <rect x="1250" y="90" width="280" height="110" class="box" fill="#ede9fe"/>
-  <text x="1390" y="127" text-anchor="middle" class="heading">Salesforce CLI</text>
-  <text x="1390" y="158" text-anchor="middle" class="body">Authentication and org context</text>
-  <text x="1390" y="184" text-anchor="middle" class="small">Raw output is never logged</text>
+  <rect x="440" y="158" width="320" height="55" rx="11" class="box" fill="#e0f2fe"/>
+  <text x="600" y="181" text-anchor="middle" class="heading">Salesforce REST API</text>
+  <text x="600" y="202" text-anchor="middle" class="small">Document metadata and visible relationships</text>
 
-  <path d="M350 145 H660" class="flow"/>
-  <path d="M1250 165 H990" class="flow"/>
+  <rect x="810" y="158" width="320" height="55" rx="11" class="box" fill="#dcfce7"/>
+  <text x="970" y="181" text-anchor="middle" class="heading">Pabot Isolation</text>
+  <text x="970" y="202" text-anchor="middle" class="small">Independent browser, files, workbooks, and reports</text>
 
-  <rect x="180" y="245" width="1240" height="90" class="box" fill="#eef2ff"/>
-  <text x="800" y="280" text-anchor="middle" class="heading">Robot Framework Workflow Orchestration</text>
-  <text x="800" y="311" text-anchor="middle" class="body">Input validation · metadata mapping · download control · retry state · reporting and cleanup</text>
-  <path d="M825 200 V245" class="flow"/>
+  <!-- Primary vertical workflow -->
+  <text x="70" y="272" class="section">PRIMARY WORKFLOW</text>
 
-  <rect x="80" y="385" width="340" height="125" class="box" fill="#dcfce7"/>
-  <text x="250" y="422" text-anchor="middle" class="heading">Python Support Utilities</text>
-  <text x="250" y="454" text-anchor="middle" class="body">Safe Salesforce CLI JSON parsing</text>
-  <text x="250" y="482" text-anchor="middle" class="small">Portable filename and path handling</text>
+  <rect x="350" y="292" width="500" height="92" rx="15" class="box" fill="#e0f2fe" filter="url(#shadow)"/>
+  <circle cx="365" cy="318" r="17" fill="#2563a6"/>
+  <text x="365" y="323" text-anchor="middle" class="step">1</text>
+  <text x="600" y="321" text-anchor="middle" class="heading">Read, Normalize, and Validate Input</text>
+  <text x="600" y="348" text-anchor="middle" class="body">Excel IDs · 15 → 18 character canonicalization</text>
+  <text x="600" y="371" text-anchor="middle" class="small">Deduplication · strict Yes / No settings</text>
 
-  <rect x="540" y="385" width="360" height="125" class="box" fill="#e0f2fe"/>
-  <text x="720" y="425" text-anchor="middle" class="heading">Authenticated Browser Download</text>
-  <text x="720" y="457" text-anchor="middle" class="body">Selenium + Chrome</text>
-  <text x="720" y="485" text-anchor="middle" class="small">Salesforce Shepherd full-file delivery</text>
+  <path d="M600 384 V405" class="flow"/>
 
-  <rect x="1060" y="385" width="360" height="125" class="box" fill="#dcfce7"/>
-  <text x="1240" y="425" text-anchor="middle" class="heading">Validation and Local Storage</text>
-  <text x="1240" y="457" text-anchor="middle" class="body">Completion • Stability • ContentSize validation</text>
-  <text x="1240" y="485" text-anchor="middle" class="small">Single download per ContentDocumentId</text>
+  <rect x="350" y="410" width="500" height="92" rx="15" class="box" fill="#fef3c7" filter="url(#shadow)"/>
+  <circle cx="365" cy="436" r="17" fill="#a16207"/>
+  <text x="365" y="441" text-anchor="middle" class="step">2</text>
+  <text x="600" y="439" text-anchor="middle" class="heading">Check Salesforce API Capacity</text>
+  <text x="600" y="466" text-anchor="middle" class="body">Minimum request estimate · pagination buffer</text>
+  <text x="600" y="489" text-anchor="middle" class="small">Required remaining reserve</text>
 
-  <path d="M800 335 V360 H720 V385" class="flow"/>
-  <path d="M900 447 H1060" class="flow"/>
-  <path d="M250 385 V350 H1390 V200" class="support"/>
-  <path d="M420 447 H540" class="support"/>
-  <path d="M250 510 V535 H1240 V510" class="support"/>
+  <path d="M600 502 V523" class="flow"/>
 
-  <polygon points="1240,565 1380,650 1240,735 1100,650" fill="#fff7ed" stroke="#c46b19" stroke-width="3"/>
-  <text x="1240" y="640" text-anchor="middle" class="heading">Download</text>
-  <text x="1240" y="669" text-anchor="middle" class="heading">successful?</text>
-  <path d="M1240 510 V565" class="flow"/>
+  <rect x="350" y="528" width="500" height="92" rx="15" class="box" fill="#fff7ed" filter="url(#shadow)"/>
+  <circle cx="365" cy="554" r="17" fill="#b95f0b"/>
+  <text x="365" y="559" text-anchor="middle" class="step">3</text>
+  <text x="600" y="557" text-anchor="middle" class="heading">Retrieve Salesforce Metadata</text>
+  <text x="600" y="584" text-anchor="middle" class="body">Batched SOQL · nextRecordsUrl pagination</text>
+  <text x="600" y="607" text-anchor="middle" class="small">All visible ContentDocumentLink rows</text>
 
-  <rect x="90" y="805" width="400" height="130" class="box" fill="#ecfdf5"/>
-  <text x="290" y="845" text-anchor="middle" class="heading">Successful Outputs</text>
-  <text x="290" y="878" text-anchor="middle" class="body">Validated downloaded files</text>
-  <text x="290" y="907" text-anchor="middle" class="small">Optional migration-ready Excel workbooks</text>
+  <path d="M600 620 V641" class="flow"/>
 
-  <polygon points="800,770 950,860 800,950 650,860" fill="#fff7ed" stroke="#c46b19" stroke-width="3"/>
-  <text x="800" y="850" text-anchor="middle" class="heading">Eligible for</text>
-  <text x="800" y="879" text-anchor="middle" class="heading">another retry?</text>
+  <rect x="350" y="646" width="500" height="92" rx="15" class="box" fill="#e0f2fe" filter="url(#shadow)"/>
+  <circle cx="365" cy="672" r="17" fill="#2563a6"/>
+  <text x="365" y="677" text-anchor="middle" class="step">4</text>
+  <text x="600" y="675" text-anchor="middle" class="heading">Download Through Authenticated Chrome</text>
+  <text x="600" y="702" text-anchor="middle" class="body">Salesforce Shepherd · isolated directory</text>
+  <text x="600" y="725" text-anchor="middle" class="small">Fresh full-file transfer</text>
 
-  <rect x="1110" y="800" width="350" height="120" class="box" fill="#ffedd5"/>
-  <text x="1285" y="838" text-anchor="middle" class="heading">Configurable Retry</text>
-  <text x="1285" y="870" text-anchor="middle" class="body">Start fresh download attempt</text>
-  <text x="1285" y="898" text-anchor="middle" class="small">Bounded count and delay</text>
+  <path d="M600 738 V759" class="flow"/>
 
-  <rect x="570" y="1010" width="460" height="90" class="box" fill="#fee2e2"/>
-  <text x="800" y="1048" text-anchor="middle" class="heading">Unresolved Failed-ID Workbook</text>
-  <text x="800" y="1077" text-anchor="middle" class="small">Invalid, non-retryable, or attempts exhausted</text>
+  <rect x="350" y="764" width="500" height="110" rx="15" class="box" fill="#dcfce7" filter="url(#shadow)"/>
+  <circle cx="365" cy="790" r="17" fill="#16755b"/>
+  <text x="365" y="795" text-anchor="middle" class="step">5</text>
+  <text x="600" y="793" text-anchor="middle" class="heading">Validate, Move, and Commit</text>
+  <text x="600" y="820" text-anchor="middle" class="body">Completion · stable size · ContentSize match</text>
+  <text x="600" y="843" text-anchor="middle" class="small">Atomic workbook transaction · cleanup on commit failure</text>
 
-  <path d="M1100 650 H290 V805" class="flow"/>
-  <text x="690" y="635" class="label">Yes</text>
-  <path d="M1240 735 V750 H800 V770" class="retry"/>
-  <text x="1010" y="737" class="label">No</text>
-  <path d="M950 860 H1110" class="retry"/>
-  <text x="1015" y="844" class="label">Yes</text>
-  <path d="M1285 800 V760 H1515 V355 H940 V410 H900" class="retry"/>
-  <text x="1330" y="744" class="label">Retry loop</text>
-  <path d="M800 950 V1010" class="flow"/>
-  <text x="818" y="986" class="label">No</text>
+  <path d="M600 874 V895" class="flow"/>
 
-  <line x1="90" y1="1120" x2="140" y2="1120" stroke="#52647a" stroke-width="3"/>
-  <text x="150" y="1125" class="small">Primary flow</text>
-  <line x1="290" y1="1120" x2="340" y2="1120" stroke="#c46b19" stroke-width="3"/>
-  <text x="350" y="1125" class="small">Retry and failure decisions</text>
-  <line x1="600" y1="1120" x2="650" y2="1120" stroke="#64748b" stroke-width="2.5" stroke-dasharray="9 7"/>
-  <text x="660" y="1125" class="small">Supporting utility relationship</text>
-  <text x="1510" y="1125" text-anchor="end" class="small">Pabot can isolate batches across workers.</text>
+  <!-- Outcome decisions -->
+  <polygon points="600,897 730,943 600,989 470,943" fill="#fff7ed" stroke="#b95f0b" stroke-width="2.5" filter="url(#shadow)"/>
+  <text x="600" y="949" text-anchor="middle" class="decision">Successful?</text>
+
+  <rect x="65" y="900" width="300" height="86" rx="15" class="box" fill="#ecfdf5" filter="url(#shadow)"/>
+  <text x="215" y="930" text-anchor="middle" class="heading">Migration Outputs</text>
+  <text x="215" y="956" text-anchor="middle" class="body">Validated file</text>
+  <text x="215" y="978" text-anchor="middle" class="small">Migration-ready workbook rows</text>
+
+  <path d="M470 943 H365" class="flow"/>
+  <rect x="397" y="917" width="48" height="24" rx="12" fill="#ffffff"/>
+  <text x="421" y="934" text-anchor="middle" class="label">YES</text>
+
+  <path d="M600 989 V1016" class="retry"/>
+  <rect x="612" y="995" width="42" height="22" rx="11" fill="#ffffff"/>
+  <text x="633" y="1011" text-anchor="middle" class="label">NO</text>
+
+  <polygon points="600,1018 730,1064 600,1110 470,1064" fill="#fff7ed" stroke="#b95f0b" stroke-width="2.5" filter="url(#shadow)"/>
+  <text x="600" y="1059" text-anchor="middle" class="decision">Retry eligible and</text>
+  <text x="600" y="1080" text-anchor="middle" class="decision">attempts remain?</text>
+
+  <rect x="65" y="1024" width="300" height="80" rx="15" class="box" fill="#fee2e2" filter="url(#shadow)"/>
+  <text x="215" y="1052" text-anchor="middle" class="heading">Failed-ID Workbook</text>
+  <text x="215" y="1078" text-anchor="middle" class="small">Invalid, missing, or retry-exhausted IDs</text>
+
+  <path d="M470 1064 H365" class="flow"/>
+  <rect x="405" y="1038" width="42" height="24" rx="12" fill="#ffffff"/>
+  <text x="426" y="1055" text-anchor="middle" class="label">NO</text>
+
+  <rect x="835" y="1024" width="300" height="80" rx="15" class="box" fill="#ffedd5" filter="url(#shadow)"/>
+  <text x="985" y="1054" text-anchor="middle" class="heading">Configurable Retry</text>
+  <text x="985" y="1078" text-anchor="middle" class="body">Fresh full-file attempt</text>
+  <text x="985" y="1097" text-anchor="middle" class="small">Bounded count and delay</text>
+
+  <path d="M730 1064 H835" class="retry"/>
+  <rect x="750" y="1038" width="48" height="24" rx="12" fill="#ffffff"/>
+  <text x="774" y="1055" text-anchor="middle" class="label">YES</text>
+
+  <path d="M1135 1064 H1170 V690 H850" class="retry"/>
+  <text x="1148" y="855" text-anchor="middle" class="retry-note" transform="rotate(-90 1148 855)">Fresh browser download attempt</text>
+
 </svg>

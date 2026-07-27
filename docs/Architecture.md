@@ -7,7 +7,7 @@ The downloader uses a hybrid control and data flow. Salesforce REST APIs retriev
 The diagram shows the main components and the flow from input validation through metadata retrieval, file download, migration workbook generation, and failure reporting.
 
 <p align="center">
-  <img src="architecture.svg" width="700" alt="Salesforce Files Bulk Downloader architecture">
+  <img src="architecture.svg" width="1200" alt="Salesforce Files Bulk Downloader architecture">
 </p>
 
 The editable source for the detailed diagram is [`architecture.svg`](architecture.svg).
