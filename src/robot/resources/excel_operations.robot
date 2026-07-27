@@ -11,7 +11,7 @@ Resource            configuration.robot
 
 *** Keywords ***
 Read Content IDs From Excel Sheet
-    [Documentation]     Reads ContentDocument IDs from the first column of the supplied Excel sheet. Removes an optional ContentDocumentId header, ignores blank values, trims whitespace, removes duplicates, and returns the resulting list.
+    [Documentation]     Reads ContentDocument IDs from the first column of the supplied Excel sheet. Removes an optional ContentDocumentId header, ignores blank values, trims whitespace, converts valid 15-character IDs to 18 characters, removes duplicates, and returns the resulting list.
     [Arguments]    ${input_excel_path}    ${sheet_name}
     ${input_excel_path}=    Normalize Path    ${input_excel_path}
     Open Excel Document    filename=${input_excel_path}    doc_id=${sheet_name}
@@ -33,7 +33,8 @@ Read Content IDs From Excel Sheet
         IF    '${id_value}' == '${EMPTY}' or '${id_value}' == '${NONE}'
             CONTINUE
         END
-        Append To List    ${content_ids}    ${id_value}
+        ${canonical_id}=    Canonicalize Content Document Id    ${id_value}
+        Append To List    ${content_ids}    ${canonical_id}
     END
     ${content_ids}=    Remove Duplicates    ${content_ids}
     RETURN    ${content_ids}

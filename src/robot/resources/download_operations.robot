@@ -244,7 +244,7 @@ Handle Download Failure
     ...    recursive=True
     Run Keyword And Ignore Error
     ...    Cleanup Download Directory    ${download_directory}
-    IF    '${reason}' != '${EMPTY}'
+    IF    $reason
         Log To Console    FAILED: ${content_id} - ${reason}
     ELSE
         Log To Console    FAILED: ${content_id}
@@ -336,7 +336,8 @@ Validate And Move Downloaded File
         ${is_file_size_matching}=    Set Variable    ${FALSE}
     END
     IF    ${target_file_exists} and ${is_file_size_matching}
-        Write Migration Rows Atomically
+        ${write_status}    ${write_message}=    Run Keyword And Ignore Error
+        ...    Write Migration Rows Atomically
         ...    ${cv_file_name}
         ...    ${cv_row}
         ...    ${file_title}
@@ -346,6 +347,16 @@ Validate And Move Downloaded File
         ...    ${content_links}
         ...    write_content_version=${GENERATE_CONTENT_VERSION_FILE}
         ...    write_content_document_links=${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
+        IF    '${write_status}' == 'FAIL'
+            Run Keyword And Ignore Error    Remove File    ${dst}
+            ${status}=    Handle Download Failure
+            ...    ${content_id}
+            ...    Migration workbook update failed: ${write_message}
+            ...    ${failed_content_ids}
+            ...    ${content_id_folder}
+            ...    ${download_directory}
+            RETURN    ${status}
+        END
         ${already_recorded_success}=    Evaluate
         ...    $content_id in $successful_content_ids
 

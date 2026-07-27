@@ -90,6 +90,8 @@ Reduce the input batch, wait for API capacity to reset, or review `${API_REQUEST
 
 The limits lookup automatically retries transient CLI failures using `${API_LIMIT_LOOKUP_MAX_ATTEMPTS}` and `${API_LIMIT_LOOKUP_RETRY_DELAY}`. Investigate Salesforce CLI authentication and local process behavior if every attempt fails.
 
+The console intentionally says `Minimum Estimated Metadata Requests`. SOQL pagination depends on Salesforce response volume and cannot be predicted from the number of input IDs alone. If a batch has unusually high relationship volume, increase `${API_REQUEST_SAFETY_BUFFER}` rather than treating the estimate as an exact forecast.
+
 ## Salesforce org identity mismatch
 
 **Symptoms**
@@ -192,6 +194,8 @@ Close the workbook, verify directory permissions, and retry after the locking pr
 
 Migration workbook updates are staged and committed together. If the log reports an incomplete rollback, preserve the named `*_rollback_recovery_*.xlsx` file and use it to restore the affected workbook before rerunning the ID.
 
+If a workbook transaction fails after the binary has moved, the downloader removes that binary and the per-ID directory before recording the failure. This cleanup is intentional: keeping a final binary without its migration rows would make the next run ambiguous. Use the failed-ID workbook to rerun the document after the workbook problem is resolved.
+
 ## Insufficient disk space
 
 **Symptoms**
@@ -232,7 +236,18 @@ A dependency, Robot resource import, headless Chrome startup, SeleniumLibrary in
 
 **Resolution**
 
-Review the failing GitHub Actions step and reproduce `ci/robot/smoke.robot` locally using the pinned dependencies. The smoke test does not require org credentials or download Salesforce files.
+Install both runtime and development dependencies, then reproduce the same checks locally:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
+ruff check src ci
+robocop check src ci
+python -m unittest discover -s ci/tests -v
+robot --outputdir results/smoke ci/robot/smoke.robot
+```
+
+The smoke suite uses mocked Salesforce responses for API-capacity, retry, pagination, metadata, and ID-validation scenarios. It does not require org credentials or download customer files.
 
 ---
 

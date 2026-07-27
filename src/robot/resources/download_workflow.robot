@@ -22,6 +22,12 @@ Download Files Using Content Document IDs
     ...    ${GENERATE_CONTENT_VERSION_FILE}
     ...    ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
 
+    ${GENERATE_CONTENT_VERSION_FILE}=    Validate And Normalize Yes Or No Setting
+    ...    GENERATE_CONTENT_VERSION_FILE
+    ...    ${GENERATE_CONTENT_VERSION_FILE}
+    ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}=    Validate And Normalize Yes Or No Setting
+    ...    GENERATE_CONTENT_DOCUMENT_LINK_FILE
+    ...    ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
     Set Test Variable    ${GENERATE_CONTENT_VERSION_FILE}
     Set Test Variable    ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
     ${content_ids}=    Create List
@@ -230,6 +236,16 @@ Download Files Using Content Document IDs
         Fail
         ...    ${failed_count} of ${total_records} ContentDocument downloads failed. Review the failed-ID Excel file in ${output_directory}.
     END
+
+Validate And Normalize Yes Or No Setting
+    [Documentation]     Validates a Yes/No setting, strips surrounding whitespace, normalizes its case, and returns either Yes or No.
+    [Arguments]    ${name}    ${value}
+    ${normalized}=    Evaluate    str($value).strip().lower()
+    Should Be True
+    ...    $normalized in ("yes", "no")
+    ...    msg=${name} must be Yes or No. Received: ${value}
+    ${normalized}=    Evaluate    $normalized.title()
+    RETURN    ${normalized}
 
 Retry Failed ContentDocument IDs
     [Documentation]    Retries unique valid ContentDocument IDs that failed during the primary pass. The original failed-ID list is preserved until retry processing completes successfully.

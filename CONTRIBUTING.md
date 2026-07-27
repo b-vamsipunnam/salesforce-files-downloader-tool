@@ -20,6 +20,7 @@ Activate the environment and install the pinned dependencies:
 
 ```bash
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 Python 3.10 or later is required. Authenticated download runs also require Salesforce CLI and Google Chrome; see [Installation](docs/Installation.md) and [Authentication](docs/Authentication.md).
@@ -47,9 +48,13 @@ Common types include `fix`, `feat`, `docs`, `test`, and `refactor`.
 Run the offline unit and smoke suites before opening a pull request:
 
 ```bash
+ruff check src ci
+robocop check src ci
 python -m unittest discover -s ci/tests -v
 robot --outputdir results/smoke ci/robot/smoke.robot
 ```
+
+Ruff checks the Python sources. Robocop currently gates error-level Robot issues so the project can improve older style warnings incrementally without weakening correctness checks.
 
 When the change affects the authenticated workflow, also run:
 
@@ -105,6 +110,8 @@ For Robot Framework changes:
 - Prefer return values for expected states; reserve assertions for actual failures.
 - Avoid exposing authentication data through logs.
 - Preserve per-worker directory and workbook isolation.
+- Keep final binaries and migration rows consistent when changing success or rollback behavior.
+- Preserve the optional test seams used to mock Salesforce CLI and REST responses without weakening production defaults.
 
 For documentation changes:
 

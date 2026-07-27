@@ -18,7 +18,16 @@ Keep changes consistent with the existing project structure and naming conventio
 
 ## Verification
 
-The main suite requires Salesforce access and valid input. Run the scope appropriate to the change and record what was tested in the pull request:
+Start with the offline checks. They cover the Python libraries, Robot syntax, mocked Salesforce CLI retries, API-capacity decisions, SOQL pagination, metadata grouping, canonical ID handling, workbook rollback, and a real local headless-Chrome startup without connecting to Salesforce:
+
+```bash
+ruff check src ci
+robocop check src ci
+python -m unittest discover -s ci/tests -v
+robot --outputdir results/smoke ci/robot/smoke.robot
+```
+
+The main suite requires Salesforce access and valid input. Run it when the change affects authenticated behavior, and record the environment and test scope in the pull request:
 
 ```bash
 robot --test Download_Batch_1 --outputdir results src/robot/orchestrator/download.robot
@@ -30,7 +39,7 @@ For parallel behavior:
 pabot --pabotlib --testlevelsplit --processes 2 --outputdir results src/robot/orchestrator/download.robot
 ```
 
-The GitHub Actions workflow runs Linux smoke tests plus Python library tests, and runs focused library and Robot dry-run validation on Windows. Coverage includes headless Chrome startup, SeleniumLibrary, Excel transactions and rollback, safe CLI JSON parsing, filename sanitization, path handling, API-request estimation, and download polling. CI does not connect to Salesforce or download customer files.
+GitHub Actions runs the Python 3.10 and 3.11 matrix on Ubuntu and Windows. Ubuntu performs the real headless-Chrome smoke run; Windows performs unit tests, Robot dry-run validation, Ruff, and error-level Robocop checks. CI does not connect to Salesforce or download customer files.
 
 ## Pull requests
 

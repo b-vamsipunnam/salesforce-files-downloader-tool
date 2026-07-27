@@ -12,7 +12,9 @@
 - Large executions require enough local disk space for binaries, workbooks, temporary files, and reports.
 - Authentication is not refreshed automatically during an active execution.
 - API-capacity checks are per batch and do not reserve requests globally across simultaneous Pabot workers. The PabotLib lock serializes CLI access, not capacity allocation.
+- Metadata request estimates are minimum estimates. Salesforce pagination can add requests that are covered only by the configured safety buffer.
 - Daily API usage reported by Salesforce may not reflect every request immediately.
+- ID deduplication is performed within each input batch. The same document can still be processed twice when it appears in separate workbooks running on different workers.
 - Destination-org inserts and source-to-destination ContentDocument ID mapping are outside this downloader.
 
 ---

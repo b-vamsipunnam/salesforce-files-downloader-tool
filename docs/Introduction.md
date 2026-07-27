@@ -37,7 +37,11 @@ Files may need to move during org consolidation, divestiture, sandbox preparatio
 
 ## Why this project exists
 
-The downloader accepts Excel lists of `ContentDocumentId` values, validates and deduplicates them, retrieves metadata in SOQL batches, and downloads each unique file through Salesforce's authenticated Shepherd download flow. It waits for temporary files to disappear, checks stability and `ContentSize`, and moves the result into an ID-specific folder. Eligible failures receive bounded, full-file retry attempts; only unresolved IDs are written to the failure workbook for a later rerun.
+The downloader accepts Excel lists of `ContentDocumentId` values, converts valid 15-character IDs to their canonical 18-character form, and deduplicates the result before querying Salesforce. That detail matters in real migration data: the 15- and 18-character forms of the same record should never trigger two physical downloads.
+
+Metadata is retrieved in SOQL batches, including pagination when Salesforce returns `nextRecordsUrl`. Each unique file is downloaded through the authenticated Shepherd flow. The workflow waits for temporary files to disappear, checks stability and `ContentSize`, moves the binary into an ID-specific folder, and commits the requested migration rows as one workbook transaction. If that transaction fails, the moved binary is removed so the filesystem and workbooks do not disagree about what succeeded.
+
+Eligible failures receive bounded, full-file retry attempts. Invalid IDs and records without required metadata are reported immediately rather than retried, and only unresolved IDs are written to the failure workbook for a later run.
 
 Optional workbooks provide local paths for inserting `ContentVersion` records and retain source `ContentDocumentLink` relationships for later destination-ID mapping. Pabot can distribute independent input batches across processes.
 

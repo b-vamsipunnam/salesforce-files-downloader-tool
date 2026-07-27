@@ -24,6 +24,8 @@ ${GENERATE_CONTENT_VERSION_FILE}          No
 ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}    No
 ```
 
+These values are case-insensitive and may contain surrounding whitespace, but they must resolve to `Yes` or `No`. A typo fails at the start of the batch rather than silently changing the requested output.
+
 ## Run four batch workers
 
 Execute the four configured batch tests across up to four parallel worker processes:
@@ -58,7 +60,18 @@ ${API_LIMIT_LOOKUP_MAX_ATTEMPTS}      3
 ${API_LIMIT_LOOKUP_RETRY_DELAY}       2s
 ```
 
-Each batch counts one successful limits request plus estimated metadata requests. The limits lookup is serialized across Pabot workers and retries transient CLI or response failures. Failed lookup attempts and metadata pagination can consume additional calls, and parallel workers do not share a reservation counter, so increase the buffer when operating near the daily limit.
+Each batch counts one successful limits request plus the minimum expected metadata requests. The limits lookup is serialized across Pabot workers and retries transient CLI or response failures. Failed lookup attempts and metadata pagination can consume additional calls, and parallel workers do not share a reservation counter, so increase the buffer when operating near the daily limit.
+
+## Mix 15- and 18-character IDs safely
+
+It is common for exports from different Salesforce tools to contain different representations of the same ID:
+
+```text
+069AAAAAAAAAAAA
+069AAAAAAAAAAAAY55
+```
+
+The downloader converts the valid 15-character value to its canonical 18-character form before deduplication. Within one workbook, this pair is processed as one ContentDocument.
 
 ## Illustrative enterprise batch
 

@@ -202,6 +202,32 @@ class SalesforceSupportJsonTests(unittest.TestCase):
         self.assertEqual(value, {"status": 0})
 
 
+class SalesforceSupportIdTests(unittest.TestCase):
+    def setUp(self):
+        self.support = SalesforceSupport()
+
+    def test_converts_valid_15_character_id_to_18_characters(self):
+        self.assertEqual(
+            self.support.canonicalize_content_document_id(
+                "069AAAAAAAAAAAA"
+            ),
+            "069AAAAAAAAAAAAY55",
+        )
+
+    def test_preserves_existing_18_character_id(self):
+        content_id = "069AAAAAAAAAAAAY55"
+        self.assertEqual(
+            self.support.canonicalize_content_document_id(content_id),
+            content_id,
+        )
+
+    def test_preserves_invalid_value_for_workflow_validation(self):
+        self.assertEqual(
+            self.support.canonicalize_content_document_id(" invalid "),
+            "invalid",
+        )
+
+
 class SalesforceSupportPathTests(unittest.TestCase):
     def test_complete_filename_respects_destination_path_budget(self):
         support = SalesforceSupport()

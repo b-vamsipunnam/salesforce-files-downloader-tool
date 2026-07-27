@@ -18,7 +18,7 @@ Yes. Each batch normally uses one limits request for its API-capacity preflight,
 
 ## How are duplicate ContentDocument IDs handled?
 
-Duplicate IDs within the same input workbook are removed before processing. Overlapping IDs in separate batch workbooks can still be processed by separate workers.
+Valid 15-character IDs are converted to their canonical 18-character form before duplicates are removed. As a result, a workbook containing both forms of the same Salesforce ID produces one download, not two. Deduplication remains batch-local, so overlapping IDs in separate input workbooks can still be processed by separate workers.
 
 ## How are multiple ContentDocumentLink records handled?
 
@@ -34,7 +34,7 @@ Valid ContentDocument IDs with the required metadata are eligible for another fu
 
 ## How are downloads validated?
 
-The downloader rejects temporary browser extensions, waits for completion and stable size, compares the file with Salesforce `ContentSize`, moves it into its final ID directory, and verifies the destination.
+The downloader rejects temporary browser extensions, waits for completion and stable size, compares the file with Salesforce `ContentSize`, moves it into its final ID directory, and verifies the destination. If migration workbooks are enabled, their transaction must also commit before the ID is marked successful. A workbook failure removes the moved binary so a rerun starts from a consistent state.
 
 ## Are Salesforce access tokens written to logs?
 
@@ -46,7 +46,7 @@ No. This repository writes downloaded files to local storage and does not upload
 
 ## Which operating systems are supported?
 
-The documentation provides environment commands for Windows, Linux, and macOS. Chrome is the primary browser path. CI runs the smoke suite on Linux and focused library and Robot validation on Windows. Actual compatibility still depends on Python, Chrome, Salesforce CLI, filesystem permissions, and headless-browser support in the deployment environment.
+The documentation provides environment commands for Windows, Linux, and macOS. Chrome is the primary browser path. CI exercises Python 3.10 and 3.11 on both Ubuntu and Windows, including a real headless-Chrome smoke run on Ubuntu and Robot validation on Windows. Actual compatibility still depends on Python, Chrome, Salesforce CLI, filesystem permissions, and headless-browser support in the deployment environment.
 
 ## How many workers should be used?
 
