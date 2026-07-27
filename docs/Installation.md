@@ -39,6 +39,16 @@ python -m pip install -r requirements.txt
 
 This installs Robot Framework, SeleniumLibrary, Pabot, RequestsLibrary, Selenium, OpenPyXL, and the Salesforce and utility packages used by the project.
 
+Contributors should also install the pinned development checks used by CI:
+
+```bash
+python -m pip install -r requirements-dev.txt
+ruff --version
+robocop --version
+```
+
+Runtime users do not need `requirements-dev.txt` unless they want to run the repository's static-analysis checks locally.
+
 ## Salesforce CLI
 
 Install the CLI with an official Salesforce installer or npm:

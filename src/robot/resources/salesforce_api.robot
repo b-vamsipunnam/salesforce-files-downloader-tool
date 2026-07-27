@@ -62,7 +62,7 @@ Get Salesforce Login Info
         ...    .my.salesforce.com
         ...    ${EMPTY}
         ${login_url}=    Catenate
-        ...    SEPARATOR=
+        ...    SEPARATOR=${EMPTY}
         ...    ${instance_url}/secur/frontdoor.jsp?sid=${access_token}
         Set Test Variable    ${org_domain}
     FINALLY
@@ -100,14 +100,18 @@ Send Safe Salesforce GET Request
 
 Execute SOQL Query
     [Documentation]     Executes a SOQL query through the active Salesforce REST session and follows nextRecordsUrl pagination until all records are retrieved. Fails when a request is unsuccessful, pagination data is incomplete, or the pagination safety limit is exceeded.
-    [Arguments]    ${soql}    ${session_alias}
+    [Arguments]
+    ...    ${soql}
+    ...    ${session_alias}
+    ...    ${request_keyword}=Send Safe Salesforce GET Request
     ${all_records}=    Create List
     ${empty_records}=    Create List
     ${params}=    Create Dictionary    q=${soql}
     ${url}=    Set Variable    /services/data/v${api_version}/query
     ${page_number}=    Set Variable    1
     WHILE    ${TRUE}
-        ${resp}=    Send Safe Salesforce GET Request
+        ${resp}=    Run Keyword
+        ...    ${request_keyword}
         ...    ${session_alias}
         ...    ${url}
         ...    params=${params}
@@ -142,7 +146,10 @@ Is Valid ContentDocument ID
 
 Get ContentDocument Metadata Map
     [Documentation]     Retrieves ContentDocument metadata for the supplied valid IDs using configurable SOQL batches. Returns a dictionary keyed by ContentDocument ID containing file title, extension, description, latest version ID, and expected content size.
-    [Arguments]    ${content_ids}    ${batch_size}=200
+    [Arguments]
+    ...    ${content_ids}
+    ...    ${batch_size}=200
+    ...    ${query_keyword}=Execute SOQL Query
     ${content_doc_map}=    Create Dictionary
     @{valid_ids}=    Create List
     FOR    ${content_id}    IN    @{content_ids}
@@ -155,7 +162,10 @@ Get ContentDocument Metadata Map
         ${quoted_ids}=    Format IDs For SOQL IN Clause    ${batch}
         ${soql}=    Set Variable
         ...    SELECT Id, Description, Title, FileExtension, LatestPublishedVersionId, ContentSize FROM ContentDocument WHERE Id IN (${quoted_ids})
-        ${records}=    Execute SOQL Query    ${soql}    ${session_alias}
+        ${records}=    Run Keyword
+        ...    ${query_keyword}
+        ...    ${soql}
+        ...    ${session_alias}
         FOR    ${record}    IN    @{records}
             ${doc_id}=    Get From Dictionary    ${record}    Id
             Set To Dictionary    ${content_doc_map}    ${doc_id}=${record}
@@ -165,7 +175,10 @@ Get ContentDocument Metadata Map
 
 Get ContentDocumentLink Metadata Map
     [Documentation]     Retrieves all ContentDocumentLink records associated with the supplied valid ContentDocument IDs using configurable SOQL batches. Returns a dictionary keyed by ContentDocument ID, with each value containing a list of all related link records.
-    [Arguments]    ${content_ids}    ${batch_size}=200
+    [Arguments]
+    ...    ${content_ids}
+    ...    ${batch_size}=200
+    ...    ${query_keyword}=Execute SOQL Query
     ${cdl_map}=    Create Dictionary
     @{valid_ids}=    Create List
     FOR    ${content_id}    IN    @{content_ids}
@@ -178,7 +191,10 @@ Get ContentDocumentLink Metadata Map
         ${quoted_ids}=    Format IDs For SOQL IN Clause    ${batch}
         ${soql}=    Set Variable
         ...    SELECT ContentDocumentId, Id, ShareType, Visibility, LinkedEntityId FROM ContentDocumentLink WHERE ContentDocumentId IN (${quoted_ids})
-        ${records}=    Execute SOQL Query    ${soql}    ${session_alias}
+        ${records}=    Run Keyword
+        ...    ${query_keyword}
+        ...    ${soql}
+        ...    ${session_alias}
         FOR    ${record}    IN    @{records}
             ${doc_id}=    Get From Dictionary    ${record}    ContentDocumentId
             ${links}=    Get From Dictionary
@@ -211,7 +227,7 @@ Format IDs For SOQL IN Clause
     [Arguments]    ${ids}
     @{quoted_ids}=    Create List
     FOR    ${id}    IN    @{ids}
-        ${quoted_id}=    Catenate    SEPARATOR=    '    ${id}    '
+        ${quoted_id}=    Catenate    SEPARATOR=${EMPTY}    '    ${id}    '
         Append To List    ${quoted_ids}    ${quoted_id}
     END
     ${joined_ids}=    Catenate    SEPARATOR=,    @{quoted_ids}

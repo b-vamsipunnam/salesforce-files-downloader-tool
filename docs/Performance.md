@@ -37,7 +37,7 @@ Start with a small worker count and observe CPU, memory, disk latency, network u
 
 ## Download validation
 
-A download succeeds only after the framework detects a non-temporary file, observes completion and stable size, verifies the size against `ContentSize`, moves the file, and verifies the destination. These checks add filesystem overhead but prevent incomplete transfers from being reported as successful.
+A download succeeds only after the framework detects a non-temporary file, observes completion and stable size, verifies the size against `ContentSize`, moves the file, verifies the destination, and commits the requested migration rows. These checks add filesystem and workbook overhead, but they prevent incomplete transfers or half-recorded migration output from being reported as successful.
 
 ## Retry behavior
 
@@ -51,7 +51,7 @@ Appearance, completion, and file stability still use their own bounds on every a
 
 ## Recovery and failure reporting
 
-Only unresolved failures are deduplicated into the batch-specific Excel workbook. IDs recovered by automatic retry are counted as successful and are not included in that workbook. After resolving permission, authentication, capacity, or network issues, use the remaining IDs in a new run. Successful outputs remain in their isolated directories. Partial binary transfer does not resume at the previous byte offset.
+Only unresolved failures are deduplicated into the batch-specific Excel workbook. IDs recovered by automatic retry are counted as successful and are not included in that workbook. If a migration-workbook transaction fails after a binary move, the binary is removed before the ID is reported as failed. After resolving permission, authentication, capacity, workbook, or network issues, use the remaining IDs in a new run. Successful outputs remain in their isolated directories. Partial binary transfer does not resume at the previous byte offset.
 
 ## Benchmark limitations
 

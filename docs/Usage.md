@@ -10,6 +10,8 @@ Refresh `org_info.json`, populate the configured input workbooks with `ContentDo
 robot --outputdir results src/robot/orchestrator/download.robot
 ```
 
+The first column may contain valid 15- or 18-character IDs. The downloader canonicalizes valid IDs to 18 characters before deduplication, so mixed representations of the same document are processed once within a batch.
+
 Run one batch while debugging:
 
 ```bash
@@ -33,6 +35,8 @@ pabot --pabotlib --testlevelsplit --processes 4 --outputdir results src/robot/or
 Each worker starts its own Robot and Chrome environment. Do not remove the shared `org_info.json` in worker-level teardown; remove it only after the complete Pabot run.
 
 Suite setup reads the alias, org ID, and API version directly from `org_info.json` and resolves the Salesforce CLI executable. It does not run `sf org display`, which avoids concurrent access to shared CLI state when Pabot starts several workers. The API-capacity lookup remains per batch because the remaining allocation can change during execution. A PabotLib lock serializes that CLI command across workers, and bounded retries handle empty, invalid, or failed CLI responses while browser downloads continue in parallel.
+
+The lock protects CLI access, not capacity allocation. Salesforce usage reporting can lag, so workers may observe similar remaining values. Treat the console value as a minimum estimate, retain a realistic safety buffer for pagination, and avoid running close to the org limit unless capacity is coordinated outside this tool.
 
 ## Expected directory structure
 
@@ -61,6 +65,8 @@ The ContentVersion workbook contains `Title`, `VersionData`, and `PathOnClient` 
 Local filenames are sanitized as complete `title.extension` values and shortened when necessary to keep the destination path within the configured safety limit. The original Salesforce title remains in the ContentVersion workbook.
 
 After the primary pass, the downloader automatically retries eligible failed downloads when retry is enabled. An ID that succeeds during retry is treated like any other successful download and is removed from the failure list. The failed-ID workbook therefore contains only unique IDs that were invalid, lacked required metadata, or still failed after all configured attempts.
+
+A file is not considered successful merely because it reached its destination folder. The migration-workbook update must also commit. If that transaction fails, the final binary is removed and the ID follows the normal failure-reporting path, which keeps the workbooks and filesystem consistent for a rerun.
 
 If no file succeeds, empty import workbooks are removed. Robot Framework's `log.html`, `report.html`, and `output.xml` show each retry attempt and provide detailed diagnostic information.
 

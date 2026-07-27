@@ -14,6 +14,9 @@ jobs:
   robot-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
 
     steps:
       # Checkout repository
@@ -24,7 +27,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: requirements.txt
 
@@ -82,7 +85,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: robot-smoke-results
+          name: robot-smoke-results-py${{ matrix.python-version }}
           path: results/smoke
           if-no-files-found: ignore
           retention-days: 7
@@ -90,6 +93,9 @@ jobs:
   windows-library-tests:
     runs-on: windows-latest
     timeout-minutes: 15
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
 
     steps:
       - name: Checkout
@@ -98,15 +104,23 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
           cache: pip
-          cache-dependency-path: requirements.txt
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
           python -m pip check
+
+      - name: Run static analysis
+        run: |
+          ruff check src ci
+          robocop check src ci
 
       - name: Run Windows library tests
         run: |

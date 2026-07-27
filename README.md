@@ -37,16 +37,18 @@ This project separates metadata retrieval from binary transfer and provides isol
 
 ## Key features
 
-- Accepts 15- and 18-character `ContentDocumentId` values and removes duplicates
+- Accepts 15- and 18-character `ContentDocumentId` values, canonicalizes them to 18 characters, and removes duplicates
 - Uses Salesforce CLI authentication without storing usernames or passwords
 - Queries `ContentDocument` and all associated `ContentDocumentLink` records in batches
 - Checks remaining Salesforce daily API capacity before creating batch artifacts
 - Downloads each physical file once into a ContentDocument-specific directory
 - Isolates download and artifact directories for each batch and worker
 - Checks completion, stability, and final size against Salesforce `ContentSize`
+- Removes the final binary if its migration-workbook transaction cannot be committed
 - Automatically retries transient download failures and writes only unresolved IDs to the failed-ID workbook
 - Creates optional ContentVersion and ContentDocumentLink import workbooks
 - Supports headless Chrome and Pabot test-level parallel execution
+- Validates Python and Robot code with Ruff, Robocop, and cross-platform CI
 
 ## Quick start
 
@@ -122,6 +124,7 @@ salesforce-files-downloader-tool/
 - `artifacts/` stores migration and failed-ID workbooks.
 - `results/` receives Robot Framework and Pabot execution reports.
 - `requirements.txt` pins the Python dependencies used by the project.
+- `requirements-dev.txt` pins the Ruff and Robocop versions used by contributors and CI.
 
 ## Contributing
 

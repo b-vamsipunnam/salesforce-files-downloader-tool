@@ -15,7 +15,9 @@ Batch inputs and optional workbook flags are defined in `src/robot/orchestrator/
 | `${BASE_DOWNLOAD_FOLDER}`                         | `downloads/`         | Validated binary output root                 |
 | `${OUTPUT_FOLDER}`                                | `artifacts/`         | Workbook output root                         |
 
-Workbook generation flags accept `Yes` or `No` to enable or disable creation of the corresponding migration workbooks. Add, remove, or edit batch test cases in `download.robot` to match the number of input workbooks being processed.
+Workbook generation flags accept `Yes` or `No` (case-insensitive, with surrounding whitespace ignored) to enable or disable creation of the corresponding migration workbooks. Any other value fails before input processing or artifact creation. Add, remove, or edit batch test cases in `download.robot` to match the number of input workbooks being processed.
+
+Failing early here is deliberate. A value such as `Yse` or `True` should not quietly disable an output that a migration operator expected to receive.
 
 ## Processing controls
 
@@ -39,7 +41,7 @@ Workbook generation flags accept `Yes` or `No` to enable or disable creation of 
 
 The default metadata batch size of 200 balances SOQL request efficiency with reliable query execution for large migrations.
 
-The API-capacity preflight reads `DailyApiRequests` through Salesforce CLI before creating output directories or workbooks. The limits command is serialized across Pabot workers and retried when it returns a nonzero exit code, empty output, invalid JSON, or no `DailyApiRequests` entry. Its estimate counts one successful limits request, one `ContentDocument` query per metadata batch, and a second query per batch when ContentDocumentLink output is enabled. Failed CLI attempts may also consume requests, so retain a safety buffer appropriate for the expected relationship volume.
+The API-capacity preflight reads `DailyApiRequests` through Salesforce CLI before creating output directories or workbooks. The limits command is serialized across Pabot workers and retried when it returns a nonzero exit code, empty output, invalid JSON, or no `DailyApiRequests` entry. Its minimum estimate counts one successful limits request, one `ContentDocument` query per metadata batch, and a second query per batch when ContentDocumentLink output is enabled. Paginated `nextRecordsUrl` requests are not predictable from the input count and are covered only by the configured safety buffer. Failed CLI attempts may also consume requests, so retain a buffer that reflects the expected relationship volume instead of treating the default as universally safe.
 
 Suite setup reads org context from `org_info.json` and resolves the CLI path once per Robot process. Each batch still performs its own capacity lookup. This is a conservative per-batch check, not a global reservation across simultaneous workers. Use non-overlapping inputs and increase the buffer when parallel executions approach the org's daily API limit.
 
@@ -51,7 +53,7 @@ Failed-ID retry is intended for temporary download problems, such as a slow brow
 
 Place one `ContentDocumentId` in the first column of the worksheet. A `ContentDocumentId` header is optional. Blank rows are ignored, and duplicate IDs are processed only once per batch.
 
-Both 15-character and 18-character Salesforce `ContentDocumentId` values are supported.
+Both 15-character and 18-character Salesforce `ContentDocumentId` values are supported. Valid 15-character IDs are converted to their canonical 18-character form before deduplication, so equivalent forms of the same record are processed once.
 
 
 | ContentDocumentId    |

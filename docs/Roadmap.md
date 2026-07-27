@@ -4,15 +4,17 @@ This roadmap records areas for improvement and exploration. It does not commit t
 
 ## Near-term
 
-- Expand CI validation
-- Improve automated test coverage
 - Improve error categorization
 - Improve resumable batch execution
 - Add checksum reporting
 - Add more execution examples
+- Add focused tests for browser retry recovery and exhausted retry paths
+- Add coverage reporting without making local development cumbersome
 
 ## Future exploration
 
+- Coordinate API-capacity reservations across parallel workers
+- Refresh expired Salesforce sessions during long-running executions
 - Enhanced migration reconciliation
 - Structured JSON reporting
 - Configurable storage organization and retention workflows

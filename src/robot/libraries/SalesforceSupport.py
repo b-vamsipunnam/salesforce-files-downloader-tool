@@ -14,6 +14,8 @@ from robot.utils import timestr_to_secs
 
 
 _INVALID_FILENAME_CHARACTERS = re.compile(r'[<>:"/\\|?*\x00-\x1F]')
+_CONTENT_DOCUMENT_ID = re.compile(r"069[A-Za-z0-9]{12}(?:[A-Za-z0-9]{3})?")
+_SALESFORCE_ID_CHECKSUM_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345"
 _WINDOWS_RESERVED_NAMES = {
     "CON",
     "PRN",
@@ -26,6 +28,25 @@ _CHROME_OPTIONS_PATCHED = False
 
 
 class SalesforceSupport:
+
+    def canonicalize_content_document_id(self, content_id: Any) -> str:
+        """Return the canonical 18-character form of a valid document ID."""
+        normalized = str(content_id).strip()
+        if not _CONTENT_DOCUMENT_ID.fullmatch(normalized):
+            return normalized
+        if len(normalized) == 18:
+            return normalized
+
+        checksum = []
+        for chunk_start in range(0, 15, 5):
+            flags = 0
+            for offset, character in enumerate(
+                normalized[chunk_start : chunk_start + 5]
+            ):
+                if character.isupper():
+                    flags |= 1 << offset
+            checksum.append(_SALESFORCE_ID_CHECKSUM_CHARACTERS[flags])
+        return f"{normalized}{''.join(checksum)}"
 
     def patch_salesforce_chrome(self) -> None:
         """Add the Linux no-sandbox option to Chrome once per process."""

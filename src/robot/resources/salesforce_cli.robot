@@ -125,6 +125,7 @@ Initialize Salesforce CLI Context From Org Info
 
 Get Salesforce Daily API Limits
     [Documentation]     Retrieves DailyApiRequests through a locked Salesforce CLI command and retries bounded transient failures such as nonzero exit codes, empty output, invalid JSON, or a missing limit.
+    [Arguments]    ${process_keyword}=Run Process
     ${max_attempts}=    Convert To Integer
     ...    ${API_LIMIT_LOOKUP_MAX_ATTEMPTS}
     Should Be True
@@ -137,7 +138,8 @@ Get Salesforce Daily API Limits
     FOR    ${attempt}    IN RANGE    1    ${range_end}
         pabot.PabotLib.Acquire Lock    salesforce_cli_lock
         TRY
-            ${limits_res}=    Run Process
+            ${limits_res}=    Run Keyword
+            ...    ${process_keyword}
             ...    ${sf_cli_path}
             ...    org
             ...    list
@@ -296,8 +298,6 @@ Check Salesforce API Capacity
     ${capacity_check_requests}=    Convert To Integer    1
     ${estimated_tool_requests}=    Evaluate
     ...    $estimated_metadata_requests + $capacity_check_requests
-    ${required_capacity}=    Evaluate
-    ...    $estimated_tool_requests + $safety_buffer + $minimum_remaining
     ${projected_remaining}=    Evaluate
     ...    $daily_remaining - $estimated_tool_requests
 
@@ -310,7 +310,8 @@ Check Salesforce API Capacity
     Log To Console    ContentDocument IDs: ${content_id_count}
     Log To Console    Metadata Batch Size: ${METADATA_BATCH_SIZE}
     Log To Console    Metadata Batches: ${metadata_batches}
-    Log To Console    Estimated Metadata Requests: ${estimated_metadata_requests}
+    Log To Console
+    ...    Minimum Estimated Metadata Requests: ${estimated_metadata_requests} (additional pagination requests are covered only by the safety buffer)
     Log To Console    API Capacity Check Requests: ${capacity_check_requests}
     Log To Console    Estimated Tool Requests: ${estimated_tool_requests}
     Log To Console    Safety Buffer: ${safety_buffer}
@@ -318,12 +319,27 @@ Check Salesforce API Capacity
     Log To Console    Projected API Requests Remaining: ${projected_remaining}
     Log To Console    ==================================================
 
-    IF    ${daily_remaining} < ${required_capacity}
+    Validate Salesforce API Capacity
+    ...    ${daily_remaining}
+    ...    ${estimated_tool_requests}
+    ...    ${safety_buffer}
+    ...    ${minimum_remaining}
+    Log To Console
+    ...    Salesforce API capacity check: PASSED
+
+Validate Salesforce API Capacity
+    [Documentation]     Fails when remaining API capacity cannot cover estimated tool requests, the safety buffer, and the required post-run reserve.
+    [Arguments]
+    ...    ${daily_remaining}
+    ...    ${estimated_tool_requests}
+    ...    ${safety_buffer}
+    ...    ${minimum_remaining}
+    ${required_capacity}=    Evaluate
+    ...    int($estimated_tool_requests) + int($safety_buffer) + int($minimum_remaining)
+    IF    int($daily_remaining) < ${required_capacity}
         Fail
         ...    Insufficient Salesforce API capacity. Remaining: ${daily_remaining}; estimated tool requests: ${estimated_tool_requests}; safety buffer: ${safety_buffer}; required reserve: ${minimum_remaining}. Reduce the input size or run again after API capacity becomes available.
     END
-    Log To Console
-    ...    Salesforce API capacity check: PASSED
 
 Safe Parse Sf Json
     [Documentation]     Parses the first valid JSON object or array from Salesforce CLI output without logging the raw output.

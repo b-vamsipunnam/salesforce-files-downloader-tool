@@ -1,43 +1,22 @@
-# Pull Request
-
-Thank you for your contribution! Please complete the sections below.
-
 ## Summary
 
-Briefly describe:
+<!-- What changed, and why? Keep this brief. -->
 
-- What changed?
-- Why?
+## Related issue
 
----
+<!-- Use "Closes #123" when applicable. -->
 
-## Related Issue
+## Validation
 
-Fixes #<issue-number>
+<!-- List the commands or manual checks you ran. -->
 
----
+- [ ] Tests pass
+- [ ] Ruff and Robocop pass
+- [ ] Authenticated/manual testing completed, or not required
 
-## Testing
+## Checklist
 
-- [ ] Robot tests
-- [ ] Manual testing
-- [ ] N/A
-
-Commands to run (if applicable):
-
-```bash
-robot src/robot/orchestrator/download.robot
-pabot --pabotlib src/robot/orchestrator/download.robot
-```
-
----
-
-## Additional Notes (Optional)
-
-Add any extra context, screenshots, or follow-up tasks here.
-
----
-
-Maintainer: **Bhimeswara Vamsi Punnam**
-
-Thank you for contributing!
+- [ ] This PR is focused and ready for review
+- [ ] Documentation is updated, or no documentation change is needed
+- [ ] Breaking or operational changes are clearly described
+- [ ] No secrets, customer data, generated reports, or runtime files are included
