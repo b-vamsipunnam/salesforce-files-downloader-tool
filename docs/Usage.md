@@ -50,7 +50,8 @@ artifacts/
 └── Download_Batch_1_<uuid>/
     ├── Download_Batch_1_ContentVersion_Import.xlsx
     ├── Download_Batch_1_ContentDocumentLink_Import.xlsx
-    └── Download_Batch_1_FAILED_IDs.xlsx
+    ├── Download_Batch_1_FAILED_IDs.xlsx
+    └── Download_Batch_1_execution_manifest.jsonl
 
 results/
 ├── log.html
@@ -60,7 +61,9 @@ results/
 
 ## Output files
 
-The ContentVersion workbook contains `Title`, `VersionData`, and `PathOnClient` for each successful file. The ContentDocumentLink workbook contains source `ContentDocumentId`, `LinkedEntityId`, `ShareType`, and `Visibility` for every original link. After inserting ContentVersion records into a destination org, replace source document IDs with the new destination IDs before importing links.
+The ContentVersion workbook contains `Title`, `VersionData`, and `PathOnClient` for each successful file. The ContentDocumentLink workbook contains source `ContentDocumentId`, `LinkedEntityId`, `ShareType`, and `Visibility` for every original link. After inserting ContentVersion records into a destination org, replace source document IDs with the new destination IDs before importing links. The failed-ID workbook contains `ContentDocumentId`, `FailureCode`, `FailureMessage`, and `AttemptCount`; its first column remains directly reusable as downloader input.
+
+The JSONL manifest is the machine-readable audit stream for one batch. It records execution boundaries, attempt starts, attempt failures, and committed successes with UTC timestamps, worker identity, metadata, paths, sizes, and structured failure details. A document receives `DOCUMENT_SUCCEEDED` only after binary validation and the requested workbook transaction commit. Treat manifests as migration data because they can contain filenames and local paths.
 
 Local filenames are sanitized as complete `title.extension` values and shortened when necessary to keep the destination path within the configured safety limit. The original Salesforce title remains in the ContentVersion workbook.
 

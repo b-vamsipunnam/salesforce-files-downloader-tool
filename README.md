@@ -40,12 +40,14 @@ This project separates metadata retrieval from binary transfer and provides isol
 - Accepts 15- and 18-character `ContentDocumentId` values, canonicalizes them to 18 characters, and removes duplicates
 - Uses Salesforce CLI authentication without storing usernames or passwords
 - Queries `ContentDocument` and all associated `ContentDocumentLink` records in batches
-- Checks remaining Salesforce daily API capacity before creating batch artifacts
+- Starts the batch audit manifest, then checks Salesforce daily API capacity before creating migration workbooks or download directories
 - Downloads each physical file once into a ContentDocument-specific directory
 - Isolates download and artifact directories for each batch and worker
 - Checks completion, stability, and final size against Salesforce `ContentSize`
 - Removes the final binary if its migration-workbook transaction cannot be committed
-- Automatically retries transient download failures and writes only unresolved IDs to the failed-ID workbook
+- Automatically retries transient download failures and writes structured failure codes, messages, and attempt counts for unresolved IDs
+- Writes a per-batch JSONL execution manifest for programmatic reconciliation and audit
+- Detects expired REST and browser sessions instead of reporting them as generic download failures
 - Creates optional ContentVersion and ContentDocumentLink import workbooks
 - Supports headless Chrome and Pabot test-level parallel execution
 - Validates Python and Robot code with Ruff, Robocop, and cross-platform CI
@@ -121,7 +123,7 @@ salesforce-files-downloader-tool/
 - `src/robot/resources/` contains configuration and reusable workflow keywords.
 - `input/` contains Excel workbooks listing source `ContentDocumentIds`.
 - `downloads/` stores validated file binaries in isolated batch directories.
-- `artifacts/` stores migration and failed-ID workbooks.
+- `artifacts/` stores JSONL execution manifests, migration workbooks, and structured failed-ID workbooks.
 - `results/` receives Robot Framework and Pabot execution reports.
 - `requirements.txt` pins the Python dependencies used by the project.
 - `requirements-dev.txt` pins the Ruff and Robocop versions used by contributors and CI.

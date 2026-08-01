@@ -24,6 +24,37 @@ CI Smoke – Excel Wrapper Works
     Write Excel Cell    1    1    Hello CI
     [Teardown]    Close All Excel Documents
 
+CI Smoke – Structured Failure Workbook Schema
+    ${directory}=    Set Variable    ${EXECDIR}${/}.review_structured_failure
+    Create Directory    ${directory}
+    Initialize Execution Reporting    ${directory}    smoke-failure-schema    local
+    Record Document Failure
+    ...    069000000000001
+    ...    CONTENT_SIZE_MISMATCH
+    ...    =unsafe diagnostic
+    ...    retryable=${TRUE}
+    ${ids}=    Create List    069000000000001
+    ${records}=    Get Failure Records    ${ids}
+    ${workbook}=    Set Variable    ${directory}${/}failures.xlsx
+    Write Failed ContentDocument IDs    ${records}    ${workbook}
+    Open Excel Document    ${workbook}    failure_schema
+    ${header_id}=    Read Excel Cell    1    1
+    ${header_code}=    Read Excel Cell    1    2
+    ${header_message}=    Read Excel Cell    1    3
+    ${header_attempt}=    Read Excel Cell    1    4
+    ${failure_code}=    Read Excel Cell    2    2
+    ${safe_message}=    Read Excel Cell    2    3
+    Should Be Equal    ${header_id}    ContentDocumentId
+    Should Be Equal    ${header_code}    FailureCode
+    Should Be Equal    ${header_message}    FailureMessage
+    Should Be Equal    ${header_attempt}    AttemptCount
+    Should Be Equal    ${failure_code}    CONTENT_SIZE_MISMATCH
+    Should Be Equal    ${safe_message}    '=unsafe diagnostic
+    [Teardown]    Run Keywords
+    ...    Run Keyword And Ignore Error    Close All Excel Documents
+    ...    AND
+    ...    Run Keyword And Ignore Error    Remove Directory    ${directory}    recursive=True
+
 CI Smoke – Parses JSON Object With Leading Warning
     ${raw_output}=    Catenate
     ...    SEPARATOR=\n

@@ -4,94 +4,91 @@
 
   <defs>
     <style>
-      .title { font: 700 32px "Segoe UI", Arial, sans-serif; fill: #172033; }
-      .subtitle { font: 16px "Segoe UI", Arial, sans-serif; fill: #475569; }
-      .section { font: 700 15px "Segoe UI", Arial, sans-serif; fill: #475569; letter-spacing: 1.5px; }
-      .heading { font: 700 21px "Segoe UI", Arial, sans-serif; fill: #172033; }
-      .decision { font: 700 15px "Segoe UI", Arial, sans-serif; fill: #172033; }
-      .body { font: 16px "Segoe UI", Arial, sans-serif; fill: #334155; }
-      .small { font: 14px "Segoe UI", Arial, sans-serif; fill: #475569; }
+      .title { font: 700 32px "Segoe UI", Arial, sans-serif; fill: #10243e; }
+      .subtitle { font: 16px "Segoe UI", Arial, sans-serif; fill: #52657a; }
+      .section { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #64748b; letter-spacing: 1.8px; }
+      .heading { font: 700 21px "Segoe UI", Arial, sans-serif; fill: #10243e; }
+      .decision { font: 700 15px "Segoe UI", Arial, sans-serif; fill: #10243e; }
+      .body { font: 16px "Segoe UI", Arial, sans-serif; fill: #2f4358; }
+      .small { font: 14px "Segoe UI", Arial, sans-serif; fill: #52657a; }
       .step { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #ffffff; }
       .label { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #334155; }
       .retry-note { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #9a4d08; }
-      .panel { fill: #ffffff; stroke: #d6e0eb; stroke-width: 2; }
-      .box { stroke: #52647a; stroke-width: 2; }
-      .flow { fill: none; stroke: #52647a; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
-      .retry { fill: none; stroke: #b95f0b; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-orange); }
+      .panel { fill: #ffffff; stroke: #dbe4ee; stroke-width: 1.5; }
+      .box { stroke: #60758b; stroke-width: 1.75; }
+      .flow { fill: none; stroke: #60758b; stroke-width: 2.75; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .retry { fill: none; stroke: #a9550a; stroke-width: 2.75; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 8 7; marker-end: url(#arrow-orange); }
     </style>
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#64748b" flood-opacity="0.14"/>
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#243b53" flood-opacity="0.10"/>
     </filter>
+    <linearGradient id="page-background" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#f3f6f9"/>
+    </linearGradient>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
-      <path d="M0 0 L9 5 L0 10 Z" fill="#52647a"/>
+      <path d="M0 0 L9 5 L0 10 Z" fill="#60758b"/>
     </marker>
     <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
-      <path d="M0 0 L9 5 L0 10 Z" fill="#b95f0b"/>
+      <path d="M0 0 L9 5 L0 10 Z" fill="#a9550a"/>
     </marker>
   </defs>
 
-  <rect width="1200" height="1160" fill="#f6f8fb"/>
+  <rect width="1200" height="1160" fill="url(#page-background)"/>
   <text x="600" y="48" text-anchor="middle" class="title">Salesforce Files Bulk Downloader — Execution Architecture</text>
   <text x="600" y="76" text-anchor="middle" class="subtitle">Capacity-aware extraction with validated binaries and consistent migration outputs</text>
+  <rect x="520" y="90" width="160" height="4" rx="2" fill="#2f6f9f"/>
 
   <!-- Shared context -->
-  <rect x="45" y="105" width="1110" height="130" rx="18" class="panel"/>
-  <text x="70" y="136" class="section">SHARED RUNTIME CONTEXT</text>
+  <rect x="45" y="105" width="1110" height="130" rx="18" class="panel" filter="url(#shadow)"/>
+  <text x="70" y="136" class="section">RUNTIME DEPENDENCIES &amp; ISOLATION</text>
 
-  <rect x="70" y="158" width="320" height="55" rx="11" class="box" fill="#ede9fe"/>
-  <text x="230" y="181" text-anchor="middle" class="heading">Salesforce CLI</text>
-  <text x="230" y="202" text-anchor="middle" class="small">Org context, authentication, and daily limits</text>
+  <rect x="70" y="158" width="335" height="55" rx="11" class="box" fill="#f7f9fc"/>
+  <text x="237" y="181" text-anchor="middle" class="heading">Salesforce CLI</text>
+  <text x="237" y="202" text-anchor="middle" class="small">Org context, authentication, and daily limits</text>
 
-  <rect x="440" y="158" width="320" height="55" rx="11" class="box" fill="#e0f2fe"/>
+  <rect x="440" y="158" width="335" height="55" rx="11" class="box" fill="#eef5fa"/>
   <text x="600" y="181" text-anchor="middle" class="heading">Salesforce REST API</text>
   <text x="600" y="202" text-anchor="middle" class="small">Document metadata and visible relationships</text>
 
-  <rect x="810" y="158" width="320" height="55" rx="11" class="box" fill="#dcfce7"/>
-  <text x="970" y="181" text-anchor="middle" class="heading">Pabot Isolation</text>
-  <text x="970" y="202" text-anchor="middle" class="small">Independent browser, files, workbooks, and reports</text>
+  <rect x="810" y="158" width="335" height="55" rx="11" class="box" fill="#f7f9fc"/>
+  <text x="977" y="181" text-anchor="middle" class="heading">Pabot Isolation</text>
+  <text x="977" y="202" text-anchor="middle" class="small">Independent browser, files, workbooks, and reports</text>
 
   <!-- Primary vertical workflow -->
   <text x="70" y="272" class="section">PRIMARY WORKFLOW</text>
+  <line x1="216" y1="267" x2="1130" y2="267" stroke="#dbe4ee" stroke-width="1.5"/>
+  <rect x="588" y="282" width="24" height="602" rx="12" fill="#e8eef5"/>
 
-  <rect x="350" y="292" width="500" height="92" rx="15" class="box" fill="#e0f2fe" filter="url(#shadow)"/>
-  <circle cx="365" cy="318" r="17" fill="#2563a6"/>
-  <text x="365" y="323" text-anchor="middle" class="step">1</text>
+  <rect x="350" y="292" width="500" height="92" rx="15" class="box" fill="#eef5fa" filter="url(#shadow)"/>
   <text x="600" y="321" text-anchor="middle" class="heading">Read, Normalize, and Validate Input</text>
   <text x="600" y="348" text-anchor="middle" class="body">Excel IDs · 15 → 18 character canonicalization</text>
   <text x="600" y="371" text-anchor="middle" class="small">Deduplication · strict Yes / No settings</text>
 
   <path d="M600 384 V405" class="flow"/>
 
-  <rect x="350" y="410" width="500" height="92" rx="15" class="box" fill="#fef3c7" filter="url(#shadow)"/>
-  <circle cx="365" cy="436" r="17" fill="#a16207"/>
-  <text x="365" y="441" text-anchor="middle" class="step">2</text>
+  <rect x="350" y="410" width="500" height="92" rx="15" class="box" fill="#fffaf0" filter="url(#shadow)"/>
   <text x="600" y="439" text-anchor="middle" class="heading">Check Salesforce API Capacity</text>
   <text x="600" y="466" text-anchor="middle" class="body">Minimum request estimate · pagination buffer</text>
   <text x="600" y="489" text-anchor="middle" class="small">Required remaining reserve</text>
 
   <path d="M600 502 V523" class="flow"/>
 
-  <rect x="350" y="528" width="500" height="92" rx="15" class="box" fill="#fff7ed" filter="url(#shadow)"/>
-  <circle cx="365" cy="554" r="17" fill="#b95f0b"/>
-  <text x="365" y="559" text-anchor="middle" class="step">3</text>
+  <rect x="350" y="528" width="500" height="92" rx="15" class="box" fill="#f7f9fc" filter="url(#shadow)"/>
   <text x="600" y="557" text-anchor="middle" class="heading">Retrieve Salesforce Metadata</text>
   <text x="600" y="584" text-anchor="middle" class="body">Batched SOQL · nextRecordsUrl pagination</text>
   <text x="600" y="607" text-anchor="middle" class="small">All visible ContentDocumentLink rows</text>
 
   <path d="M600 620 V641" class="flow"/>
 
-  <rect x="350" y="646" width="500" height="92" rx="15" class="box" fill="#e0f2fe" filter="url(#shadow)"/>
-  <circle cx="365" cy="672" r="17" fill="#2563a6"/>
-  <text x="365" y="677" text-anchor="middle" class="step">4</text>
+  <rect x="350" y="646" width="500" height="92" rx="15" class="box" fill="#eef5fa" filter="url(#shadow)"/>
   <text x="600" y="675" text-anchor="middle" class="heading">Download Through Authenticated Chrome</text>
   <text x="600" y="702" text-anchor="middle" class="body">Salesforce Shepherd · isolated directory</text>
   <text x="600" y="725" text-anchor="middle" class="small">Fresh full-file transfer</text>
 
   <path d="M600 738 V759" class="flow"/>
 
-  <rect x="350" y="764" width="500" height="110" rx="15" class="box" fill="#dcfce7" filter="url(#shadow)"/>
-  <circle cx="365" cy="790" r="17" fill="#16755b"/>
-  <text x="365" y="795" text-anchor="middle" class="step">5</text>
+  <rect x="350" y="764" width="500" height="110" rx="15" class="box" fill="#edf7f2" filter="url(#shadow)"/>
   <text x="600" y="793" text-anchor="middle" class="heading">Validate, Move, and Commit</text>
   <text x="600" y="820" text-anchor="middle" class="body">Completion · stable size · ContentSize match</text>
   <text x="600" y="843" text-anchor="middle" class="small">Atomic workbook transaction · cleanup on commit failure</text>
@@ -99,13 +96,13 @@
   <path d="M600 874 V895" class="flow"/>
 
   <!-- Outcome decisions -->
-  <polygon points="600,897 730,943 600,989 470,943" fill="#fff7ed" stroke="#b95f0b" stroke-width="2.5" filter="url(#shadow)"/>
-  <text x="600" y="949" text-anchor="middle" class="decision">Successful?</text>
+  <polygon points="600,897 730,943 600,989 470,943" fill="#fffaf0" stroke="#a9550a" stroke-width="2.25" filter="url(#shadow)"/>
+  <text x="600" y="949" text-anchor="middle" class="decision">Commit successful?</text>
 
-  <rect x="65" y="900" width="300" height="86" rx="15" class="box" fill="#ecfdf5" filter="url(#shadow)"/>
+  <rect x="65" y="900" width="300" height="86" rx="15" class="box" fill="#edf7f2" filter="url(#shadow)"/>
   <text x="215" y="930" text-anchor="middle" class="heading">Migration Outputs</text>
-  <text x="215" y="956" text-anchor="middle" class="body">Validated file</text>
-  <text x="215" y="978" text-anchor="middle" class="small">Migration-ready workbook rows</text>
+  <text x="215" y="956" text-anchor="middle" class="body">Validated file · import workbooks</text>
+  <text x="215" y="978" text-anchor="middle" class="small">Per-batch JSONL execution manifest</text>
 
   <path d="M470 943 H365" class="flow"/>
   <rect x="397" y="917" width="48" height="24" rx="12" fill="#ffffff"/>
@@ -115,19 +112,19 @@
   <rect x="612" y="995" width="42" height="22" rx="11" fill="#ffffff"/>
   <text x="633" y="1011" text-anchor="middle" class="label">NO</text>
 
-  <polygon points="600,1018 730,1064 600,1110 470,1064" fill="#fff7ed" stroke="#b95f0b" stroke-width="2.5" filter="url(#shadow)"/>
+  <polygon points="600,1018 730,1064 600,1110 470,1064" fill="#fffaf0" stroke="#a9550a" stroke-width="2.25" filter="url(#shadow)"/>
   <text x="600" y="1059" text-anchor="middle" class="decision">Retry eligible and</text>
   <text x="600" y="1080" text-anchor="middle" class="decision">attempts remain?</text>
 
-  <rect x="65" y="1024" width="300" height="80" rx="15" class="box" fill="#fee2e2" filter="url(#shadow)"/>
+  <rect x="65" y="1024" width="300" height="80" rx="15" class="box" fill="#fdf1f1" filter="url(#shadow)"/>
   <text x="215" y="1052" text-anchor="middle" class="heading">Failed-ID Workbook</text>
-  <text x="215" y="1078" text-anchor="middle" class="small">Invalid, missing, or retry-exhausted IDs</text>
+  <text x="215" y="1078" text-anchor="middle" class="small">Code · message · attempt count</text>
 
   <path d="M470 1064 H365" class="flow"/>
   <rect x="405" y="1038" width="42" height="24" rx="12" fill="#ffffff"/>
   <text x="426" y="1055" text-anchor="middle" class="label">NO</text>
 
-  <rect x="835" y="1024" width="300" height="80" rx="15" class="box" fill="#ffedd5" filter="url(#shadow)"/>
+  <rect x="835" y="1024" width="300" height="80" rx="15" class="box" fill="#fff6e8" filter="url(#shadow)"/>
   <text x="985" y="1054" text-anchor="middle" class="heading">Configurable Retry</text>
   <text x="985" y="1078" text-anchor="middle" class="body">Fresh full-file attempt</text>
   <text x="985" y="1097" text-anchor="middle" class="small">Bounded count and delay</text>
@@ -136,7 +133,7 @@
   <rect x="750" y="1038" width="48" height="24" rx="12" fill="#ffffff"/>
   <text x="774" y="1055" text-anchor="middle" class="label">YES</text>
 
-  <path d="M1135 1064 H1170 V690 H850" class="retry"/>
-  <text x="1148" y="855" text-anchor="middle" class="retry-note" transform="rotate(-90 1148 855)">Fresh browser download attempt</text>
+  <path d="M1135 1064 H1160 V690 H850" class="retry"/>
+  <text x="1141" y="855" text-anchor="middle" class="retry-note" transform="rotate(-90 1141 855)">Fresh browser download attempt</text>
 
 </svg>

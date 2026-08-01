@@ -41,12 +41,14 @@ Robot Framework provides keyword-driven orchestration for a workflow that combin
 - **One physical download per ContentDocument:** repeated IDs within a batch do not trigger repeated transfers.
 - **Preservation of multiple ContentDocumentLink records:** all retrieved links can be retained for migration mapping.
 - **Validation before success reporting:** completion, stability, expected size, movement, destination checks, and workbook commit all precede success.
-- **Failure isolation:** failed IDs are separated from successful outputs.
+- **Structured failure isolation:** failed IDs are separated from successful outputs with stable failure codes, sanitized messages, and attempt counts.
 - **Bounded recovery:** eligible download failures receive a configurable number of full-download retries before they are reported.
 - **Parallel worker separation:** each test uses unique download and artifact directories.
 - **Recoverable reporting:** only unresolved IDs are written to failure workbooks for controlled reruns.
+- **Machine-readable reconciliation:** each batch writes an append-only JSONL event manifest; success events follow binary validation and workbook commit.
+- **Authentication detection:** REST `401`/`INVALID_SESSION_ID`, browser login redirects, and downloaded Salesforce HTML login responses are classified as expired sessions.
 - **Minimal exposure of sensitive authentication data:** token-bearing operations suppress ordinary logs and authentication files remain uncommitted.
-- **Capacity protection:** each batch uses a conservative minimum estimate and preserves a configurable daily API reserve before creating artifacts. Pagination and concurrent workers are handled operationally through the safety buffer; workers do not share a reservation counter.
+- **Capacity protection:** after starting its audit manifest, each batch uses a conservative minimum estimate and preserves a configurable daily API reserve before creating migration workbooks or download directories. Pagination and concurrent workers are handled operationally through the safety buffer; workers do not share a reservation counter.
 
 ## Runtime locations
 
@@ -57,7 +59,7 @@ Robot Framework provides keyword-driven orchestration for a workflow that combin
 | `src/robot/libraries/`    | Custom Python libraries                                   |
 | `input/`                  | Source workbooks containing IDs                           |
 | `downloads/`              | Validated binaries, isolated by test and UUID             |
-| `artifacts/`              | Import and failed-ID workbooks                            |
+| `artifacts/`              | Import workbooks, structured failures, and JSONL manifests |
 | `results/`                | Robot Framework and Pabot reports                         |
 
 ---

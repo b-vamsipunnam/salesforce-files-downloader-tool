@@ -19,7 +19,7 @@ This page covers the keywords that callers and maintainers are most likely to us
 | `Initialize Salesforce CLI Context From Org Info` | Load worker context from `org_info.json` during suite setup. | None | None | Sets the alias, org ID, and API version without running `sf org display`; resolves the CLI path for the capacity check. |
 | `Get Salesforce Daily API Limits` | Read `DailyApiRequests` before a batch. | Optional process keyword for tests; defaults to `Run Process` | Maximum and remaining requests | Captures output in memory, runs under a PabotLib lock, and retries bounded CLI or response failures. |
 | `Estimate Metadata API Requests` | Estimate batched metadata calls. | ID count and ContentDocumentLink generation flag | Batch and request counts | Uses `${METADATA_BATCH_SIZE}` and does not predict pagination. |
-| `Check Salesforce API Capacity` | Run the preflight capacity guard. | ID count and ContentDocumentLink generation flag | None | Includes the limits call itself and fails before artifact creation when estimated use, buffer, and reserve exceed remaining capacity. |
+| `Check Salesforce API Capacity` | Run the preflight capacity guard. | ID count and ContentDocumentLink generation flag | None | Runs after manifest initialization and fails before migration-workbook or download-directory creation when estimated use, buffer, and reserve exceed remaining capacity. |
 | `Validate Salesforce API Capacity` | Validate already-calculated capacity values. | Remaining requests, estimated tool requests, safety buffer, and minimum reserve | None | Pure capacity decision used by the preflight and offline tests. |
 | `Safe Parse Sf Json`            | Parse JSON from CLI output.                 | `${raw_output}` | Parsed object | Finds the first valid object or array without logging raw CLI output.   |
 | `Try Parse First Json Value`    | Probe CLI output when invalid JSON is an expected retry condition. | `${raw_output}` | Boolean status and parsed value | Returns `${FALSE}` and `${NONE}` instead of raising for empty or invalid output. |
@@ -138,9 +138,9 @@ Download Files Using Content Document IDs
 
 | Keyword                                     | What it does and when to use it    | Arguments                                                                                              | Return value | Important behavior                                           |
 |---------------------------------------------|------------------------------------|--------------------------------------------------------------------------------------------------------|--------------|--------------------------------------------------------------|
-| `Handle Download Failure`                   | Isolate a failed document.         | `${content_id}`, `${reason}`, `${failed_content_ids}`, `${content_id_folder}`, `${download_directory}` | `FAIL`       | Records the ID, logs a reason, and cleans incomplete output. |
-| `Write Failed ContentDocument IDs To Excel` | Create the batch failure workbook. | `${unique_failed_content_ids}`, `${output_directory}`                                                  | None         | Writes only when at least one ID exists.                     |
-| `Write Failed ContentDocument IDs`          | Populate a failure workbook.       | `${unique_failed_content_ids}`, `${excel_file}`                                                        | None         | Uses a `ContentDocumentId` header.                           |
+| `Handle Download Failure`                   | Isolate a failed document.         | `${content_id}`, `${failure_code}`, `${reason}`, `${failed_content_ids}`, `${content_id_folder}`, `${download_directory}` | `FAIL` | Records a structured failure and cleans incomplete output. |
+| `Write Failed ContentDocument IDs To Excel` | Create the batch failure workbook. | `${failure_records}`, `${output_directory}` | None | Writes only when at least one unresolved failure exists. |
+| `Write Failed ContentDocument IDs`          | Populate a failure workbook.       | `${failure_records}`, `${excel_file}` | None | Writes ID, code, sanitized message, and attempt count. |
 
 ## Cleanup
 
