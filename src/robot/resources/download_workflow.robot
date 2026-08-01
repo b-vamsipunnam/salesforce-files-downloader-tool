@@ -5,6 +5,7 @@ Library             SeleniumLibrary
 Library             OperatingSystem
 Library             Collections
 Library             String
+Library             ../libraries/ExecutionReporting.py
 Resource            configuration.robot
 Resource            salesforce_cli.robot
 Resource            salesforce_api.robot
@@ -42,12 +43,22 @@ Download Files Using Content Document IDs
     ${download_directory}=    Set Variable    ${NONE}
     ${current_content_id}=    Set Variable    ${NONE}
     ${unexpected_error}=    Set Variable    ${NONE}
+    ${reporting_error}=    Set Variable    ${NONE}
     ${cv_file_name}=    Set Variable    ${NONE}
     ${cdl_file_name}=    Set Variable    ${NONE}
     Set Test Variable    ${successful_content_ids}
     Set Test Variable    ${failed_content_ids}
     Set Test Variable    ${total_records}
     TRY
+        ${output_directory}=    Initialize Output Directory
+        ${output_directory}=    Normalize Path    ${output_directory}
+        Set Test Variable    ${output_directory}
+        ${worker_id}=    Get Variable Value    \${PABOTEXECUTIONPOOLID}    local
+        ${manifest_file}=    Initialize Execution Reporting
+        ...    ${output_directory}
+        ...    ${TEST NAME}
+        ...    ${worker_id}
+        Set Test Variable    ${manifest_file}
         @{content_ids}=    Read Content IDs From Excel Sheet
         ...    ${input_excel_path}
         ...    ${sheet_name}
@@ -62,9 +73,6 @@ Download Files Using Content Document IDs
             ...    ${total_records}
             ...    ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
 
-            ${output_directory}=    Initialize Output Directory
-            ${output_directory}=    Normalize Path    ${output_directory}
-            Set Test Variable    ${output_directory}
             ${cv_row}=    Set Variable    2
             ${cdl_row}=    Set Variable    2
             IF    '${GENERATE_CONTENT_VERSION_FILE.lower()}' == 'yes'
@@ -113,6 +121,11 @@ Download Files Using Content Document IDs
                     Append To List
                     ...    ${failed_content_ids}
                     ...    ${content_id}
+                    Record Document Failure
+                    ...    ${content_id}
+                    ...    INVALID_CONTENT_DOCUMENT_ID
+                    ...    Invalid ContentDocumentId format
+                    ...    retryable=${FALSE}
                     Remove Values From List    ${pending_content_ids}    ${content_id}
                     ${current_content_id}=    Set Variable    ${NONE}
                     CONTINUE
@@ -136,6 +149,11 @@ Download Files Using Content Document IDs
                     Append To List
                     ...    ${failed_content_ids}
                     ...    ${content_id}
+                    Record Document Failure
+                    ...    ${content_id}
+                    ...    CONTENT_DOCUMENT_NOT_FOUND
+                    ...    ContentDocument metadata not found
+                    ...    retryable=${FALSE}
                     Remove Values From List    ${pending_content_ids}    ${content_id}
                 ELSE IF    '${GENERATE_CONTENT_DOCUMENT_LINK_FILE.lower()}' == 'yes' and $content_links is None
                     Log To Console
@@ -143,6 +161,11 @@ Download Files Using Content Document IDs
                     Append To List
                     ...    ${failed_content_ids}
                     ...    ${content_id}
+                    Record Document Failure
+                    ...    ${content_id}
+                    ...    CONTENT_DOCUMENT_LINK_NOT_FOUND
+                    ...    ContentDocumentLink metadata not found
+                    ...    retryable=${FALSE}
                     Remove Values From List    ${pending_content_ids}    ${content_id}
                 ELSE
                     ${download_status}=    Process ContentDocument Download
@@ -164,6 +187,11 @@ Download Files Using Content Document IDs
                             ${cdl_row}=    Evaluate
                             ...    ${cdl_row} + ${link_count}
                         END
+                    ELSE
+                        ${failure_code}=    Get Document Failure Code    ${content_id}
+                        IF    '${failure_code}' == 'AUTH_SESSION_EXPIRED'
+                            Fail    AUTH_SESSION_EXPIRED: Browser authentication is no longer valid.
+                        END
                     END
                 END
                 ${current_content_id}=    Set Variable    ${NONE}
@@ -182,10 +210,27 @@ Download Files Using Content Document IDs
         END
     EXCEPT    AS    ${error}
         ${unexpected_error}=    Set Variable    ${error}
+        ${is_auth_error}=    Evaluate    'AUTH_SESSION_EXPIRED' in str($error)
+        IF    ${is_auth_error}
+            ${execution_failure_code}=    Set Variable    AUTH_SESSION_EXPIRED
+        ELSE
+            ${is_api_error}=    Evaluate    'Salesforce SOQL' in str($error) or 'Salesforce GET' in str($error)
+            IF    ${is_api_error}
+                ${execution_failure_code}=    Set Variable    SALESFORCE_API_FAILURE
+            ELSE
+                ${execution_failure_code}=    Set Variable    UNEXPECTED_ERROR
+            END
+        END
+        Record Execution Failure    ${execution_failure_code}    ${error}
         FOR    ${unprocessed_content_id}    IN    @{pending_content_ids}
             Append To List
             ...    ${failed_content_ids}
             ...    ${unprocessed_content_id}
+            Record Document Failure
+            ...    ${unprocessed_content_id}
+            ...    ${execution_failure_code}
+            ...    Processing stopped before this document completed
+            ...    retryable=${FALSE}
         END
         Log To Console
         ...    UNEXPECTED ERROR: ${unexpected_error}
@@ -213,9 +258,10 @@ Download Files Using Content Document IDs
             ...    ${cdl_file_name}
         END
         IF    $output_directory is not None and ${failed_count} > 0
+            ${failure_records}=    Get Failure Records    ${unique_failed_content_ids}
             ${report_status}    ${report_message}=    Run Keyword And Ignore Error
             ...    Write Failed ContentDocument IDs To Excel
-            ...    ${unique_failed_content_ids}
+            ...    ${failure_records}
             ...    ${output_directory}
 
             IF    '${report_status}' == 'FAIL'
@@ -227,6 +273,13 @@ Download Files Using Content Document IDs
         Log    ${unique_failed_content_ids}
         Log To Console
         ...    Download summary: ${successful_count} successful, ${failed_count} failed, ${total_records} total.
+        ${execution_failed}=    Evaluate    $unexpected_error is not None
+        Complete Execution Reporting
+        ...    ${successful_count}
+        ...    ${failed_count}
+        ...    ${total_records}
+        ...    execution_failed=${execution_failed}
+        ${reporting_error}=    Get Execution Reporting Error
     END
     IF    $unexpected_error is not None
         Fail
@@ -235,6 +288,9 @@ Download Files Using Content Document IDs
     IF    ${failed_count} > 0
         Fail
         ...    ${failed_count} of ${total_records} ContentDocument downloads failed. Review the failed-ID Excel file in ${output_directory}.
+    END
+    IF    $reporting_error is not None
+        Fail    Execution reporting was incomplete: ${reporting_error}
     END
 
 Validate And Normalize Yes Or No Setting
@@ -285,6 +341,12 @@ Retry Failed ContentDocument IDs
                 Append To List
                 ...    ${final_failed_content_ids}
                 ...    ${content_id}
+                CONTINUE
+            END
+            ${retryable}=    Is Document Failure Retryable    ${content_id}
+            IF    not ${retryable}
+                Append To List    ${final_failed_content_ids}    ${content_id}
+                Log To Console    NOT RETRYABLE: ${content_id} - structured failure policy
                 CONTINUE
             END
             ${content_doc}=    Get From Dictionary
@@ -459,6 +521,16 @@ Process ContentDocument Download
     ...    max_filename_length=180
     ...    max_path_length=240
     Set Test Variable    ${file_name}
+    ${link_count}=    Get Length    ${content_links}
+    ${final_path}=    Set Variable    ${content_id_folder}${/}${file_name}
+    Start Document Attempt
+    ...    ${content_id}
+    ...    ${content_version_id}
+    ...    ${file_title}
+    ...    ${file_name}
+    ...    ${final_path}
+    ...    ${expected_file_size}
+    ...    ${link_count}
     ${download_result}=    Download And Validate Content File
     ...    ${content_id}
     ...    ${download_url}

@@ -82,7 +82,16 @@ Download And Validate Content File
     Log To Console    Starting download: ${file_name} and expected size: ${expected_file_size} bytes
     ${is_url_success}=    Run Keyword And Return Status    Go To    ${download_url}
     IF    not ${is_url_success}
-        ${status}=    Handle Download Failure    ${content_id}    Browser navigation to download URL failed
+        ${status}=    Handle Download Failure    ${content_id}    DOWNLOAD_NAVIGATION_FAILED
+        ...    Browser navigation to download URL failed
+        ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
+        RETURN    ${status}
+    END
+    ${browser_location}=    Get Location
+    ${session_expired}=    Is Salesforce Login URL    ${browser_location}
+    IF    ${session_expired}
+        ${status}=    Handle Download Failure    ${content_id}    AUTH_SESSION_EXPIRED
+        ...    Salesforce browser session redirected to a login page
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
     END
@@ -91,7 +100,8 @@ Download And Validate Content File
     ...    ${DOWNLOAD_APPEAR_TIMEOUT}
     ...    ${download_directory}
     IF    not ${is_file_appeared}
-        ${status}=    Handle Download Failure    ${content_id}    Download file did not appear within timeout
+        ${status}=    Handle Download Failure    ${content_id}    DOWNLOAD_APPEAR_TIMEOUT
+        ...    Download file did not appear within timeout
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
     END
@@ -100,7 +110,8 @@ Download And Validate Content File
     ${files_in_download_dir}=    List Files In Directory    ${download_directory}
     ${recent_file_count}=    Get Length    ${files_in_download_dir}
     IF    '${recent_file_count}' == '0'
-        ${status}=    Handle Download Failure    ${content_id}    Download directory is empty after download trigger
+        ${status}=    Handle Download Failure    ${content_id}    DOWNLOAD_APPEAR_TIMEOUT
+        ...    Download directory is empty after download trigger
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
     END
@@ -108,14 +119,16 @@ Download And Validate Content File
     ...    Wait Until File Download Completes
     ...    ${download_directory}
     IF    not ${is_download_proper}
-        ${status}=    Handle Download Failure    ${content_id}    Download did not complete within timeout
+        ${status}=    Handle Download Failure    ${content_id}    DOWNLOAD_COMPLETION_TIMEOUT
+        ...    Download did not complete within timeout
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
     END
     ${recent_files}=    List Files In Directory    ${download_directory}
     ${recent_file_count}=    Get Length    ${recent_files}
     IF    ${recent_file_count} == 0
-        ${status}=    Handle Download Failure    ${content_id}    No downloaded file found after completion wait
+        ${status}=    Handle Download Failure    ${content_id}    DOWNLOAD_COMPLETION_TIMEOUT
+        ...    No downloaded file found after completion wait
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
     END
@@ -130,7 +143,8 @@ Download And Validate Content File
         END
         ${matching_count}=    Get Length    ${matching_size_files}
         IF    ${matching_count} == 0
-            ${status}=    Handle Download Failure    ${content_id}    No downloaded file matched expected file size
+            ${status}=    Handle Download Failure    ${content_id}    MULTIPLE_FILES_NO_SIZE_MATCH
+            ...    No downloaded file matched expected file size
             ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
             RETURN    ${status}
         END
@@ -142,10 +156,19 @@ Download And Validate Content File
     IF    ${recent_file_count} == 1
         Set Test Variable    ${latest_filename}    ${recent_files}[0]
     END
+    ${downloaded_path}=    Set Variable    ${download_directory}${/}${latest_filename}
+    ${is_html_response}=    File Looks Like Html    ${downloaded_path}
+    IF    ${is_html_response}
+        ${status}=    Handle Download Failure    ${content_id}    AUTH_SESSION_EXPIRED
+        ...    Salesforce returned an HTML login or error page instead of a file
+        ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
+        RETURN    ${status}
+    END
     ${downloaded_size}=    Get File Size    ${download_directory}${/}${latest_filename}
     IF    ${downloaded_size} != ${expected_file_size}
         ${status}=    Handle Download Failure
         ...    ${content_id}
+        ...    CONTENT_SIZE_MISMATCH
         ...    Downloaded file size does not match expected ContentSize
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
@@ -235,9 +258,16 @@ Find Completed Download File
 
 Handle Download Failure
     [Documentation]     Records a failed ContentDocument ID, removes its ContentDocument-specific folder, cleans remaining files from the active download directory, logs the failure reason, and returns FAIL.
-    [Arguments]    ${content_id}    ${reason}
+    [Arguments]    ${content_id}    ${failure_code}    ${reason}
     ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
     Append To List    ${failed_content_ids}    ${content_id}
+    ${retryable}=    Evaluate
+    ...    $failure_code not in ('AUTH_SESSION_EXPIRED', 'INVALID_CONTENT_DOCUMENT_ID', 'CONTENT_DOCUMENT_NOT_FOUND', 'CONTENT_DOCUMENT_LINK_NOT_FOUND')
+    Record Document Failure
+    ...    ${content_id}
+    ...    ${failure_code}
+    ...    ${reason}
+    ...    retryable=${retryable}
     Run Keyword And Ignore Error
     ...    Remove Directory
     ...    ${content_id_folder}
@@ -285,7 +315,8 @@ Validate And Move Downloaded File
     ${dst}=    Set Variable    ${content_id_folder}${/}${file_name}
     ${is_source_file_exists}=    Evaluate    os.path.isfile($src)    modules=os
     IF    not ${is_source_file_exists}
-        ${status}=    Handle Download Failure    ${content_id}    Downloaded source file missing before move
+        ${status}=    Handle Download Failure    ${content_id}    FINAL_FILE_VALIDATION_FAILED
+        ...    Downloaded source file missing before move
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
     END
@@ -303,13 +334,15 @@ Validate And Move Downloaded File
     IF    not ${is_size_stable}
         ${status}=    Handle Download Failure
         ...    ${content_id}
+        ...    FILE_NOT_STABLE
         ...    Downloaded file size did not stabilize
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
     END
     ${is_source_file_exists}=    Evaluate    os.path.isfile($src)    modules=os
     IF    not ${is_source_file_exists}
-        ${status}=    Handle Download Failure    ${content_id}    Downloaded source file disappeared before move
+        ${status}=    Handle Download Failure    ${content_id}    FINAL_FILE_VALIDATION_FAILED
+        ...    Downloaded source file disappeared before move
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
     END
@@ -320,6 +353,7 @@ Validate And Move Downloaded File
     IF    not ${is_file_moved}
         ${status}=    Handle Download Failure
         ...    ${content_id}
+        ...    FILE_MOVE_FAILED
         ...    Downloaded file remained locked and could not be moved within ${FILE_MOVE_TIMEOUT}
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}
@@ -351,6 +385,7 @@ Validate And Move Downloaded File
             Run Keyword And Ignore Error    Remove File    ${dst}
             ${status}=    Handle Download Failure
             ...    ${content_id}
+            ...    WORKBOOK_TRANSACTION_FAILED
             ...    Migration workbook update failed: ${write_message}
             ...    ${failed_content_ids}
             ...    ${content_id_folder}
@@ -365,6 +400,7 @@ Validate And Move Downloaded File
             ...    ${successful_content_ids}
             ...    ${content_id}
         END
+        Record Document Success    ${content_id}    ${actual_file_size}    ${dst}
         Log To Console
         ...    SUCCESS: ${file_name} downloaded and moved to ${content_id}
         ${source_still_exists}=    Evaluate
@@ -384,6 +420,7 @@ Validate And Move Downloaded File
         END
         ${status}=    Handle Download Failure
         ...    ${content_id}
+        ...    FINAL_FILE_VALIDATION_FAILED
         ...    Moved file missing or final file size validation failed
         ...    ${failed_content_ids}    ${content_id_folder}    ${download_directory}
         RETURN    ${status}

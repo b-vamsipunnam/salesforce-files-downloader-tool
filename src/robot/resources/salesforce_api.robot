@@ -80,17 +80,24 @@ Send Safe Salesforce GET Request
         ...    ${session_alias}
         ...    ${url}
         ...    params=${params}
+        ...    expected_status=anything
     FINALLY
         Set Log Level    ${previous_level}
     END
     IF    '${status}' == 'FAIL'
-        Log    Salesforce GET failed for ${url}: ${resp}    level=WARN
+        ${safe_error}=    Redact Sensitive Text    ${resp}
+        Log    Salesforce GET failed for ${url}: ${safe_error}    level=WARN
         RETURN    ${NONE}
     END
     ${status_code}=    Set Variable    ${resp.status_code}
     IF    ${status_code} != 200
         ${body}=    Set Variable    ${resp.text}
-        ${body_preview}=    Evaluate    str($body)[:500]
+        ${auth_expired}=    Is Salesforce Auth Failure    ${status_code}    ${body}
+        IF    ${auth_expired}
+            Fail    AUTH_SESSION_EXPIRED: Salesforce REST session is no longer valid.
+        END
+        ${body_preview}=    Redact Sensitive Text    ${body}
+        ${body_preview}=    Evaluate    str($body_preview)[:500]
         Log
         ...    Salesforce GET returned HTTP ${status_code}: ${body_preview}
         ...    level=WARN

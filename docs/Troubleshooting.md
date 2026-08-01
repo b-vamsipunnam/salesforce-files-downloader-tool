@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Start with `results/log.html`, the batch-specific failed-ID workbook under `artifacts/`, and `results/pabot_results/` for parallel runs. Never publish `org_info.json`, tokens, customer data, or sensitive filenames.
+Start with the batch JSONL execution manifest and structured failed-ID workbook under `artifacts/`, then use `results/log.html` and `results/pabot_results/` for detailed execution context. Never publish manifests, `org_info.json`, tokens, customer data, or sensitive filenames.
 
 ## Salesforce CLI not found
 
