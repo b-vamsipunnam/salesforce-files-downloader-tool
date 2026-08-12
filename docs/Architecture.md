@@ -14,8 +14,8 @@ The editable source for the detailed diagram is [`architecture.svg`](architectur
 
 ## Component responsibilities
 
-- **Salesforce CLI** generates the authentication file before execution and retrieves daily API limits. Suite setup reads the alias, org ID, and API version from that file without invoking concurrent org-display commands.
-- **Salesforce REST API** executes paginated SOQL queries for `ContentDocument` and `ContentDocumentLink` metadata.
+- **Salesforce CLI** authenticates the operator and generates `org_info.json` before execution; it is not invoked by the main runtime workflow.
+- **Salesforce REST API** reads daily API limits and executes paginated SOQL queries for `ContentDocument` and `ContentDocumentLink` metadata.
 - **Selenium and Chrome** establish the Salesforce session through `frontdoor.jsp` and initiate Shepherd downloads.
 - **Robot Framework** coordinates suite initialization, strict configuration validation, per-batch API preflight, input normalization, metadata mapping, downloads, retry state, reporting, and teardown.
 - **Python libraries** provide safe Salesforce CLI JSON parsing, 15-to-18-character ID canonicalization, destination-aware filename handling, Chrome configuration, transactional Excel updates, and filesystem support used by Robot keywords.

@@ -56,11 +56,9 @@ The capacity preflight is enabled by default. This example retains 100 requests 
 ${ENABLE_API_CAPACITY_CHECK}          ${TRUE}
 ${API_REQUEST_SAFETY_BUFFER}          25
 ${MINIMUM_API_REQUESTS_REMAINING}     100
-${API_LIMIT_LOOKUP_MAX_ATTEMPTS}      3
-${API_LIMIT_LOOKUP_RETRY_DELAY}       2s
 ```
 
-Each batch counts one successful limits request plus the minimum expected metadata requests. The limits lookup is serialized across Pabot workers and retries transient CLI or response failures. Failed lookup attempts and metadata pagination can consume additional calls, and parallel workers do not share a reservation counter, so increase the buffer when operating near the daily limit.
+Each batch counts one Salesforce REST limits request plus the minimum expected metadata requests. Metadata pagination can consume additional calls, and parallel workers do not share a reservation counter, so increase the buffer when operating near the daily limit.
 
 ## Mix 15- and 18-character IDs safely
 

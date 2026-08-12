@@ -4,7 +4,7 @@
 
 This page covers the keywords that callers and maintainers are most likely to use. In each table, **What it does and when to use it** explains the intended role, while **Important behavior** calls out state changes, assumptions, and limits. Most projects should start with the orchestration keyword and use lower-level keywords only when extending or testing the workflow.
 
-## Salesforce CLI and authentication
+## Salesforce CLI authentication and runtime context
 
 **Source**
 
@@ -16,13 +16,12 @@ This page covers the keywords that callers and maintainers are most likely to us
 | `Resolve Salesforce CLI`        | Find `sf` on `PATH`.                        | None            | None          | Sets suite variable `${sf_cli_path}`; fails when missing.               |
 | `Validate Salesforce CLI`       | Verify the resolved CLI runs.               | None            | None          | Requires `${sf_cli_path}` and a zero exit code.                         |
 | `Load Org Context`              | Validate an alias and read its org context. | `${ORG_ALIAS}`  | None          | Sets the API version, org ID, and target alias at suite scope.          |
-| `Initialize Salesforce CLI Context From Org Info` | Load worker context from `org_info.json` during suite setup. | None | None | Sets the alias, org ID, and API version without running `sf org display`; resolves the CLI path for the capacity check. |
-| `Get Salesforce Daily API Limits` | Read `DailyApiRequests` before a batch. | Optional process keyword for tests; defaults to `Run Process` | Maximum and remaining requests | Captures output in memory, runs under a PabotLib lock, and retries bounded CLI or response failures. |
+| `Initialize Salesforce Context From Org Info` | Load runtime context from `org_info.json` during suite setup. | None | None | Sets the alias, org ID, and API version without invoking Salesforce CLI. |
 | `Estimate Metadata API Requests` | Estimate batched metadata calls. | ID count and ContentDocumentLink generation flag | Batch and request counts | Uses `${METADATA_BATCH_SIZE}` and does not predict pagination. |
-| `Check Salesforce API Capacity` | Run the preflight capacity guard. | ID count and ContentDocumentLink generation flag | None | Runs after manifest initialization and fails before migration-workbook or download-directory creation when estimated use, buffer, and reserve exceed remaining capacity. |
+| `Check Salesforce API Capacity` | Run the preflight capacity guard. | ID count, ContentDocumentLink generation flag, and REST session alias | None | Reads limits through REST after manifest initialization and fails before migration-workbook or download-directory creation when estimated use, buffer, and reserve exceed remaining capacity. |
 | `Validate Salesforce API Capacity` | Validate already-calculated capacity values. | Remaining requests, estimated tool requests, safety buffer, and minimum reserve | None | Pure capacity decision used by the preflight and offline tests. |
 | `Safe Parse Sf Json`            | Parse JSON from CLI output.                 | `${raw_output}` | Parsed object | Finds the first valid object or array without logging raw CLI output.   |
-| `Try Parse First Json Value`    | Probe CLI output when invalid JSON is an expected retry condition. | `${raw_output}` | Boolean status and parsed value | Returns `${FALSE}` and `${NONE}` instead of raising for empty or invalid output. |
+| `Try Parse First Json Value`    | Probe CLI output without raising on invalid JSON. | `${raw_output}` | Boolean status and parsed value | Returns `${FALSE}` and `${NONE}` for empty or invalid output. |
 | `Initialize Salesforce Session` | Create an authenticated REST session.       | None            | Session alias | Reads `org_info.json`; uses a unique RequestsLibrary alias.             |
 | `Get Salesforce Login Info`     | Prepare frontdoor browser authentication.   | None            | Login URL     | Sets `${org_domain}` and reads the token without ordinary log exposure. |
 
@@ -42,6 +41,7 @@ ${session}=    Initialize Salesforce Session
 | Keyword                                | What it does and when to use it               | Arguments                                         | Return value                      | Important behavior                                                         |
 |----------------------------------------|----------------------------------------------|---------------------------------------------------|-----------------------------------|----------------------------------------------------------------------------|
 | `Send Safe Salesforce GET Request`     | Send a REST GET through an existing session. | `${session_alias}`, `${url}`, `${params}=${NONE}` | Response or `${NONE}`             | Suppresses request logging and sanitizes failures.                         |
+| `Get Salesforce Daily API Limits Via REST` | Read `DailyApiRequests` before a batch. | `${session_alias}`, optional request keyword for tests | Maximum and remaining requests | Uses the authenticated REST limits endpoint; the runtime does not invoke Salesforce CLI. |
 | `Execute SOQL Query`                   | Retrieve all records for a SOQL query.       | `${soql}`, `${session_alias}`, optional request keyword | List of records                   | Follows `nextRecordsUrl`; enforces a 10,000-page safety bound. The optional keyword supports offline tests and defaults to the production request path. |
 | `Is Valid ContentDocument ID`          | Validate an input ID.                        | `${content_id}`                                   | Boolean                           | Accepts 15- or 18-character alphanumeric IDs beginning with `069`.         |
 | `Get ContentDocument Metadata Map`     | Query document metadata in batches.          | `${content_ids}`, `${batch_size}=200`, optional query keyword | Map keyed by document ID          | Includes title, extension, description, latest version, and expected size. The query override is intended for tests. |

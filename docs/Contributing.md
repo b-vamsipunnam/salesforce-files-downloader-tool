@@ -18,7 +18,7 @@ Keep changes consistent with the existing project structure and naming conventio
 
 ## Verification
 
-Start with the offline checks. They cover the Python libraries, Robot syntax, mocked Salesforce CLI retries, API-capacity decisions, SOQL pagination, metadata grouping, canonical ID handling, workbook rollback, and a real local headless-Chrome startup without connecting to Salesforce:
+Start with the offline checks. They cover the Python libraries, Robot syntax, mocked Salesforce REST limits, API-capacity decisions, SOQL pagination, metadata grouping, canonical ID handling, workbook rollback, and a real local headless-Chrome startup without connecting to Salesforce:
 
 ```bash
 ruff check src ci

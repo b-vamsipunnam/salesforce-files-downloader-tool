@@ -35,9 +35,6 @@ ${METADATA_BATCH_SIZE}                  200
 ${ENABLE_API_CAPACITY_CHECK}            ${TRUE}
 ${API_REQUEST_SAFETY_BUFFER}            25
 ${MINIMUM_API_REQUESTS_REMAINING}       100
-${API_LIMIT_LOOKUP_MAX_ATTEMPTS}        3
-${API_LIMIT_LOOKUP_RETRY_DELAY}         2s
-
 # Failed ContentDocument retry controls.
 ${ENABLE_FAILED_ID_RETRY}               ${TRUE}
 ${FAILED_ID_RETRY_COUNT}                2

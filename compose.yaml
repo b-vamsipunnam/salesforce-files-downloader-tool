@@ -1,0 +1,18 @@
+services:
+  downloader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    shm_size: "2gb"
+    environment:
+      CHROME_NO_SANDBOX: "${CHROME_NO_SANDBOX:-false}"
+    volumes:
+      - ./org_info.json:/app/org_info.json:ro
+      - ./input:/app/input:ro
+      - ./downloads:/app/downloads
+      - ./artifacts:/app/artifacts
+      - ./results:/app/results
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

@@ -11,6 +11,54 @@ import openpyxl
 from src.robot.libraries.ExcelLibrary import ExcelLibrary
 from src.robot.libraries.ExecutionReporting import FAILURE_CODES, ExecutionReporting
 from src.robot.libraries.SalesforceSupport import SalesforceSupport
+from src.robot.libraries.WebdriverManager import (
+    _configure_chrome_options,
+    _environment_flag_enabled,
+)
+
+
+class WebdriverManagerTests(unittest.TestCase):
+    def test_environment_flag_is_disabled_by_default(self):
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(_environment_flag_enabled("CHROME_NO_SANDBOX"))
+
+    def test_environment_flag_accepts_true(self):
+        with patch.dict(
+            os.environ, {"CHROME_NO_SANDBOX": "true"}, clear=True
+        ):
+            self.assertTrue(_environment_flag_enabled("CHROME_NO_SANDBOX"))
+
+    def test_environment_flag_is_trimmed_and_case_insensitive(self):
+        with patch.dict(
+            os.environ, {"CHROME_NO_SANDBOX": " YES "}, clear=True
+        ):
+            self.assertTrue(_environment_flag_enabled("CHROME_NO_SANDBOX"))
+
+    def test_environment_flag_rejects_unrecognized_value(self):
+        with patch.dict(
+            os.environ, {"CHROME_NO_SANDBOX": "enabled"}, clear=True
+        ):
+            self.assertFalse(_environment_flag_enabled("CHROME_NO_SANDBOX"))
+
+    @patch("src.robot.libraries.WebdriverManager.logger.warn")
+    def test_chrome_sandbox_is_enabled_by_default(self, warn):
+        with patch.dict(os.environ, {}, clear=True):
+            options = _configure_chrome_options("C:/downloads", None, True)
+
+        self.assertNotIn("--no-sandbox", options.arguments)
+        self.assertIn("--headless=new", options.arguments)
+        self.assertIn("--window-size=1920,1080", options.arguments)
+        warn.assert_not_called()
+
+    @patch("src.robot.libraries.WebdriverManager.logger.warn")
+    def test_chrome_sandbox_fallback_adds_argument_and_warning(self, warn):
+        with patch.dict(
+            os.environ, {"CHROME_NO_SANDBOX": "true"}, clear=True
+        ):
+            options = _configure_chrome_options("C:/downloads", None, True)
+
+        self.assertIn("--no-sandbox", options.arguments)
+        warn.assert_called_once()
 
 
 class ExcelLibraryTransactionTests(unittest.TestCase):

@@ -38,7 +38,8 @@ This project separates metadata retrieval from binary transfer and provides isol
 ## Key features
 
 - Accepts 15- and 18-character `ContentDocumentId` values, canonicalizes them to 18 characters, and removes duplicates
-- Uses Salesforce CLI authentication without storing usernames or passwords
+- Uses Salesforce CLI on the host to generate short-lived authentication context without storing usernames or passwords
+- Reads daily API limits through Salesforce REST without invoking Salesforce CLI during the main runtime workflow
 - Queries `ContentDocument` and all associated `ContentDocumentLink` records in batches
 - Starts the batch audit manifest, then checks Salesforce daily API capacity before creating migration workbooks or download directories
 - Downloads each physical file once into a ContentDocument-specific directory
@@ -70,11 +71,13 @@ robot --outputdir results src/robot/orchestrator/download.robot
 
 Downloaded files appear in `downloads/`, migration and failure workbooks in `artifacts/`, and Robot Framework reports in `results/`.
 
+Docker is also available as an optional, reproducible execution method. Authenticate with Salesforce CLI on the host, generate `org_info.json`, then run `docker compose run --rm downloader`. See [Containerization](docs/Containerization.md) for mounts, security, resource guidance, and parallel execution.
+
 ## Architecture
 
 ![Salesforce Files Bulk Downloader execution architecture](docs/architecture.svg)
 
-The tool uses Salesforce REST APIs for metadata and an authenticated Selenium browser for Shepherd file downloads. Robot Framework coordinates validation and reporting, while Pabot can isolate and run batches in parallel. See the [Architecture](docs/Architecture.md) guide for the complete workflow and detailed component diagram.
+The tool uses Salesforce CLI before execution to generate `org_info.json`, Salesforce REST APIs for limits and metadata, and an authenticated Selenium browser for Shepherd file downloads. Robot Framework coordinates validation and reporting, while Pabot can isolate and run batches in parallel. See the [Architecture](docs/Architecture.md) guide for the complete workflow and detailed component diagram.
 
 ## Contents
 
@@ -83,6 +86,7 @@ The tool uses Salesforce REST APIs for metadata and an authenticated Selenium br
 | [Introduction](docs/Introduction.md)                   | Salesforce Files concepts, enterprise migration challenges, and why this tool exists |
 | [Installation](docs/Installation.md)                   | Prerequisites and environment setup                                                  |
 | [Authentication](docs/Authentication.md)               | Salesforce CLI authentication and session handling                                   |
+| [Containerization](docs/Containerization.md)            | Optional Docker execution, mounts, security, and resource guidance                    |
 | [Configuration](docs/Configuration.md)                 | Runtime variables, paths, timeouts, and execution settings                           |
 | [Usage](docs/Usage.md)                                 | Sequential and parallel execution instructions                                       |
 | [Examples](docs/Examples.md)                           | Common execution scenarios                                                           |

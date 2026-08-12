@@ -69,9 +69,11 @@ Download Files Using Content Document IDs
             Log To Console
             ...    No ContentDocumentIds found. Skipping download and Data Loader file generation.
         ELSE
+            ${session_alias}=    Initialize Salesforce Session
             Check Salesforce API Capacity
             ...    ${total_records}
             ...    ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
+            ...    ${session_alias}
 
             ${cv_row}=    Set Variable    2
             ${cdl_row}=    Set Variable    2
@@ -90,7 +92,6 @@ Download Files Using Content Document IDs
             Set Test Variable    ${download_directory}
             ${previous_level}=    Set Log Level    NONE
             TRY
-                ${session_alias}=    Initialize Salesforce Session
                 ${login_url}=    Get Salesforce Login Info
                 Configure Browser
                 ...    ${download_directory}

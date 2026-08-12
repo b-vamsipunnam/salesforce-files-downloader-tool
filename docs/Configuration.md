@@ -27,8 +27,6 @@ Failing early here is deliberate. A value such as `Yse` or `True` should not qui
 | `${ENABLE_API_CAPACITY_CHECK}` | `${TRUE}` | Check DailyApiRequests before processing |
 | `${API_REQUEST_SAFETY_BUFFER}` | `25`    | Extra API requests reserved for estimation variance |
 | `${MINIMUM_API_REQUESTS_REMAINING}` | `100` | Required API capacity left after estimated metadata calls |
-| `${API_LIMIT_LOOKUP_MAX_ATTEMPTS}` | `3` | Maximum Salesforce CLI limits-command attempts |
-| `${API_LIMIT_LOOKUP_RETRY_DELAY}` | `2s` | Delay between failed limits-command attempts |
 | `${DOWNLOAD_APPEAR_TIMEOUT}`   | `60s`   | Wait for a browser download to appear    |
 | `${DOWNLOAD_COMPLETE_TIMEOUT}` | `60s`   | Wait for temporary download state to end |
 | `${FILE_STABILITY_MAX_CHECKS}` | `60`    | Maximum file stability checks            |
@@ -41,9 +39,9 @@ Failing early here is deliberate. A value such as `Yse` or `True` should not qui
 
 The default metadata batch size of 200 balances SOQL request efficiency with reliable query execution for large migrations.
 
-The batch output directory and execution manifest are initialized before input reading and API preflight so early failures remain auditable. The preflight then reads `DailyApiRequests` through Salesforce CLI before creating migration workbooks or download directories. The limits command is serialized across Pabot workers and retried when it returns a nonzero exit code, empty output, invalid JSON, or no `DailyApiRequests` entry. Its minimum estimate counts one successful limits request, one `ContentDocument` query per metadata batch, and a second query per batch when ContentDocumentLink output is enabled. Paginated `nextRecordsUrl` requests are not predictable from the input count and are covered only by the configured safety buffer. Failed CLI attempts may also consume requests, so retain a buffer that reflects the expected relationship volume instead of treating the default as universally safe.
+The batch output directory and execution manifest are initialized before input reading and API preflight so early failures remain auditable. The preflight reads `DailyApiRequests` from Salesforce's REST limits endpoint before creating migration workbooks or download directories. Its minimum estimate counts one limits request, one `ContentDocument` query per metadata batch, and a second query per batch when ContentDocumentLink output is enabled. Paginated `nextRecordsUrl` requests are not predictable from the input count and are covered only by the configured safety buffer.
 
-Suite setup reads org context from `org_info.json` and resolves the CLI path once per Robot process. Each batch still performs its own capacity lookup. This is a conservative per-batch check, not a global reservation across simultaneous workers. Use non-overlapping inputs and increase the buffer when parallel executions approach the org's daily API limit.
+Suite setup reads org context from `org_info.json` without invoking Salesforce CLI. Each batch performs its own REST capacity lookup. This is a conservative per-batch check, not a global reservation across simultaneous workers. Use non-overlapping inputs and increase the buffer when parallel executions approach the org's daily API limit.
 
 Increase timeouts only after checking file access, browser behavior, network throughput, and disk performance. Larger SOQL batches reduce request count but make each query longer.
 

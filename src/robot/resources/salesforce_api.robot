@@ -105,6 +105,31 @@ Send Safe Salesforce GET Request
     END
     RETURN    ${resp}
 
+Get Salesforce Daily API Limits Via REST
+    [Documentation]     Retrieves DailyApiRequests from the Salesforce REST limits endpoint so authenticated org_info.json execution does not require Salesforce CLI inside the runtime environment.
+    [Arguments]    ${session_alias}    ${request_keyword}=Send Safe Salesforce GET Request
+    ${resp}=    Run Keyword
+    ...    ${request_keyword}
+    ...    ${session_alias}
+    ...    /services/data/v${api_version}/limits
+    IF    $resp is None
+        Fail    Unable to retrieve Salesforce DailyApiRequests from the REST limits endpoint.
+    END
+    ${payload}=    Evaluate    $resp.json()
+    ${daily_limit}=    Get From Dictionary
+    ...    ${payload}
+    ...    DailyApiRequests
+    ...    default=${NONE}
+    Should Not Be Equal
+    ...    ${daily_limit}
+    ...    ${NONE}
+    ...    msg=DailyApiRequests was not present in the Salesforce REST limits response.
+    ${maximum}=    Get From Dictionary    ${daily_limit}    Max
+    ${remaining}=    Get From Dictionary    ${daily_limit}    Remaining
+    ${maximum}=    Convert To Integer    ${maximum}
+    ${remaining}=    Convert To Integer    ${remaining}
+    RETURN    ${maximum}    ${remaining}
+
 Execute SOQL Query
     [Documentation]     Executes a SOQL query through the active Salesforce REST session and follows nextRecordsUrl pagination until all records are retrieved. Fails when a request is unsuccessful, pagination data is incomplete, or the pagination safety limit is exceeded.
     [Arguments]

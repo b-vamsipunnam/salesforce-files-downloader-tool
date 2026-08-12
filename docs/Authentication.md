@@ -32,7 +32,7 @@ sf org display --json --target-org <org_alias> > org_info.json
 
 The downloader does not remove `org_info.json` during suite teardown because parallel workers share it. Delete it manually only after the complete Robot or Pabot execution has finished.
 
-Authentication is managed entirely through Salesforce CLI. The downloader never stores Salesforce usernames or passwords and does not refresh expired sessions during execution.
+Salesforce CLI is used on the host to authenticate and generate `org_info.json`. The runtime reads that file directly for REST and browser authentication and does not invoke Salesforce CLI. The downloader never stores Salesforce usernames or passwords and does not refresh expired sessions during execution.
 
 Access tokens are short-lived, and their lifetime depends on your Salesforce organization's session timeout settings. If authentication fails because the session has expired, regenerate `org_info.json` before rerunning the downloader.
 

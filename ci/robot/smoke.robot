@@ -113,13 +113,18 @@ CI Smoke – Allows Disabled API Capacity Check
     Set Test Variable    ${ENABLE_API_CAPACITY_CHECK}    ${FALSE}
     Check Salesforce API Capacity    100    Yes
 
-CI Smoke – Pabot Lock Is Available
-    pabot.PabotLib.Acquire Lock    smoke_salesforce_cli_lock
-    TRY
-        Log    Cross-process lock acquired.
-    FINALLY
-        pabot.PabotLib.Release Lock    smoke_salesforce_cli_lock
-    END
+CI Smoke – Reads Daily API Limits Through REST
+    Set Test Variable    ${api_version}    61.0
+    ${daily_limit}=    Create Dictionary    Max=100000    Remaining=90000
+    ${payload}=    Create Dictionary    DailyApiRequests=${daily_limit}
+    ${response}=    Evaluate
+    ...    type("MockResponse", (), {"json": lambda self, payload=$payload: payload})()
+    Set Test Variable    ${MOCK_LIMITS_RESPONSE}    ${response}
+    ${maximum}    ${remaining}=    Get Salesforce Daily API Limits Via REST
+    ...    mock-session
+    ...    Return Mock Limits Response
+    Should Be Equal As Integers    ${maximum}    100000
+    Should Be Equal As Integers    ${remaining}    90000
 
 CI Smoke – Logs API Capacity Values
     Set Test Variable    ${SF_ORG_ALIAS}    DemoHub
@@ -281,44 +286,6 @@ CI Smoke – API Capacity Validation Fails
     ...    25
     ...    100
 
-CI Smoke – CLI Limit Lookup Retries Then Succeeds
-    ${failed}=    Create Dictionary
-    ...    rc=1
-    ...    stdout=${EMPTY}
-    ...    stderr=temporary failure
-    ${valid_output}=    Set Variable
-    ...    {"result":[{"name":"DailyApiRequests","max":100000,"remaining":90000}]}
-    ${successful}=    Create Dictionary
-    ...    rc=0
-    ...    stdout=${valid_output}
-    ...    stderr=${EMPTY}
-    ${results}=    Create List    ${failed}    ${successful}
-    Set Test Variable    ${MOCK_CLI_RESULTS}    ${results}
-    Set Test Variable    ${sf_cli_path}    mock-sf
-    Set Test Variable    ${SF_ORG_ALIAS}    mock-org
-    Set Test Variable    ${API_LIMIT_LOOKUP_RETRY_DELAY}    0s
-    ${maximum}    ${remaining}=    Get Salesforce Daily API Limits
-    ...    Run Mock Salesforce CLI Process
-    Should Be Equal As Integers    ${maximum}    100000
-    Should Be Equal As Integers    ${remaining}    90000
-    Should Be Empty    ${MOCK_CLI_RESULTS}
-
-CI Smoke – CLI Limit Lookup Fails After All Attempts
-    ${failed}=    Create Dictionary
-    ...    rc=1
-    ...    stdout=${EMPTY}
-    ...    stderr=permanent failure
-    ${results}=    Create List    ${failed}    ${failed}    ${failed}
-    Set Test Variable    ${MOCK_CLI_RESULTS}    ${results}
-    Set Test Variable    ${sf_cli_path}    mock-sf
-    Set Test Variable    ${SF_ORG_ALIAS}    mock-org
-    Set Test Variable    ${API_LIMIT_LOOKUP_RETRY_DELAY}    0s
-    Run Keyword And Expect Error
-    ...    Unable to retrieve Salesforce DailyApiRequests after 3 attempts.*
-    ...    Get Salesforce Daily API Limits
-    ...    Run Mock Salesforce CLI Process
-    Should Be Empty    ${MOCK_CLI_RESULTS}
-
 CI Smoke – SOQL Query Follows Pagination
     Set Test Variable    ${api_version}    61.0
     ${first_record}=    Create Dictionary    Id=069AAAAAAAAAAAAY55
@@ -406,20 +373,16 @@ CI Smoke – Preserves Multiple ContentDocument Links
 
 
 *** Keywords ***
-Run Mock Salesforce CLI Process
-    [Arguments]    @{arguments}
-    ${result}=    Remove From List    ${MOCK_CLI_RESULTS}    0
-    ${response}=    Evaluate
-    ...    types.SimpleNamespace(**$result)
-    ...    modules=types
-    RETURN    ${response}
-
 Return Mock Salesforce Page
     [Arguments]    ${session_alias}    ${url}    ${params}=${NONE}
     ${payload}=    Remove From List    ${MOCK_SOQL_PAGES}    0
     ${response}=    Evaluate
     ...    type("MockResponse", (), {"json": lambda self, payload=$payload: payload})()
     RETURN    ${response}
+
+Return Mock Limits Response
+    [Arguments]    ${session_alias}    ${url}
+    RETURN    ${MOCK_LIMITS_RESPONSE}
 
 Return Mock SOQL Records
     [Arguments]    ${soql}    ${session_alias}

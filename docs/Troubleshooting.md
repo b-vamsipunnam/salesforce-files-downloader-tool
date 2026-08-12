@@ -2,11 +2,11 @@
 
 Start with the batch JSONL execution manifest and structured failed-ID workbook under `artifacts/`, then use `results/log.html` and `results/pabot_results/` for detailed execution context. Never publish manifests, `org_info.json`, tokens, customer data, or sensitive filenames.
 
-## Salesforce CLI not found
+## Salesforce CLI not found during authentication setup
 
 **Symptoms**
 
-The suite reports that `sf` is missing or the shell does not recognize the command.
+The shell does not recognize `sf` while authenticating or generating `org_info.json`.
 
 **Likely cause**
 
@@ -88,7 +88,7 @@ The org's `DailyApiRequests` allocation cannot accommodate the estimated metadat
 
 Reduce the input batch, wait for API capacity to reset, or review `${API_REQUEST_SAFETY_BUFFER}` and `${MINIMUM_API_REQUESTS_REMAINING}` with the owners of other org integrations. Do not disable the check unless API consumption is managed externally. Parallel Pabot workers do not share a reservation counter, so use additional buffer when their combined demand approaches the limit.
 
-The limits lookup automatically retries transient CLI failures using `${API_LIMIT_LOOKUP_MAX_ATTEMPTS}` and `${API_LIMIT_LOOKUP_RETRY_DELAY}`. Investigate Salesforce CLI authentication and local process behavior if every attempt fails.
+The limits lookup uses the authenticated Salesforce REST session. If it fails, verify that `org_info.json` is current, the session has API access, and the configured API version supports the limits endpoint.
 
 The console intentionally says `Minimum Estimated Metadata Requests`. SOQL pagination depends on Salesforce response volume and cannot be predicted from the number of input IDs alone. If a batch has unusually high relationship volume, increase `${API_REQUEST_SAFETY_BUFFER}` rather than treating the estimate as an exact forecast.
 
@@ -214,15 +214,15 @@ Free space or move the configured output roots to a larger volume. Allow capacit
 
 **Symptoms**
 
-Multiple workers process the same ContentDocumentId, shared runtime files disappear unexpectedly, or parallel workers report invalid Salesforce CLI JSON while sequential execution succeeds.
+Multiple workers process the same ContentDocumentId, shared runtime files disappear unexpectedly, or parallel workers exceed expected API consumption while sequential execution succeeds.
 
 **Likely cause**
 
-Input workbooks overlap, custom output paths are shared, a custom worker teardown removes `org_info.json` before all workers finish, or an older project version runs Salesforce CLI commands concurrently without a cross-process lock.
+Input workbooks overlap, custom output paths are shared, a custom worker teardown removes `org_info.json` before all workers finish, or workers run too close to the org's remaining API capacity without a shared reservation.
 
 **Resolution**
 
-Use non-overlapping input batches, retain UUID-based output paths, include `--pabotlib` in the Pabot command, and remove the shared authentication file only after the complete Pabot run. Current worker setup reads org context directly from `org_info.json`, and the limits lookup uses a PabotLib lock.
+Use non-overlapping input batches, retain UUID-based output paths, include `--pabotlib` in the Pabot command, apply a concurrency-aware API safety buffer, and remove the shared authentication file only after the complete Pabot run. Current workers read org context directly from `org_info.json` and query limits through Salesforce REST.
 
 ## GitHub Actions smoke-test failure
 

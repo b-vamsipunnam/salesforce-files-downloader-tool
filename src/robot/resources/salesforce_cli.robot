@@ -5,7 +5,6 @@ Library             OperatingSystem
 Library             Collections
 Library             Process
 Library             json
-Library             pabot.PabotLib
 Library             ../libraries/SalesforceSupport.py
 Resource            configuration.robot
 
@@ -68,7 +67,11 @@ Load Org Context
     ...    Connected to ${SF_ORG_ALIAS} (API v${CLI_API_VERSION})
 
 Initialize Salesforce CLI Context From Org Info
-    [Documentation]     Loads the authenticated alias, org ID, and API version directly from org_info.json and resolves the CLI path without running an org display command.
+    [Documentation]     Backward-compatible alias for loading the runtime context from org_info.json.
+    Initialize Salesforce Context From Org Info
+
+Initialize Salesforce Context From Org Info
+    [Documentation]     Loads the authenticated alias, org ID, and API version directly from org_info.json without requiring Salesforce CLI at runtime.
     ${current_sf_path}=    Get Variable Value
     ...    \${sf_cli_path}
     ...    ${NONE}
@@ -116,134 +119,11 @@ Initialize Salesforce CLI Context From Org Info
         ...    msg=The loaded Salesforce CLI context does not match ${ORG_INFO_FILE}. Regenerate the authentication file from the intended org.
         RETURN
     END
-    Resolve Salesforce CLI
     Set Suite Variable    ${SF_ORG_ALIAS}    ${org_alias}
     Set Suite Variable    ${CLI_ORG_ID}    ${org_info_id}
     Set Suite Variable    ${CLI_API_VERSION}    ${org_info_api_version}
     Log To Console
     ...    Connected to ${SF_ORG_ALIAS} (API v${CLI_API_VERSION})
-
-Get Salesforce Daily API Limits
-    [Documentation]     Retrieves DailyApiRequests through a locked Salesforce CLI command and retries bounded transient failures such as nonzero exit codes, empty output, invalid JSON, or a missing limit.
-    [Arguments]    ${process_keyword}=Run Process
-    ${max_attempts}=    Convert To Integer
-    ...    ${API_LIMIT_LOOKUP_MAX_ATTEMPTS}
-    Should Be True
-    ...    ${max_attempts} > 0
-    ...    msg=API_LIMIT_LOOKUP_MAX_ATTEMPTS must be greater than zero.
-    ${last_error}=    Set Variable
-    ...    Salesforce CLI limits lookup did not run.
-    ${range_end}=    Evaluate    $max_attempts + 1
-
-    FOR    ${attempt}    IN RANGE    1    ${range_end}
-        pabot.PabotLib.Acquire Lock    salesforce_cli_lock
-        TRY
-            ${limits_res}=    Run Keyword
-            ...    ${process_keyword}
-            ...    ${sf_cli_path}
-            ...    org
-            ...    list
-            ...    limits
-            ...    --target-org
-            ...    ${SF_ORG_ALIAS}
-            ...    --json
-        FINALLY
-            pabot.PabotLib.Release Lock    salesforce_cli_lock
-        END
-
-        IF    ${limits_res.rc} != 0
-            ${last_error}=    Set Variable
-            ...    Salesforce CLI exited with code ${limits_res.rc}: ${limits_res.stderr}
-            Log Salesforce Limit Lookup Retry
-            ...    ${attempt}
-            ...    ${max_attempts}
-            ...    ${last_error}
-            IF    ${attempt} < ${max_attempts}    CONTINUE
-            BREAK
-        END
-
-        ${stdout}=    Evaluate    str($limits_res.stdout).strip()
-        IF    not $stdout
-            ${last_error}=    Set Variable
-            ...    Salesforce CLI returned empty output with exit code 0.
-            Log Salesforce Limit Lookup Retry
-            ...    ${attempt}
-            ...    ${max_attempts}
-            ...    ${last_error}
-            IF    ${attempt} < ${max_attempts}    CONTINUE
-            BREAK
-        END
-
-        ${parsed}    ${limits_json}=    Try Parse First Json Value
-        ...    ${stdout}
-        IF    not ${parsed}
-            ${last_error}=    Set Variable
-            ...    Salesforce CLI returned invalid JSON with exit code 0.
-            Log Salesforce Limit Lookup Retry
-            ...    ${attempt}
-            ...    ${max_attempts}
-            ...    ${last_error}
-            IF    ${attempt} < ${max_attempts}    CONTINUE
-            BREAK
-        END
-
-        ${has_result}=    Evaluate
-        ...    isinstance($limits_json, dict) and isinstance($limits_json.get("result"), list)
-        IF    not ${has_result}
-            ${last_error}=    Set Variable
-            ...    Salesforce CLI limits response did not contain a result list.
-            Log Salesforce Limit Lookup Retry
-            ...    ${attempt}
-            ...    ${max_attempts}
-            ...    ${last_error}
-            IF    ${attempt} < ${max_attempts}    CONTINUE
-            BREAK
-        END
-
-        ${limits}=    Get From Dictionary    ${limits_json}    result
-        ${daily_limit}=    Set Variable    ${NONE}
-        FOR    ${limit}    IN    @{limits}
-            ${is_daily_limit}=    Evaluate
-            ...    isinstance($limit, dict) and $limit.get("name") == "DailyApiRequests"
-            IF    ${is_daily_limit}
-                ${daily_limit}=    Set Variable    ${limit}
-                BREAK
-            END
-        END
-        IF    $daily_limit is None
-            ${last_error}=    Set Variable
-            ...    DailyApiRequests was not present in the Salesforce CLI response.
-            Log Salesforce Limit Lookup Retry
-            ...    ${attempt}
-            ...    ${max_attempts}
-            ...    ${last_error}
-            IF    ${attempt} < ${max_attempts}    CONTINUE
-            BREAK
-        END
-
-        ${maximum}=    Get From Dictionary    ${daily_limit}    max
-        ${remaining}=    Get From Dictionary    ${daily_limit}    remaining
-        ${maximum}=    Convert To Integer    ${maximum}
-        ${remaining}=    Convert To Integer    ${remaining}
-        RETURN    ${maximum}    ${remaining}
-    END
-
-    Fail
-    ...    Unable to retrieve Salesforce DailyApiRequests after ${max_attempts} attempts. Last error: ${last_error}
-
-Log Salesforce Limit Lookup Retry
-    [Documentation]     Logs a sanitized warning for a failed limits lookup attempt and waits before another attempt when retries remain.
-    [Arguments]    ${attempt}    ${max_attempts}    ${reason}
-    IF    ${attempt} < ${max_attempts}
-        Log
-        ...    Salesforce API limit lookup attempt ${attempt} failed: ${reason} Retrying.
-        ...    level=WARN
-        Sleep    ${API_LIMIT_LOOKUP_RETRY_DELAY}
-    ELSE
-        Log
-        ...    Salesforce API limit lookup attempt ${attempt} failed: ${reason}
-        ...    level=WARN
-    END
 
 Estimate Metadata API Requests
     [Documentation]     Estimates REST requests for batched ContentDocument and optional ContentDocumentLink metadata retrieval.
@@ -274,14 +154,19 @@ Check Salesforce API Capacity
     [Arguments]
     ...    ${content_id_count}
     ...    ${generate_content_document_link_file}
+    ...    ${session_alias}=${NONE}
     IF    not ${ENABLE_API_CAPACITY_CHECK}
         Log To Console
         ...    Salesforce API capacity check is disabled.
         RETURN
     END
 
-    Initialize Salesforce CLI Context From Org Info
-    ${daily_max}    ${daily_remaining}=    Get Salesforce Daily API Limits
+    Should Not Be Equal
+    ...    ${session_alias}
+    ...    ${NONE}
+    ...    msg=An initialized Salesforce REST session is required for the API capacity check.
+    ${daily_max}    ${daily_remaining}=    Get Salesforce Daily API Limits Via REST
+    ...    ${session_alias}
     ${metadata_batches}    ${estimated_metadata_requests}=
     ...    Estimate Metadata API Requests
     ...    ${content_id_count}

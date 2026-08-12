@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1160" viewBox="0 0 1200 1160" role="img" aria-labelledby="title description">
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1200" height="1160" viewBox="0 0 1200 1160" role="img" aria-labelledby="title description">
   <title id="title">Salesforce Files Bulk Downloader execution architecture</title>
   <desc id="description">A top-to-bottom workflow showing input normalization, API preflight, metadata retrieval, browser download, validation, atomic workbook updates, and retry or failure handling.</desc>
 
@@ -19,8 +20,15 @@
       .flow { fill: none; stroke: #60758b; stroke-width: 2.75; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
       .retry { fill: none; stroke: #a9550a; stroke-width: 2.75; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 8 7; marker-end: url(#arrow-orange); }
     </style>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#243b53" flood-opacity="0.10"/>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="blur"/>
+      <feOffset in="blur" dx="0" dy="3" result="offsetBlur"/>
+      <feFlood flood-color="#243b53" flood-opacity="0.10" result="shadowColor"/>
+      <feComposite in="shadowColor" in2="offsetBlur" operator="in" result="shadowBlur"/>
+      <feMerge>
+        <feMergeNode in="shadowBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
     <linearGradient id="page-background" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#f8fafc"/>
@@ -45,11 +53,11 @@
 
   <rect x="70" y="158" width="335" height="55" rx="11" class="box" fill="#f7f9fc"/>
   <text x="237" y="181" text-anchor="middle" class="heading">Salesforce CLI</text>
-  <text x="237" y="202" text-anchor="middle" class="small">Org context, authentication, and daily limits</text>
+  <text x="237" y="202" text-anchor="middle" class="small">Host authentication and org_info.json generation</text>
 
   <rect x="440" y="158" width="335" height="55" rx="11" class="box" fill="#eef5fa"/>
   <text x="600" y="181" text-anchor="middle" class="heading">Salesforce REST API</text>
-  <text x="600" y="202" text-anchor="middle" class="small">Document metadata and visible relationships</text>
+  <text x="600" y="202" text-anchor="middle" class="small">API limits, document metadata, and relationships</text>
 
   <rect x="810" y="158" width="335" height="55" rx="11" class="box" fill="#f7f9fc"/>
   <text x="977" y="181" text-anchor="middle" class="heading">Pabot Isolation</text>

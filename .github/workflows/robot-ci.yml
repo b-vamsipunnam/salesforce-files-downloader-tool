@@ -11,6 +11,90 @@ permissions:
   contents: read
 
 jobs:
+  container-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t salesforce-files-downloader:test .
+
+      - name: Check Python version
+        run: docker run --rm --entrypoint python salesforce-files-downloader:test --version
+
+      - name: Check Robot Framework version
+        run: |
+          docker run --rm --entrypoint python salesforce-files-downloader:test \
+            -c "import robot; print(robot.__version__)"
+
+      - name: Check Chrome version
+        run: docker run --rm --entrypoint google-chrome salesforce-files-downloader:test --version
+
+      - name: Verify non-root runtime identity
+        run: |
+          test "$(docker run --rm --entrypoint id salesforce-files-downloader:test -u)" = "10001"
+
+      - name: Verify sandboxed Chrome startup
+        run: |
+          docker run --rm \
+            --shm-size=2g \
+            --security-opt no-new-privileges:true \
+            --cap-drop ALL \
+            --entrypoint google-chrome \
+            salesforce-files-downloader:test \
+            --headless=new \
+            --disable-gpu \
+            --dump-dom \
+            about:blank
+
+      - name: Verify mount permissions and host persistence
+        run: |
+          runtime_dir="$(mktemp -d)"
+          mkdir -p \
+            "$runtime_dir/input" \
+            "$runtime_dir/downloads" \
+            "$runtime_dir/artifacts" \
+            "$runtime_dir/results"
+          chmod 777 \
+            "$runtime_dir/downloads" \
+            "$runtime_dir/artifacts" \
+            "$runtime_dir/results"
+          printf '{"result":{}}' > "$runtime_dir/org_info.json"
+
+          docker run --rm \
+            --entrypoint sh \
+            --mount "type=bind,src=$runtime_dir/org_info.json,dst=/app/org_info.json,readonly" \
+            --mount "type=bind,src=$runtime_dir/input,dst=/app/input,readonly" \
+            --mount "type=bind,src=$runtime_dir/downloads,dst=/app/downloads" \
+            --mount "type=bind,src=$runtime_dir/artifacts,dst=/app/artifacts" \
+            --mount "type=bind,src=$runtime_dir/results,dst=/app/results" \
+            salesforce-files-downloader:test \
+            -c 'set -eu
+              if touch /app/input/must-fail; then exit 1; fi
+              if printf x >> /app/org_info.json; then exit 1; fi
+              touch /app/downloads/persisted
+              touch /app/artifacts/persisted
+              touch /app/results/persisted'
+
+          test -f "$runtime_dir/downloads/persisted"
+          test -f "$runtime_dir/artifacts/persisted"
+          test -f "$runtime_dir/results/persisted"
+
+      - name: Verify runtime secrets are absent from image
+        run: |
+          docker run --rm --entrypoint sh salesforce-files-downloader:test \
+            -c 'test ! -e /app/org_info.json && ! find /app -type f -name "*.auth.json" -print -quit | grep -q .'
+
+      - name: Run container smoke tests
+        run: |
+          docker run --rm --entrypoint python salesforce-files-downloader:test \
+            -m unittest discover -s ci/tests -v
+          docker run --rm --entrypoint robot salesforce-files-downloader:test \
+            --outputdir /tmp/robot-smoke ci/robot/smoke.robot
+
   robot-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15

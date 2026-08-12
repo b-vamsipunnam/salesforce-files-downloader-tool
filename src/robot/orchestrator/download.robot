@@ -3,7 +3,7 @@ Documentation       Automates bulk downloads of Salesforce files using ContentDo
 
 Resource            ../resources/keywords.robot
 
-Suite Setup         Initialize Salesforce CLI Context From Org Info
+Suite Setup         Initialize Salesforce Context From Org Info
 Suite Teardown      Cleanup Download Suite
 
 
