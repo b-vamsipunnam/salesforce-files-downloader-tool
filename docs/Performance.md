@@ -28,7 +28,7 @@ These measurements describe one run configuration, not a throughput guarantee. R
 Pabot splits batch tests across processes only when `--testlevelsplit` is used. Every process owns a Chrome instance and UUID-based download and artifact directories.
 
 ```bash
-pabot --pabotlib --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
+pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
 ```
 
 ## Worker scaling
@@ -41,9 +41,8 @@ A download succeeds only after the framework detects a non-temporary file, obser
 
 ## Retry behavior
 
-The downloader has three separate retry layers:
+The downloader has two retry layers:
 
-- The Salesforce CLI limits lookup retries up to `${API_LIMIT_LOOKUP_MAX_ATTEMPTS}` times, waiting `${API_LIMIT_LOOKUP_RETRY_DELAY}` after a transient command or response failure.
 - File movement retries temporary filesystem locks until `${FILE_MOVE_TIMEOUT}` expires, waiting `${FILE_MOVE_RETRY_INTERVAL}` between attempts.
 - After the primary batch pass, failed downloads receive up to `${FAILED_ID_RETRY_COUNT}` additional full-download attempts when `${ENABLE_FAILED_ID_RETRY}` is enabled. `${FAILED_ID_RETRY_DELAY}` is applied between those additional attempts.
 

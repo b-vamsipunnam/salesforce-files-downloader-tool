@@ -45,11 +45,11 @@
 
   <rect x="70" y="158" width="335" height="55" rx="11" class="box" fill="#f7f9fc"/>
   <text x="237" y="181" text-anchor="middle" class="heading">Salesforce CLI</text>
-  <text x="237" y="202" text-anchor="middle" class="small">Org context, authentication, and daily limits</text>
+  <text x="237" y="202" text-anchor="middle" class="small">Login and protected authentication-file generation</text>
 
   <rect x="440" y="158" width="335" height="55" rx="11" class="box" fill="#eef5fa"/>
   <text x="600" y="181" text-anchor="middle" class="heading">Salesforce REST API</text>
-  <text x="600" y="202" text-anchor="middle" class="small">Document metadata and visible relationships</text>
+  <text x="600" y="202" text-anchor="middle" class="small">API capacity, document metadata, and relationships</text>
 
   <rect x="810" y="158" width="335" height="55" rx="11" class="box" fill="#f7f9fc"/>
   <text x="977" y="181" text-anchor="middle" class="heading">Pabot Isolation</text>

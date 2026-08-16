@@ -4,7 +4,6 @@ This roadmap records areas for improvement and exploration. It does not commit t
 
 ## Near-term
 
-- Improve error categorization
 - Improve resumable batch execution
 - Add checksum reporting
 - Add more execution examples
@@ -16,7 +15,6 @@ This roadmap records areas for improvement and exploration. It does not commit t
 - Coordinate API-capacity reservations across parallel workers
 - Refresh expired Salesforce sessions during long-running executions
 - Enhanced migration reconciliation
-- Structured JSON reporting
 - Configurable storage organization and retention workflows
 - Additional browser compatibility research
 - Performance profiling and worker-scaling improvements

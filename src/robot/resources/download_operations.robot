@@ -371,7 +371,7 @@ Validate And Move Downloaded File
     END
     IF    ${target_file_exists} and ${is_file_size_matching}
         ${write_status}    ${write_message}=    Run Keyword And Ignore Error
-        ...    Write Migration Rows Atomically
+        ...    Write Sanitized Migration Rows Atomically
         ...    ${cv_file_name}
         ...    ${cv_row}
         ...    ${file_title}

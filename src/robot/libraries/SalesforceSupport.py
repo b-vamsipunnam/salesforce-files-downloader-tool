@@ -2,7 +2,6 @@
 Adds functionality to Robot Framework SeleniumLibrary Browser Management.
 E.g. from https://github.com/robotframework/SeleniumLibrary/blob/master/docs/extending/extending/InheritSeleniumLibrary.py
 """
-import json
 import os
 import platform
 import re
@@ -62,39 +61,6 @@ class SalesforceSupport:
 
             options_class.__init__ = new_init
             _CHROME_OPTIONS_PATCHED = True
-
-    def parse_first_json_value(self, raw_output: str) -> Any:
-        """Return the first valid JSON object or array found in CLI output."""
-        if not isinstance(raw_output, str):
-            raise TypeError("Salesforce CLI output must be a string.")
-
-        decoder = json.JSONDecoder()
-        candidate_positions = [
-            index
-            for index, character in enumerate(raw_output)
-            if character in "{["
-        ]
-
-        for position in candidate_positions:
-            try:
-                value, _ = decoder.raw_decode(raw_output[position:])
-                return value
-            except json.JSONDecodeError:
-                continue
-
-        raise ValueError(
-            "No valid JSON object or array found in Salesforce CLI output."
-        )
-
-    def try_parse_first_json_value(
-        self,
-        raw_output: str,
-    ) -> tuple[bool, Any | None]:
-        """Try to parse CLI JSON without raising for expected invalid output."""
-        try:
-            return True, self.parse_first_json_value(raw_output)
-        except (TypeError, ValueError):
-            return False, None
 
     def sanitize_local_filename(
         self,

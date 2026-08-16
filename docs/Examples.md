@@ -31,7 +31,7 @@ These values are case-insensitive and may contain surrounding whitespace, but th
 Execute the four configured batch tests across up to four parallel worker processes:
 
 ```bash
-pabot --pabotlib --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
+pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
 ```
 
 Where practical, distribute a similar number of IDs across input workbooks to improve parallel execution efficiency. A small batch can finish while another worker continues processing a much larger input.
@@ -56,11 +56,9 @@ The capacity preflight is enabled by default. This example retains 100 requests 
 ${ENABLE_API_CAPACITY_CHECK}          ${TRUE}
 ${API_REQUEST_SAFETY_BUFFER}          25
 ${MINIMUM_API_REQUESTS_REMAINING}     100
-${API_LIMIT_LOOKUP_MAX_ATTEMPTS}      3
-${API_LIMIT_LOOKUP_RETRY_DELAY}       2s
 ```
 
-Each batch counts one successful limits request plus the minimum expected metadata requests. The limits lookup is serialized across Pabot workers and retries transient CLI or response failures. Failed lookup attempts and metadata pagination can consume additional calls, and parallel workers do not share a reservation counter, so increase the buffer when operating near the daily limit.
+Each batch counts one authenticated REST limits request plus the minimum expected metadata requests. Workers query limits independently and do not share a reservation counter. Metadata pagination can consume additional calls, so increase the buffer when operating near the daily limit.
 
 ## Mix 15- and 18-character IDs safely
 

@@ -3,14 +3,10 @@ Documentation       Defines shared paths, timeouts, batch sizes, temporary-file 
 
 
 *** Variables ***
-# Temporary browser download markers and runtime-generated artifacts used during cleanup.
+# Temporary browser download markers.
 @{TEMP_FILE_SUFFIXES}                   .crdownload    .tmp    .part
-@{TEMP_FILES}
-...                                     CDL_DOC
-...                                     CV_DOC
-...                                     smoke_doc
 
-# Salesforce CLI-generated organization authentication metadata file.
+# Robot-generated Salesforce authentication metadata file.
 ${ORG_INFO_FILE}                        org_info.json
 
 # Standard project directories for input files, isolated downloads, and generated artifacts.
@@ -35,8 +31,6 @@ ${METADATA_BATCH_SIZE}                  200
 ${ENABLE_API_CAPACITY_CHECK}            ${TRUE}
 ${API_REQUEST_SAFETY_BUFFER}            25
 ${MINIMUM_API_REQUESTS_REMAINING}       100
-${API_LIMIT_LOOKUP_MAX_ATTEMPTS}        3
-${API_LIMIT_LOOKUP_RETRY_DELAY}         2s
 
 # Failed ContentDocument retry controls.
 ${ENABLE_FAILED_ID_RETRY}               ${TRUE}

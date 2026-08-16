@@ -21,6 +21,7 @@ This tool handles Salesforce access tokens, org identifiers, file metadata, and 
 - Never commit access tokens, passwords, OAuth secrets, or `org_info.json`.
 - Use least-privilege Salesforce accounts and avoid production administrator credentials where possible.
 - Keep `org_info.json` readable only by trusted users.
+- Generate `org_info.json` only with the Robot authentication task documented in `docs/Authentication.md`; it uses the dedicated Salesforce CLI access-token command and does not print the token.
 - Delete `org_info.json` only after every sequential or parallel worker has finished.
 - Log out unused Salesforce sessions and rotate credentials according to your organization’s policy.
 - Protect `downloads/`, `artifacts/`, and `results/` with appropriate filesystem permissions and retention rules.
@@ -38,7 +39,7 @@ Generate a new `org_info.json` before the next run.
 
 ## Maintain a secure environment
 
-- Keep Python, Salesforce CLI, Chrome, ChromeDriver, and project dependencies current.
+- Keep NVM or the selected Node version manager, Node.js LTS, npm, Salesforce CLI, Python, Chrome, and project dependencies on supported stable releases.
 - Install packages only from trusted sources.
 - Monitor dependencies for published vulnerabilities.
 - Avoid processing sensitive data on public or shared machines.

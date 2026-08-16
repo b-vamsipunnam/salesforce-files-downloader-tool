@@ -3,7 +3,6 @@ Documentation       CI smoke test that validates library imports, Selenium start
 
 Library             SeleniumLibrary
 Library             ../../src/robot/libraries/ExcelLibrary.py
-Resource            ../../src/robot/resources/salesforce_cli.robot
 Resource            ../../src/robot/resources/salesforce_api.robot
 Resource            ../../src/robot/resources/download_operations.robot
 Resource            ../../src/robot/resources/download_workflow.robot
@@ -20,9 +19,13 @@ CI Smoke – Framework Boots
     [Teardown]    Close All Browsers
 
 CI Smoke – Excel Wrapper Works
-    Create Excel Document    smoke_doc
+    ${workbook}=    Set Variable    ${EXECDIR}${/}.review_smoke_doc.xlsx
+    Create Excel Document    ${workbook}
     Write Excel Cell    1    1    Hello CI
-    [Teardown]    Close All Excel Documents
+    [Teardown]    Run Keywords
+    ...    Run Keyword And Ignore Error    Close All Excel Documents
+    ...    AND
+    ...    Run Keyword And Ignore Error    Remove File    ${workbook}
 
 CI Smoke – Structured Failure Workbook Schema
     ${directory}=    Set Variable    ${EXECDIR}${/}.review_structured_failure
@@ -55,49 +58,28 @@ CI Smoke – Structured Failure Workbook Schema
     ...    AND
     ...    Run Keyword And Ignore Error    Remove Directory    ${directory}    recursive=True
 
-CI Smoke – Parses JSON Object With Leading Warning
-    ${raw_output}=    Catenate
-    ...    SEPARATOR=\n
-    ...    Warning: plugin update available
-    ...    {"status": 0}
-    ${data}=    Safe Parse Sf Json    ${raw_output}
-    Should Be Equal As Integers    ${data}[status]    0
-
-CI Smoke – Parses JSON Array With Leading Warning
-    ${raw_output}=    Catenate
-    ...    SEPARATOR=\n
-    ...    Warning: plugin update available
-    ...    [{"status": 0}]
-    ${data}=    Safe Parse Sf Json    ${raw_output}
-    Should Be Equal As Integers    ${data}[0][status]    0
-
-CI Smoke – Ignores Text After JSON
-    ${raw_output}=    Catenate
-    ...    SEPARATOR=\n
-    ...    {"status": 0}
-    ...    Additional CLI message
-    ${data}=    Safe Parse Sf Json    ${raw_output}
-    Should Be Equal As Integers    ${data}[status]    0
-
-CI Smoke – Skips JSON Markers In Leading Warning
-    ${raw_output}=    Catenate
-    ...    SEPARATOR=\n
-    ...    Warning: plugin [legacy] contains {invalid} metadata
-    ...    {"status": 0}
-    ${data}=    Safe Parse Sf Json    ${raw_output}
-    Should Be Equal As Integers    ${data}[status]    0
-
-CI Smoke – Rejects Output Without JSON
-    Run Keyword And Expect Error
-    ...    Invalid sf CLI JSON output
-    ...    Safe Parse Sf Json
-    ...    Warning: plugin update available
-
-CI Smoke – Rejects Malformed JSON
-    Run Keyword And Expect Error
-    ...    Invalid sf CLI JSON output
-    ...    Safe Parse Sf Json
-    ...    {"status":
+CI Smoke – ContentVersion Title Is Not A Formula
+    ${directory}=    Set Variable    ${EXECDIR}${/}.review_safe_content_version_title
+    Create Directory    ${directory}
+    ${cv_row}    ${workbook}=    Create ContentVersion Excel File    ${directory}
+    ${links}=    Create List
+    Write Sanitized Migration Rows Atomically
+    ...    ${workbook}
+    ...    ${cv_row}
+    ...    =HYPERLINK("https://example.invalid","unsafe")
+    ...    C:${/}download${/}file.bin
+    ...    ${NONE}
+    ...    2
+    ...    ${links}
+    ...    write_content_version=${TRUE}
+    ...    write_content_document_links=${FALSE}
+    Open Excel Document    ${workbook}    safe_content_version
+    ${title}=    Read Excel Cell    ${cv_row}    1
+    Should Be Equal    ${title}    '=HYPERLINK("https://example.invalid","unsafe")
+    [Teardown]    Run Keywords
+    ...    Run Keyword And Ignore Error    Close All Excel Documents
+    ...    AND
+    ...    Run Keyword And Ignore Error    Remove Directory    ${directory}    recursive=True
 
 CI Smoke – Estimates Metadata API Requests With Links
     ${batches}    ${requests}=    Estimate Metadata API Requests    401    Yes
@@ -112,24 +94,6 @@ CI Smoke – Estimates Metadata API Requests Without Links
 CI Smoke – Allows Disabled API Capacity Check
     Set Test Variable    ${ENABLE_API_CAPACITY_CHECK}    ${FALSE}
     Check Salesforce API Capacity    100    Yes
-
-CI Smoke – Pabot Lock Is Available
-    pabot.PabotLib.Acquire Lock    smoke_salesforce_cli_lock
-    TRY
-        Log    Cross-process lock acquired.
-    FINALLY
-        pabot.PabotLib.Release Lock    smoke_salesforce_cli_lock
-    END
-
-CI Smoke – Logs API Capacity Values
-    Set Test Variable    ${SF_ORG_ALIAS}    DemoHub
-    Log To Console    Org Alias: ${SF_ORG_ALIAS}
-    Log To Console    Daily API Maximum: 100000
-    Log To Console    Daily API Remaining: 99999
-    Log To Console    Minimum Estimated Metadata Requests: 2
-    Log To Console    API Capacity Check Requests: 1
-    Log To Console    Estimated Tool Requests: 3
-    Log To Console    Projected API Requests Remaining: 99996
 
 CI Smoke – Sanitizes Windows Reserved Filename
     ${safe}=    Sanitize Filename    CON.txt
@@ -281,43 +245,52 @@ CI Smoke – API Capacity Validation Fails
     ...    25
     ...    100
 
-CI Smoke – CLI Limit Lookup Retries Then Succeeds
-    ${failed}=    Create Dictionary
-    ...    rc=1
-    ...    stdout=${EMPTY}
-    ...    stderr=temporary failure
-    ${valid_output}=    Set Variable
-    ...    {"result":[{"name":"DailyApiRequests","max":100000,"remaining":90000}]}
-    ${successful}=    Create Dictionary
-    ...    rc=0
-    ...    stdout=${valid_output}
-    ...    stderr=${EMPTY}
-    ${results}=    Create List    ${failed}    ${successful}
-    Set Test Variable    ${MOCK_CLI_RESULTS}    ${results}
-    Set Test Variable    ${sf_cli_path}    mock-sf
-    Set Test Variable    ${SF_ORG_ALIAS}    mock-org
-    Set Test Variable    ${API_LIMIT_LOOKUP_RETRY_DELAY}    0s
-    ${maximum}    ${remaining}=    Get Salesforce Daily API Limits
-    ...    Run Mock Salesforce CLI Process
-    Should Be Equal As Integers    ${maximum}    100000
-    Should Be Equal As Integers    ${remaining}    90000
-    Should Be Empty    ${MOCK_CLI_RESULTS}
+CI Smoke – Reads Daily API Limits Via REST
+    Set Test Variable    ${api_version}    67.0
+    ${daily_limit}=    Create Dictionary    Max=15000    Remaining=14981
+    ${payload}=    Create Dictionary    DailyApiRequests=${daily_limit}
+    Set Test Variable    ${MOCK_LIMITS_PAYLOAD}    ${payload}
+    ${maximum}    ${remaining}=    Get Salesforce Daily API Limits Via REST
+    ...    mock-session
+    ...    Return Mock Salesforce Limits Response
+    Should Be Equal As Integers    ${maximum}    15000
+    Should Be Equal As Integers    ${remaining}    14981
+    Should Be Equal    ${MOCK_LIMITS_SESSION}    mock-session
+    Should Be Equal    ${MOCK_LIMITS_URL}    /services/data/v67.0/limits
 
-CI Smoke – CLI Limit Lookup Fails After All Attempts
-    ${failed}=    Create Dictionary
-    ...    rc=1
-    ...    stdout=${EMPTY}
-    ...    stderr=permanent failure
-    ${results}=    Create List    ${failed}    ${failed}    ${failed}
-    Set Test Variable    ${MOCK_CLI_RESULTS}    ${results}
-    Set Test Variable    ${sf_cli_path}    mock-sf
-    Set Test Variable    ${SF_ORG_ALIAS}    mock-org
-    Set Test Variable    ${API_LIMIT_LOOKUP_RETRY_DELAY}    0s
+CI Smoke – Rejects Redacted Salesforce Access Token
+    ${result}=    Create Dictionary
+    ...    accessToken=[REDACTED] Use 'sf org auth show-access-token' to view
+    ...    instanceUrl=https://example.my.salesforce.com
+    ...    apiVersion=67.0
+    ...    alias=test-org
+    ${org}=    Create Dictionary    status=0    result=${result}
     Run Keyword And Expect Error
-    ...    Unable to retrieve Salesforce DailyApiRequests after 3 attempts.*
-    ...    Get Salesforce Daily API Limits
-    ...    Run Mock Salesforce CLI Process
-    Should Be Empty    ${MOCK_CLI_RESULTS}
+    ...    Invalid org_info.json: accessToken is empty or redacted.*
+    ...    Validate Salesforce Org Info
+    ...    ${org}
+
+CI Smoke – Accepts Usable Salesforce Org Info
+    ${result}=    Create Dictionary
+    ...    accessToken=test-session-token
+    ...    instanceUrl=https://example.my.salesforce.com
+    ...    apiVersion=67.0
+    ...    alias=test-org
+    ${org}=    Create Dictionary    status=0    result=${result}
+    Validate Salesforce Org Info    ${org}
+
+CI Smoke – Capacity Check Uses REST Limits
+    Set Test Variable    ${ENABLE_API_CAPACITY_CHECK}    ${TRUE}
+    Set Test Variable    ${SF_ORG_ALIAS}    DemoHub
+    Set Test Variable    ${METADATA_BATCH_SIZE}    200
+    Set Test Variable    ${API_REQUEST_SAFETY_BUFFER}    25
+    Set Test Variable    ${MINIMUM_API_REQUESTS_REMAINING}    100
+    Check Salesforce API Capacity
+    ...    10000
+    ...    Yes
+    ...    mock-session
+    ...    Return Mock Salesforce Daily Limit Values
+    Should Be Equal    ${MOCK_LIMITS_SESSION}    mock-session
 
 CI Smoke – SOQL Query Follows Pagination
     Set Test Variable    ${api_version}    61.0
@@ -406,13 +379,19 @@ CI Smoke – Preserves Multiple ContentDocument Links
 
 
 *** Keywords ***
-Run Mock Salesforce CLI Process
-    [Arguments]    @{arguments}
-    ${result}=    Remove From List    ${MOCK_CLI_RESULTS}    0
+Return Mock Salesforce Limits Response
+    [Arguments]    ${session_alias}    ${url}
+    Set Test Variable    ${MOCK_LIMITS_SESSION}    ${session_alias}
+    Set Test Variable    ${MOCK_LIMITS_URL}    ${url}
     ${response}=    Evaluate
-    ...    types.SimpleNamespace(**$result)
+    ...    types.SimpleNamespace(json=lambda payload=$MOCK_LIMITS_PAYLOAD: payload)
     ...    modules=types
     RETURN    ${response}
+
+Return Mock Salesforce Daily Limit Values
+    [Arguments]    ${session_alias}
+    Set Test Variable    ${MOCK_LIMITS_SESSION}    ${session_alias}
+    RETURN    15000    14981
 
 Return Mock Salesforce Page
     [Arguments]    ${session_alias}    ${url}    ${params}=${NONE}

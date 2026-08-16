@@ -44,13 +44,11 @@ Create ContentVersion Excel File
     [Arguments]    ${download_directory}
     ${proper_test_name}=    Sanitize Local Filename    ${TEST NAME}    max_length=80
     ${cv_file_name}=    Set Variable    ${download_directory}${/}${proper_test_name}_ContentVersion_Import.xlsx
-    Create Excel Document    doc_id=CV_DOC
+    Create Excel Document    doc_id=${cv_file_name}
     Write Excel Cell    row_num=1    col_num=1    value=Title
     Write Excel Cell    row_num=1    col_num=2    value=VersionData
     Write Excel Cell    row_num=1    col_num=3    value=PathOnClient
-    # Write Excel Cell    row_num=1    col_num=4    value=Description
-    # Write Excel Cell    row_num=1    col_num=5    value=FirstPublishLocationId
-    Save Excel Document    filename=${cv_file_name}
+    Save Excel Document
     Close Current Excel Document
     ${first_data_row}=    Set Variable    2
     RETURN    ${first_data_row}    ${cv_file_name}
@@ -60,12 +58,12 @@ Create ContentDocumentLink Excel File
     [Arguments]    ${download_directory}
     ${proper_test_name}=    Sanitize Local Filename    ${TEST NAME}    max_length=80
     ${cdl_file_name}=    Set Variable    ${download_directory}${/}${proper_test_name}_ContentDocumentLink_Import.xlsx
-    Create Excel Document    doc_id=CDL_DOC
+    Create Excel Document    doc_id=${cdl_file_name}
     Write Excel Cell    row_num=1    col_num=1    value=ContentDocumentId
     Write Excel Cell    row_num=1    col_num=2    value=LinkedEntityID
     Write Excel Cell    row_num=1    col_num=3    value=ShareType
     Write Excel Cell    row_num=1    col_num=4    value=Visibility
-    Save Excel Document    filename=${cdl_file_name}
+    Save Excel Document
     Close Current Excel Document
     ${first_data_row}=    Set Variable    2
     RETURN    ${first_data_row}    ${cdl_file_name}
@@ -142,30 +140,26 @@ Write Failed ContentDocument IDs
     Close Current Excel Document
     Run Keyword And Ignore Error    Remove File    ${temp_doc_id}
 
-Write ContentVersion Row
-    [Documentation]     Writes one ContentVersion import row containing the Salesforce file title, local VersionData path, and PathOnClient value, then saves and closes the workbook.
-    [Arguments]    ${cv_row}    ${dst}    ${cv_file_name}    ${file_title}
-    Open Excel Document    filename=${cv_file_name}    doc_id=CV_DOC
-    Write Excel Cell    row_num=${cv_row}    col_num=1    value=${file_title}
-    Write Excel Cell    row_num=${cv_row}    col_num=2    value=${dst}
-    Write Excel Cell    row_num=${cv_row}    col_num=3    value=${dst}
-    # Intentionally kept these commented lines for futures use.
-    # Write Excel Cell    row_num=${cv_row}    col_num=4    value=${description}
-    # Write Excel Cell    row_num=${cv_row}    col_num=5    value=FirstPublishLocationId
-    Save Excel Document    filename=${cv_file_name}
-    Close Current Excel Document
-
-Write ContentDocumentLink Row
-    [Documentation]     Writes one ContentDocumentLink import row containing the source ContentDocument ID, linked entity ID, share type, and visibility, then saves and closes the workbook.
-    [Arguments]    ${cdl_row}    ${content_link}    ${cdl_file_name}
-    ${document_id}=    Get From Dictionary    ${content_link}    ContentDocumentId
-    ${linked_entity_id}=    Get From Dictionary    ${content_link}    LinkedEntityId
-    ${share_type}=    Get From Dictionary    ${content_link}    ShareType
-    ${visibility}=    Get From Dictionary    ${content_link}    Visibility
-    Open Excel Document    filename=${cdl_file_name}    doc_id=CDL_DOC
-    Write Excel Cell    row_num=${cdl_row}    col_num=1    value=${document_id}
-    Write Excel Cell    row_num=${cdl_row}    col_num=2    value=${linked_entity_id}
-    Write Excel Cell    row_num=${cdl_row}    col_num=3    value=${share_type}
-    Write Excel Cell    row_num=${cdl_row}    col_num=4    value=${visibility}
-    Save Excel Document    filename=${cdl_file_name}
-    Close Current Excel Document
+Write Sanitized Migration Rows Atomically
+    [Documentation]     Sanitizes the Salesforce title against spreadsheet formula injection, then stages and commits the requested ContentVersion and ContentDocumentLink rows atomically.
+    [Arguments]
+    ...    ${cv_file_name}
+    ...    ${cv_row}
+    ...    ${file_title}
+    ...    ${version_data_path}
+    ...    ${cdl_file_name}
+    ...    ${cdl_row}
+    ...    ${content_links}
+    ...    ${write_content_version}=${TRUE}
+    ...    ${write_content_document_links}=${TRUE}
+    ${safe_file_title}=    Sanitize Spreadsheet Cell    ${file_title}
+    Write Migration Rows Atomically
+    ...    ${cv_file_name}
+    ...    ${cv_row}
+    ...    ${safe_file_title}
+    ...    ${version_data_path}
+    ...    ${cdl_file_name}
+    ...    ${cdl_row}
+    ...    ${content_links}
+    ...    write_content_version=${write_content_version}
+    ...    write_content_document_links=${write_content_document_links}

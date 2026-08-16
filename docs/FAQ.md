@@ -14,7 +14,7 @@ This project uses REST and SOQL for metadata and Shepherd for file delivery. Bul
 
 ## Does the tool consume Salesforce API calls?
 
-Yes. Each batch normally uses one limits request for its API-capacity preflight, followed by REST API queries for metadata. A transient CLI failure can cause the limits request to be attempted again, and metadata pagination can add query calls. Binary transfer uses Shepherd rather than REST binary requests. API consumption therefore depends on input volume, `${METADATA_BATCH_SIZE}`, whether ContentDocumentLink metadata is requested, retry activity, and query pagination.
+Yes. Each batch normally uses one REST limits request for its API-capacity preflight, followed by REST metadata queries. Metadata pagination can add calls; binary transfer uses Shepherd rather than REST binary requests. API consumption therefore depends mainly on input volume, `${METADATA_BATCH_SIZE}`, whether ContentDocumentLink metadata is requested, and query pagination. Download retries reuse the metadata already retrieved for that batch.
 
 ## How are duplicate ContentDocument IDs handled?
 
@@ -39,6 +39,8 @@ The downloader rejects temporary browser extensions, waits for completion and st
 ## Are Salesforce access tokens written to logs?
 
 Token-bearing initialization and request operations suppress ordinary Robot logging. The token remains in the local `org_info.json`, which must not be committed or shared. Review generated XML and HTML reports before sharing them because customer IDs, filenames, and diagnostic details may still be sensitive. Revoke the Salesforce session immediately if a token is ever exposed.
+
+Salesforce CLI versions that redact `sf org display` output require the dedicated `sf org auth show-access-token` command. Use the Robot authentication task described in [Authentication](Authentication.md); it combines the token with org metadata, rejects empty or `[REDACTED]` values, and does not print the token.
 
 ## Can files be uploaded directly to S3?
 

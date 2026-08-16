@@ -4,13 +4,137 @@ import re
 import tempfile
 import unittest
 from pathlib import Path
+from subprocess import CompletedProcess
 from unittest.mock import Mock, patch
 
 import openpyxl
 
 from src.robot.libraries.ExcelLibrary import ExcelLibrary
+from src.robot.libraries.CredentialGenerator import CredentialGenerator
 from src.robot.libraries.ExecutionReporting import FAILURE_CODES, ExecutionReporting
 from src.robot.libraries.SalesforceSupport import SalesforceSupport
+from src.robot.libraries.WebdriverManager import WebdriverManager
+
+
+class WebdriverManagerTests(unittest.TestCase):
+    @patch("src.robot.libraries.WebdriverManager.BuiltIn")
+    def test_configures_automatic_downloads_for_headless_chrome(self, built_in):
+        selenium = Mock()
+        built_in.return_value.get_library_instance.return_value = selenium
+
+        WebdriverManager().configure_chrome_browser(
+            "downloads/worker-1",
+            "https://example.my.salesforce.com/secur/frontdoor.jsp",
+            "example",
+        )
+
+        options = selenium.open_browser.call_args.kwargs["options"]
+        preferences = options.experimental_options["prefs"]
+        expected_directory = os.path.abspath("downloads/worker-1")
+        self.assertEqual(preferences["download.default_directory"], expected_directory)
+        self.assertEqual(
+            preferences[
+                "profile.default_content_setting_values.automatic_downloads"
+            ],
+            1,
+        )
+        selenium.driver.execute_cdp_cmd.assert_called_once_with(
+            "Browser.setDownloadBehavior",
+            {
+                "behavior": "allow",
+                "downloadPath": expected_directory,
+                "eventsEnabled": True,
+            },
+        )
+
+
+class CredentialGeneratorTests(unittest.TestCase):
+    def setUp(self):
+        self.temp_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_directory.cleanup)
+        self.output_path = Path(self.temp_directory.name) / "org_info.json"
+        self.generator = CredentialGenerator()
+
+    @staticmethod
+    def cli_result(payload, returncode=0):
+        return CompletedProcess(
+            args=["sf.cmd"],
+            returncode=returncode,
+            stdout=json.dumps(payload),
+            stderr="",
+        )
+
+    def test_parses_json_after_cli_warning(self):
+        payload = self.generator._parse_json_object(
+            'Warning: update available\n{"status": 0}\n'
+        )
+
+        self.assertEqual(payload, {"status": 0})
+
+    @patch(
+        "src.robot.libraries.CredentialGenerator.shutil.which",
+        return_value="C:/Program Files/nodejs/sf.cmd",
+    )
+    @patch("src.robot.libraries.CredentialGenerator.subprocess.run")
+    def test_generates_combined_file_atomically(self, run, _which):
+        token = "00Dxx0000000001!usable-token"
+        run.side_effect = [
+            self.cli_result(
+                {
+                    "status": 0,
+                    "result": {
+                        "accessToken": "[REDACTED]",
+                        "instanceUrl": "https://example.my.salesforce.com",
+                        "apiVersion": "67.0",
+                        "alias": "test-org",
+                    },
+                }
+            ),
+            self.cli_result(
+                {"status": 0, "result": {"accessToken": token}}
+            ),
+        ]
+
+        message = self.generator.generate_salesforce_org_info(
+            "test-org", str(self.output_path)
+        )
+
+        payload = json.loads(self.output_path.read_text(encoding="utf-8"))
+        self.assertEqual(payload["result"]["accessToken"], token)
+        self.assertNotIn(token, message)
+        self.assertEqual(list(self.output_path.parent.glob("*.tmp")), [])
+        self.assertEqual(run.call_count, 2)
+
+    @patch(
+        "src.robot.libraries.CredentialGenerator.shutil.which",
+        return_value="C:/Program Files/nodejs/sf.cmd",
+    )
+    @patch("src.robot.libraries.CredentialGenerator.subprocess.run")
+    def test_rejects_redacted_token_and_preserves_existing_file(
+        self, run, _which
+    ):
+        self.output_path.write_text("existing", encoding="utf-8")
+        run.side_effect = [
+            self.cli_result(
+                {
+                    "status": 0,
+                    "result": {
+                        "instanceUrl": "https://example.my.salesforce.com",
+                        "apiVersion": "67.0",
+                    },
+                }
+            ),
+            self.cli_result(
+                {"status": 0, "result": {"accessToken": "[REDACTED]"}}
+            ),
+        ]
+
+        with self.assertRaisesRegex(RuntimeError, "usable access token"):
+            self.generator.generate_salesforce_org_info(
+                "test-org", str(self.output_path)
+            )
+
+        self.assertEqual(self.output_path.read_text(encoding="utf-8"), "existing")
 
 
 class ExcelLibraryTransactionTests(unittest.TestCase):
@@ -265,11 +389,14 @@ class ExecutionReportingTests(unittest.TestCase):
         self.assertNotIn(secret, redacted)
         self.assertGreaterEqual(redacted.count("[REDACTED]"), 3)
 
-    def test_spreadsheet_formula_prefix_is_escaped(self):
-        self.assertEqual(
-            self.reporting.sanitize_spreadsheet_cell('=HYPERLINK("bad")'),
-            '\'=HYPERLINK("bad")',
-        )
+    def test_content_version_title_formula_prefixes_are_escaped(self):
+        for prefix in ("=", "+", "-", "@"):
+            title = f'{prefix}HYPERLINK("bad")'
+            with self.subTest(prefix=prefix):
+                self.assertEqual(
+                    self.reporting.sanitize_spreadsheet_cell(title),
+                    f"'{title}",
+                )
 
     def test_manifest_contains_ordered_terminal_events(self):
         content_id = "069AAAAAAAAAAAAY55"
@@ -354,33 +481,6 @@ class ExecutionReportingTests(unittest.TestCase):
                     source,
                     rf"{re.escape(failure_code)}[\s\S]{{0,250}}{re.escape(message)}",
                 )
-
-
-class SalesforceSupportJsonTests(unittest.TestCase):
-    def setUp(self):
-        self.support = SalesforceSupport()
-
-    def test_try_parse_returns_false_for_empty_output(self):
-        parsed, value = self.support.try_parse_first_json_value("")
-
-        self.assertFalse(parsed)
-        self.assertIsNone(value)
-
-    def test_try_parse_returns_false_for_invalid_output(self):
-        parsed, value = self.support.try_parse_first_json_value(
-            "Salesforce CLI warning without JSON"
-        )
-
-        self.assertFalse(parsed)
-        self.assertIsNone(value)
-
-    def test_try_parse_returns_first_valid_json_value(self):
-        parsed, value = self.support.try_parse_first_json_value(
-            'Warning\n{"status": 0}\nTrailing text'
-        )
-
-        self.assertTrue(parsed)
-        self.assertEqual(value, {"status": 0})
 
 
 class SalesforceSupportIdTests(unittest.TestCase):

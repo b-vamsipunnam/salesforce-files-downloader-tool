@@ -4,32 +4,26 @@
 
 This page covers the keywords that callers and maintainers are most likely to use. In each table, **What it does and when to use it** explains the intended role, while **Important behavior** calls out state changes, assumptions, and limits. Most projects should start with the orchestration keyword and use lower-level keywords only when extending or testing the workflow.
 
-## Salesforce CLI and authentication
+## Salesforce authentication and REST capacity
 
 **Source**
 
-`src/robot/resources/salesforce_cli.robot` and `src/robot/resources/salesforce_api.robot`
+`src/robot/libraries/CredentialGenerator.py` and `src/robot/resources/salesforce_api.robot`
 
 | Keyword                         | What it does and when to use it              | Arguments       | Return value  | Important behavior                                                      |
 |---------------------------------|---------------------------------------------|-----------------|---------------|-------------------------------------------------------------------------|
-| `Check Prerequisites`           | Validate the CLI and org context.           | `${ORG_ALIAS}`  | None          | Calls CLI resolution, version validation, and org loading.              |
-| `Resolve Salesforce CLI`        | Find `sf` on `PATH`.                        | None            | None          | Sets suite variable `${sf_cli_path}`; fails when missing.               |
-| `Validate Salesforce CLI`       | Verify the resolved CLI runs.               | None            | None          | Requires `${sf_cli_path}` and a zero exit code.                         |
-| `Load Org Context`              | Validate an alias and read its org context. | `${ORG_ALIAS}`  | None          | Sets the API version, org ID, and target alias at suite scope.          |
-| `Initialize Salesforce CLI Context From Org Info` | Load worker context from `org_info.json` during suite setup. | None | None | Sets the alias, org ID, and API version without running `sf org display`; resolves the CLI path for the capacity check. |
-| `Get Salesforce Daily API Limits` | Read `DailyApiRequests` before a batch. | Optional process keyword for tests; defaults to `Run Process` | Maximum and remaining requests | Captures output in memory, runs under a PabotLib lock, and retries bounded CLI or response failures. |
+| `Get Salesforce Daily API Limits Via REST` | Read `DailyApiRequests` before a batch. | Session alias; optional request keyword for tests | Maximum and remaining requests | Calls the authenticated Salesforce REST limits endpoint without starting a CLI subprocess. |
 | `Estimate Metadata API Requests` | Estimate batched metadata calls. | ID count and ContentDocumentLink generation flag | Batch and request counts | Uses `${METADATA_BATCH_SIZE}` and does not predict pagination. |
-| `Check Salesforce API Capacity` | Run the preflight capacity guard. | ID count and ContentDocumentLink generation flag | None | Runs after manifest initialization and fails before migration-workbook or download-directory creation when estimated use, buffer, and reserve exceed remaining capacity. |
+| `Check Salesforce API Capacity` | Run the preflight capacity guard. | ID count, ContentDocumentLink generation flag, REST session alias, and optional limits keyword | None | Fails before migration-workbook or download-directory creation when estimated use, buffer, and reserve exceed remaining capacity. |
 | `Validate Salesforce API Capacity` | Validate already-calculated capacity values. | Remaining requests, estimated tool requests, safety buffer, and minimum reserve | None | Pure capacity decision used by the preflight and offline tests. |
-| `Safe Parse Sf Json`            | Parse JSON from CLI output.                 | `${raw_output}` | Parsed object | Finds the first valid object or array without logging raw CLI output.   |
-| `Try Parse First Json Value`    | Probe CLI output when invalid JSON is an expected retry condition. | `${raw_output}` | Boolean status and parsed value | Returns `${FALSE}` and `${NONE}` instead of raising for empty or invalid output. |
-| `Initialize Salesforce Session` | Create an authenticated REST session.       | None            | Session alias | Reads `org_info.json`; uses a unique RequestsLibrary alias.             |
+| `Initialize Salesforce Session` | Create an authenticated REST session.       | None            | Session alias | Reads and validates `org_info.json`; uses a unique RequestsLibrary alias. |
+| `Validate Salesforce Org Info` | Reject unsuccessful, incomplete, empty-token, or redacted-token org data without exposing the token. | Org dictionary | None | Fails before REST, workbook, or browser work and directs the user to the credential generator. |
+| `Generate Salesforce Org Info` | Generate the downloader credential file using Salesforce CLI metadata and dedicated access-token commands. | Org alias, output path, optional CLI command | Non-secret confirmation | Used by `orchestrator/authenticate.robot`; validates and atomically replaces the destination without returning the token. |
 | `Get Salesforce Login Info`     | Prepare frontdoor browser authentication.   | None            | Login URL     | Sets `${org_domain}` and reads the token without ordinary log exposure. |
 
-Minimal prerequisite example:
+Minimal session example:
 
 ```robot
-Check Prerequisites    source_org
 ${session}=    Initialize Salesforce Session
 ```
 
@@ -65,9 +59,7 @@ ${documents}=    Get ContentDocument Metadata Map    ${content_ids}    200
 | `Read Content IDs From Excel Sheet`     | Read IDs from the first column. | `${input_excel_path}`, `${sheet_name}`                    | Canonical, deduplicated ID list | Removes an optional header, blanks, and whitespace; converts valid 15-character IDs to 18 characters before deduplication. |
 | `Create ContentVersion Excel File`      | Create an import workbook.      | `${download_directory}`                                   | First data row and path | Writes `Title`, `VersionData`, and `PathOnClient` headers.     |
 | `Create ContentDocumentLink Excel File` | Create a relationship workbook. | `${download_directory}`                                   | First data row and path | Writes document, entity, share type, and visibility headers.   |
-| `Write Migration Rows Atomically`       | Record one completed document.  | Workbook paths, starting rows, title, local path, links, and generation flags | None | Stages all requested rows and rolls back committed workbooks if a later replacement fails. |
-| `Write ContentVersion Row`              | Write one version row directly. | `${cv_row}`, `${dst}`, `${cv_file_name}`, `${file_title}` | None                    | Compatibility keyword; the main workflow uses the atomic writer. |
-| `Write ContentDocumentLink Row`         | Write one relationship directly. | `${cdl_row}`, `${content_link}`, `${cdl_file_name}`      | None                    | Compatibility keyword; the main workflow uses the atomic writer. |
+| `Write Sanitized Migration Rows Atomically` | Record one completed document. | Workbook paths, starting rows, title, local path, links, and generation flags | None | Escapes formula-like titles, then stages all requested rows and rolls back committed workbooks if a later replacement fails. |
 | `Remove Empty Import Files`             | Remove unused import workbooks. | `${cv_file_name}`, `${cdl_file_name}`                     | None                    | Deletes existing files only when invoked after zero successes. |
 
 ```robot
@@ -84,7 +76,7 @@ ${content_ids}=    Read Content IDs From Excel Sheet    ${INPUT_EXCEL_PATH_1}   
 |--------------------------------------|------------------------------------------|------------------------------------------------------------------------------------------|---------------------------------|--------------------------------------------------------------------------------------|
 | `Initialize Output Directory`        | Create isolated artifact output.         | None                                                                                     | Directory path                  | Uses the test name and a UUID.                                                       |
 | `Initialize Download Directory`      | Create isolated browser output.          | None                                                                                     | Directory path                  | Uses the test name and a UUID.                                                       |
-| `Configure Browser`                  | Start and authenticate Chrome.           | `${download_directory}`, `${login_url}`, `${org_domain}`, `${headless}=${True}`          | None                            | Configures the download directory and Salesforce session.                            |
+| `Configure Browser`                  | Start and authenticate Chrome.           | `${download_directory}`, `${login_url}`, `${org_domain}`, `${headless}=${True}`          | None                            | Enables automatic downloads and binds the Chrome session to the worker's isolated absolute download path. |
 | `Build ContentDocument Download URL` | Build a Shepherd document URL.           | `${org_domain}`, `${document_id}`                                                        | URL                             | Targets the ContentDocument download endpoint.                                       |
 | `Create ContentDocument ID Folder`   | Create a final per-ID directory.         | `${content_id}`, `${download_directory}`                                                 | Directory path                  | Verifies that the directory exists.                                                  |
 | `Sanitize Filename`                  | Make a title safe for local storage.     | `${name}`                                                                                | Sanitized name                  | Handles invalid characters, Windows reserved names, trailing dots or spaces, and empty values. |
@@ -152,7 +144,7 @@ These keywords are typically executed during suite teardown and normally do not 
 
 | Keyword                     | What it does and when to use it            | Arguments | Return value | Important behavior                                                  |
 |-----------------------------|--------------------------------------------|-----------|--------------|---------------------------------------------------------------------|
-| `Cleanup Runtime Artifacts` | Remove recognized temporary runtime files. | None      | None         | Limits removal to known generated names in `${EXECDIR}` and intentionally preserves shared `org_info.json`. |
+| `Cleanup Runtime Artifacts` | Remove recognized temporary runtime files. | None      | None         | Removes only strictly named downloader temporary files from `${EXECDIR}` and preserves shared `org_info.json`. |
 | `Cleanup Download Suite`    | Perform suite teardown.                    | None      | None         | Closes browsers and cleans runtime artifacts.                       |
 
 ---
