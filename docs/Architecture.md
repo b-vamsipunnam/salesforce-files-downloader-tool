@@ -14,10 +14,10 @@ The editable source for the detailed diagram is [`architecture.svg`](architectur
 
 ## Component responsibilities
 
-- **Salesforce CLI** generates the authentication file before execution and retrieves daily API limits. Suite setup reads the alias, org ID, and API version from that file without invoking concurrent org-display commands.
+- **Salesforce CLI** authenticates the source org and generates the protected authentication file before execution. Runtime workers read that file and retrieve daily API limits directly from Salesforce REST, so parallel execution does not start CLI subprocesses.
 - **Salesforce REST API** executes paginated SOQL queries for `ContentDocument` and `ContentDocumentLink` metadata.
 - **Selenium and Chrome** establish the Salesforce session through `frontdoor.jsp` and initiate Shepherd downloads.
-- **Robot Framework** coordinates suite initialization, strict configuration validation, per-batch API preflight, input normalization, metadata mapping, downloads, retry state, reporting, and teardown.
+- **Robot Framework** coordinates strict configuration validation, per-batch initialization and API preflight, input normalization, metadata mapping, downloads, retry state, reporting, and teardown.
 - **Python libraries** provide safe Salesforce CLI JSON parsing, 15-to-18-character ID canonicalization, destination-aware filename handling, Chrome configuration, transactional Excel updates, and filesystem support used by Robot keywords.
 - **Pabot** can split batch tests across processes. UUID-based download and artifact directories separate their output.
 
@@ -55,7 +55,7 @@ Robot Framework provides keyword-driven orchestration for a workflow that combin
 | Location                  | Responsibility                                            |
 |---------------------------|-----------------------------------------------------------|
 | `src/robot/orchestrator/` | Batch definitions and suite execution                     |
-| `src/robot/resources/`    | Workflow, API, download, Excel, CLI, and cleanup keywords |
+| `src/robot/resources/`    | Workflow, API, download, Excel, and cleanup keywords      |
 | `src/robot/libraries/`    | Custom Python libraries                                   |
 | `input/`                  | Source workbooks containing IDs                           |
 | `downloads/`              | Validated binaries, isolated by test and UUID             |

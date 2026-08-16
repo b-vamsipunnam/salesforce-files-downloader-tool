@@ -1,3 +1,5 @@
+import os
+
 from robot.libraries.BuiltIn import BuiltIn
 from selenium.webdriver.chrome.options import Options
 
@@ -17,6 +19,7 @@ class WebdriverManager:
         with the installed Chrome browser.
         """
         selib = BuiltIn().get_library_instance("SeleniumLibrary")
+        download_directory = os.path.abspath(str(download_directory))
         options = Options()
 
         if headless:
@@ -44,6 +47,7 @@ class WebdriverManager:
             "plugins.always_open_pdf_externally": True,
             "safebrowsing.enabled": True,
             "profile.default_content_settings.popups": 0,
+            "profile.default_content_setting_values.automatic_downloads": 1,
         }
         options.add_experimental_option("prefs", prefs)
 
@@ -51,6 +55,19 @@ class WebdriverManager:
             url=login_url,
             browser="chrome",
             options=options,
+        )
+
+        # Chrome can leave subsequent downloads as "Unconfirmed *.crdownload"
+        # unless the active headless session explicitly allows downloads. The
+        # preference permits multiple files and CDP binds them to this worker's
+        # isolated directory.
+        selib.driver.execute_cdp_cmd(
+            "Browser.setDownloadBehavior",
+            {
+                "behavior": "allow",
+                "downloadPath": download_directory,
+                "eventsEnabled": True,
+            },
         )
 
         selib.maximize_browser_window()

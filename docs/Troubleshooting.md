@@ -16,6 +16,35 @@ Salesforce CLI is not installed or its executable is absent from `PATH`.
 
 Install Salesforce CLI, restart the shell if needed, and confirm `sf --version` succeeds.
 
+## `Invalid regular expression flags` from every Salesforce CLI command
+
+**Symptoms**
+
+`sf.cmd --version`, `sf org display`, or `sf org list limits` fails immediately with `SyntaxError: Invalid regular expression flags`.
+
+**Likely cause**
+
+The active Node.js runtime does not satisfy the installed Salesforce CLI's engine requirement. End-of-life Node versions can also fail while parsing syntax used by current CLI releases.
+
+**Resolution**
+
+On Windows, update NVM for Windows with its latest official installer, activate the latest Node.js LTS, and reinstall global packages for that runtime. Check the live engine declarations instead of copying a historical patch version:
+
+```powershell
+nvm version
+nvm install lts
+nvm use lts
+nvm current
+node --version
+npm view npm@latest version engines --json
+npm install --global npm@latest
+npm view @salesforce/cli@latest version engines --json
+npm install --global @salesforce/cli@latest
+sf.cmd --version
+```
+
+The Node version named by `sf.cmd --version` must match `node --version` and satisfy the displayed engine range. Close and reopen PowerShell and PyCharm if `where.exe node`, `where.exe npm`, or `where.exe sf` still resolves an older installation. See [Installation](Installation.md) for the authoritative version policy and full validation sequence.
+
 ## Invalid org alias
 
 **Symptoms**
@@ -43,6 +72,20 @@ The access token in `org_info.json` expired or was revoked.
 **Resolution**
 
 Regenerate `org_info.json` from the authenticated alias and rerun failed IDs. The tool does not refresh a token during execution.
+
+## Redacted or empty access token in `org_info.json`
+
+**Symptoms**
+
+Salesforce CLI authentication succeeds, but downloader REST or browser authentication fails immediately. `result.accessToken` in `org_info.json` is empty or begins with `[REDACTED]`.
+
+**Likely cause**
+
+Recent Salesforce CLI versions hide secrets from `sf org display` by default, or a failing CLI command was redirected and replaced a valid file with empty output.
+
+**Resolution**
+
+First run `sf.cmd org display --target-org <org_alias> --json` without redirection. After it succeeds, run `robot --variable ORG_ALIAS:<org_alias> --output NONE --log NONE --report NONE src/robot/orchestrator/authenticate.robot`. The Robot task uses `sf org auth show-access-token`, validates the result without printing the token, and atomically replaces `org_info.json`. Runtime workers retrieve API limits through their authenticated REST sessions.
 
 ## Chrome startup or browser compatibility issues
 
@@ -88,7 +131,7 @@ The org's `DailyApiRequests` allocation cannot accommodate the estimated metadat
 
 Reduce the input batch, wait for API capacity to reset, or review `${API_REQUEST_SAFETY_BUFFER}` and `${MINIMUM_API_REQUESTS_REMAINING}` with the owners of other org integrations. Do not disable the check unless API consumption is managed externally. Parallel Pabot workers do not share a reservation counter, so use additional buffer when their combined demand approaches the limit.
 
-The limits lookup automatically retries transient CLI failures using `${API_LIMIT_LOOKUP_MAX_ATTEMPTS}` and `${API_LIMIT_LOOKUP_RETRY_DELAY}`. Investigate Salesforce CLI authentication and local process behavior if every attempt fails.
+If parallel workers appear idle before workbooks are created, inspect `results/pabot_results/*/robot_stderr.out`. Workers retrieve limits through their authenticated REST sessions. An `AUTH_SESSION_EXPIRED` or REST limits failure requires regeneration of `org_info.json`.
 
 The console intentionally says `Minimum Estimated Metadata Requests`. SOQL pagination depends on Salesforce response volume and cannot be predicted from the number of input IDs alone. If a batch has unusually high relationship volume, increase `${API_REQUEST_SAFETY_BUFFER}` rather than treating the estimate as an exact forecast.
 
@@ -104,7 +147,7 @@ The alias was reassigned, the authentication file is stale, or multiple local al
 
 **Resolution**
 
-Before starting Robot or Pabot, compare `result.id`, `result.username`, and `result.instanceUrl` from `sf org display --target-org <alias> --json`. Regenerate `org_info.json` from the intended org before rerunning the downloader. Worker setup deliberately does not repeat this CLI call because concurrent `sf org display` processes can contend for shared Salesforce CLI state.
+Before starting Robot or Pabot, compare `result.id`, `result.username`, and `result.instanceUrl` from `sf org display --target-org <alias> --json`. Regenerate `org_info.json` from the intended org before rerunning the downloader. Download workers use the generated file and do not repeat this CLI call.
 
 ## Temporary download never completes
 
@@ -114,11 +157,11 @@ A `.crdownload`, `.tmp`, or `.part` file remains until the completion timeout.
 
 **Likely cause**
 
-The transfer stalled, local storage is full, or browser/network activity was interrupted.
+The transfer stalled, local storage is full, browser/network activity was interrupted, or an enterprise browser policy overrode automatic-download behavior.
 
 **Resolution**
 
-Check network stability and free disk space, remove abandoned temporary output after the run, and retry the failed ID.
+Use the current project browser helper, check Chrome enterprise download policies, network stability, and free disk space, remove abandoned temporary output after the run, and retry the failed ID. The helper enables automatic downloads and assigns an isolated absolute download path to each browser session.
 
 The automatic retry starts a fresh download; it does not continue the abandoned temporary file.
 
@@ -214,15 +257,15 @@ Free space or move the configured output roots to a larger volume. Allow capacit
 
 **Symptoms**
 
-Multiple workers process the same ContentDocumentId, shared runtime files disappear unexpectedly, or parallel workers report invalid Salesforce CLI JSON while sequential execution succeeds.
+Multiple workers process the same ContentDocumentId or shared runtime files disappear unexpectedly.
 
 **Likely cause**
 
-Input workbooks overlap, custom output paths are shared, a custom worker teardown removes `org_info.json` before all workers finish, or an older project version runs Salesforce CLI commands concurrently without a cross-process lock.
+Input workbooks overlap, custom output paths are shared, or a custom worker teardown removes `org_info.json` before all workers finish.
 
 **Resolution**
 
-Use non-overlapping input batches, retain UUID-based output paths, include `--pabotlib` in the Pabot command, and remove the shared authentication file only after the complete Pabot run. Current worker setup reads org context directly from `org_info.json`, and the limits lookup uses a PabotLib lock.
+Use non-overlapping input batches, retain UUID-based output paths, and remove the shared authentication file only after the complete Pabot run. Current workers read org context directly from `org_info.json` and use independent authenticated REST capacity checks.
 
 ## GitHub Actions smoke-test failure
 

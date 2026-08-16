@@ -7,7 +7,6 @@ Library             Collections
 Library             String
 Library             ../libraries/ExecutionReporting.py
 Resource            configuration.robot
-Resource            salesforce_cli.robot
 Resource            salesforce_api.robot
 Resource            excel_operations.robot
 Resource            download_operations.robot
@@ -69,9 +68,16 @@ Download Files Using Content Document IDs
             Log To Console
             ...    No ContentDocumentIds found. Skipping download and Data Loader file generation.
         ELSE
+            ${previous_level}=    Set Log Level    NONE
+            TRY
+                ${session_alias}=    Initialize Salesforce Session
+            FINALLY
+                Set Log Level    ${previous_level}
+            END
             Check Salesforce API Capacity
             ...    ${total_records}
             ...    ${GENERATE_CONTENT_DOCUMENT_LINK_FILE}
+            ...    ${session_alias}
 
             ${cv_row}=    Set Variable    2
             ${cdl_row}=    Set Variable    2
@@ -90,7 +96,6 @@ Download Files Using Content Document IDs
             Set Test Variable    ${download_directory}
             ${previous_level}=    Set Log Level    NONE
             TRY
-                ${session_alias}=    Initialize Salesforce Session
                 ${login_url}=    Get Salesforce Login Info
                 Configure Browser
                 ...    ${download_directory}

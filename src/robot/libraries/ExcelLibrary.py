@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from io import BytesIO
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 import os
 import shutil
@@ -17,27 +16,13 @@ class SuchIdIsExistException(Exception):
     pass
 
 
-class NoSuchIdException(Exception):
-    """Raised when accessing an absent document identifier."""
-    pass
-
-
 class NoOpenedDocumentsException(Exception):
     """Raised in the absence of open documents."""
     pass
 
 
-class ExcelLibrary(object):
-    """Library for working with Excel documents.
-
-    This is a compatibility wrapper intended to be used as a drop-in Robot Framework library.
-
-    IMPORTANT BEHAVIOR (for backward-compatibility with your Robot suite):
-    - 'Create Excel Document' argument is treated as a FILE PATH (not a doc_id).
-      It creates the workbook and binds the current document id to that path.
-    - 'Save Excel Document' can be called with filename OR with no args; it will save
-      to the current document id if it is a path.
-    """
+class ExcelLibrary:
+    """Robot Framework library for the workbook operations used by this project."""
 
     ROBOT_LIBRARY_SCOPE = "GLOBAL"
 
@@ -75,17 +60,9 @@ class ExcelLibrary(object):
     # -------------------------
 
     def create_excel_document(self, doc_id: str) -> str:
-        """
-        Creates new excel document.
-
-        COMPAT MODE:
-        - 'doc_id' is treated as a FILE PATH (your suite passes ${CV_File_Name} etc.).
-        - Creates workbook on disk immediately.
-        - Uses the file path as the cache key and current id.
-        """
+        """Create a workbook at ``doc_id`` and make it current."""
         file_path = str(doc_id)
 
-        # If you call Create twice with same path, keep the old behavior: raise.
         if file_path in self._cache:
             raise SuchIdIsExistException(f"Document with such id {file_path} is created.")
 
@@ -100,15 +77,7 @@ class ExcelLibrary(object):
         return self._current_id
 
     def open_excel_document(self, filename: str, doc_id: str = None) -> str:
-        """
-        Opens xlsx document file.
-
-        Supports BOTH signatures:
-        - Open Excel Document | filename=file.xlsx | doc_id=myid |
-        - Open Excel Document | filename=file.xlsx |   (doc_id omitted)
-
-        If doc_id is omitted, uses filename as id.
-        """
+        """Open an xlsx file and make it the current workbook."""
         filename = str(filename)
         use_id = str(doc_id) if doc_id is not None else filename
 
@@ -119,25 +88,6 @@ class ExcelLibrary(object):
         self._cache[use_id] = workbook
         self._current_id = use_id
         return self._current_id
-
-    def open_excel_document_from_stream(self, stream: bytes, doc_id: str) -> str:
-        """Opens xlsx document from stream."""
-        doc_id = str(doc_id)
-        if doc_id in self._cache:
-            raise SuchIdIsExistException(f"Document with such id {doc_id} is opened.")
-        workbook = openpyxl.load_workbook(filename=BytesIO(stream))
-        self._cache[doc_id] = workbook
-        self._current_id = doc_id
-        return self._current_id
-
-    def switch_current_excel_document(self, doc_id: str) -> Optional[str]:
-        """Switches current excel document."""
-        doc_id = str(doc_id)
-        if doc_id not in self._cache:
-            raise NoSuchIdException(f"Document with such id {doc_id} is not opened yet.")
-        old_name = self._current_id
-        self._current_id = doc_id
-        return old_name
 
     def close_current_excel_document(self) -> Optional[str]:
         """Close and remove the current document from the cache."""
@@ -176,13 +126,7 @@ class ExcelLibrary(object):
             ) from close_errors[0]
 
     def save_excel_document(self, filename: str = None) -> None:
-        """
-        Saves the current document to disk.
-
-        COMPAT MODE:
-        - If filename is omitted, saves to current_id when it looks like a path.
-        - If filename provided, ensures its parent directory exists.
-        """
+        """Save the current workbook, optionally to a new filename."""
         workbook = self._get_current_workbook()
 
         target = filename if filename else self._current_id
@@ -194,25 +138,11 @@ class ExcelLibrary(object):
 
         workbook.save(filename=target)
 
-        # If user saved to a new filename, rebind id to that file path
         if filename and self._current_id != target:
-            # Move cache entry key to new id
             self._cache[target] = workbook
             if self._current_id in self._cache:
                 self._cache.pop(self._current_id, None)
             self._current_id = target
-
-    def get_list_sheet_names(self) -> List[str]:
-        """Returns a list of sheet names in the current document."""
-        workbook = self._get_current_workbook()
-        return workbook.sheetnames
-
-    def make_list_from_excel_sheet(self, sheet: Worksheet) -> list:
-        """Making list from Excel sheet."""
-        data = []
-        for row in sheet.values:
-            data.append(row)
-        return data
 
     # -------------------------
     # Read keywords
@@ -225,28 +155,6 @@ class ExcelLibrary(object):
         sheet = self.get_sheet(sheet_name)
         cell: Cell = sheet.cell(row=row_num, column=col_num)
         return cell.value
-
-    def read_excel_row(
-        self, row_num: int, col_offset: int = 0, max_num: int = 0, sheet_name: str = None
-    ) -> List[Any]:
-        """Returns content of a row from the current sheet of the document."""
-        row_num = int(row_num)
-        col_offset = int(col_offset)
-        max_num = int(max_num)
-        sheet = self.get_sheet(sheet_name)
-
-        if max_num <= 0:
-            # If not provided, read until last column with values (best-effort)
-            max_num = sheet.max_column - col_offset
-
-        row_iter: Iterator[Tuple[Cell]] = sheet.iter_rows(
-            min_row=row_num,
-            max_row=row_num,
-            min_col=1 + col_offset,
-            max_col=col_offset + max_num,
-        )
-        row: Tuple[Cell, ...] = next(row_iter)
-        return [cell.value for cell in row]
 
     def read_excel_column(
         self, col_num: int, row_offset: int = 0, max_num: int = 0, sheet_name: str = None
@@ -278,33 +186,6 @@ class ExcelLibrary(object):
         col_num = int(col_num)
         sheet = self.get_sheet(sheet_name)
         sheet.cell(row=row_num, column=col_num, value=value)
-
-    def write_excel_row(
-        self, row_num: int, row_data: List[Any], col_offset: int = 0, sheet_name: str = None
-    ) -> None:
-        """Writes a row to the document."""
-        row_num = int(row_num)
-        col_offset = int(col_offset)
-        sheet = self.get_sheet(sheet_name)
-        for col_num in range(len(row_data)):
-            sheet.cell(row=row_num, column=col_num + col_offset + 1, value=row_data[col_num])
-
-    def write_excel_rows(
-        self, rows_data: List[List[Any]], rows_offset: int = 0, col_offset: int = 0, sheet_name: str = None
-    ) -> None:
-        """Writes a list of rows to the document."""
-        for row_num, row_data in enumerate(rows_data):
-            self.write_excel_row(row_num + int(rows_offset) + 1, row_data, col_offset, sheet_name)
-
-    def write_excel_column(
-        self, col_num: int, col_data: List[Any], row_offset: int = 0, sheet_name: str = None
-    ) -> None:
-        """Writes the data to a column."""
-        col_num = int(col_num)
-        row_offset = int(row_offset)
-        sheet = self.get_sheet(sheet_name)
-        for row_num in range(len(col_data)):
-            sheet.cell(column=col_num, row=row_num + row_offset + 1, value=col_data[row_num])
 
     def write_migration_rows_atomically(
         self,

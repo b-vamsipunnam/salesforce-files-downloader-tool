@@ -2,9 +2,22 @@
 
 A successful execution produces isolated download, artifact, and Robot Framework report directories similar to the following:
 
+## Required preflight
+
+Do not start Robot or Pabot until the environment and Salesforce commands pass independently. On Windows PowerShell:
+
+```powershell
+node --version
+npm --version
+sf.cmd --version
+sf.cmd org display --target-org <org_alias> --json | Out-Null
+```
+
+Node.js and npm must satisfy the live engine declarations documented in [Installation](Installation.md), the CLI version output must name the active Node runtime, and the Salesforce command must exit successfully. Generate a current, non-redacted `org_info.json` with the Robot task in [Authentication](Authentication.md). If any preflight command fails, do not redirect its output into `org_info.json` and do not start parallel workers. Runtime API-capacity checks use authenticated REST calls and do not require `sf org list limits`.
+
 ## Basic execution
 
-Refresh `org_info.json`, populate the configured input workbooks with `ContentDocumentId` values, and run all configured batches sequentially:
+Refresh and validate `org_info.json`, populate the configured input workbooks with `ContentDocumentId` values, and run all configured batches sequentially:
 
 ```bash
 robot --outputdir results src/robot/orchestrator/download.robot
@@ -23,20 +36,20 @@ robot --test Download_Batch_1 --outputdir results src/robot/orchestrator/downloa
 Because `download.robot` is one suite, this command creates Pabot infrastructure but leaves its batch tests sequential:
 
 ```bash
-pabot --pabotlib --processes 4 --outputdir results src/robot/orchestrator/download.robot
+pabot --processes 4 --outputdir results src/robot/orchestrator/download.robot
 ```
 
 Add `--testlevelsplit` to execute the configured batch tests concurrently:
 
 ```bash
-pabot --pabotlib --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
+pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
 ```
 
-Each worker starts its own Robot and Chrome environment. Do not remove the shared `org_info.json` in worker-level teardown; remove it only after the complete Pabot run.
+Each worker starts its own Robot and Chrome environment and performs its own authenticated REST capacity check. Do not remove the shared `org_info.json` in worker-level teardown; remove it only after the complete Pabot run.
 
-Suite setup reads the alias, org ID, and API version directly from `org_info.json` and resolves the Salesforce CLI executable. It does not run `sf org display`, which avoids concurrent access to shared CLI state when Pabot starts several workers. The API-capacity lookup remains per batch because the remaining allocation can change during execution. A PabotLib lock serializes that CLI command across workers, and bounded retries handle empty, invalid, or failed CLI responses while browser downloads continue in parallel.
+Each non-empty batch reads `org_info.json`, initializes its authenticated REST session, and calls `/services/data/v<version>/limits` before creating migration workbooks or starting Chrome. This retains a fresh per-batch capacity decision without starting Salesforce CLI subprocesses during downloads.
 
-The lock protects CLI access, not capacity allocation. Salesforce usage reporting can lag, so workers may observe similar remaining values. Treat the console value as a minimum estimate, retain a realistic safety buffer for pagination, and avoid running close to the org limit unless capacity is coordinated outside this tool.
+REST capacity checks do not reserve requests globally. Salesforce usage reporting can lag, so workers may observe similar remaining values. Treat the console value as a minimum estimate, retain a realistic safety buffer for pagination, and avoid running close to the org limit unless capacity is coordinated outside this tool.
 
 ## Expected directory structure
 
@@ -58,6 +71,8 @@ results/
 ├── output.xml
 └── report.html
 ```
+
+Every batch run creates new UUID-based download and artifact directories. These directories and Robot reports are retained for audit and recovery; review and remove historical runs according to local retention requirements only after all workers have finished.
 
 ## Output files
 

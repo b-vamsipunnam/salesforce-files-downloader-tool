@@ -23,7 +23,7 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
-Python 3.10 or later is required. Authenticated download runs also require Salesforce CLI and Google Chrome; see [Installation](docs/Installation.md) and [Authentication](docs/Authentication.md).
+Python 3.10 or later is required. Authenticated download runs also require Google Chrome, the latest supported Node.js LTS, compatible npm, and the latest stable Salesforce CLI. Complete the live compatibility checks in [Installation](docs/Installation.md) and [Authentication](docs/Authentication.md); do not duplicate patch-version pins here.
 
 ## Make a focused change
 
@@ -62,10 +62,10 @@ When the change affects the authenticated workflow, also run:
 robot --outputdir results src/robot/orchestrator/download.robot
 ```
 
-This suite requires an authenticated Salesforce CLI alias, a current `org_info.json`, Chrome, and valid input workbooks. To exercise worker isolation, use test-level Pabot splitting:
+This suite requires an authenticated Salesforce CLI alias, a validated non-redacted `org_info.json`, Chrome, and valid input workbooks. Confirm `sf.cmd org display --target-org <org_alias> --json` succeeds independently before starting workers. Runtime API-capacity checks use the authenticated REST session rather than a Salesforce CLI limits subprocess. To exercise worker isolation, use test-level Pabot splitting:
 
 ```bash
-pabot --pabotlib --testlevelsplit --processes 2 --outputdir results src/robot/orchestrator/download.robot
+pabot --testlevelsplit --processes 2 --outputdir results src/robot/orchestrator/download.robot
 ```
 
 Review `output.xml`, `log.html`, and `report.html` before sharing them. Remove customer data, tokens, org identifiers, filenames, and other sensitive values.

@@ -23,10 +23,13 @@ Initialize Salesforce Session
         ...    ${ORG_INFO_FILE}
         ...    encoding=UTF-8-sig
         ${org_dict}=    Evaluate    json.loads($json_text)    modules=json
+        Validate Salesforce Org Info    ${org_dict}
         ${token}=    Set Variable    ${org_dict['result']['accessToken']}
         ${instance}=    Set Variable    ${org_dict['result']['instanceUrl']}
         ${api_version}=    Set Variable    ${org_dict['result']['apiVersion']}
+        ${org_alias}=    Set Variable    ${org_dict['result']['alias']}
         Set Test Variable    ${api_version}
+        Set Test Variable    ${SF_ORG_ALIAS}    ${org_alias}
         ${headers}=    Create Dictionary
         ...    Authorization=Bearer ${token}
         ...    Content-Type=application/json
@@ -39,6 +42,31 @@ Initialize Salesforce Session
         Set Log Level    ${previous_level}
     END
     RETURN    ${session_alias}
+
+Validate Salesforce Org Info
+    [Documentation]     Fails with a safe, actionable message when org_info.json is unsuccessful, incomplete, or contains the redacted placeholder returned by newer Salesforce CLI versions. The access token is never included in the failure message.
+    [Arguments]    ${org_dict}
+    ${status}=    Get From Dictionary    ${org_dict}    status    default=${NONE}
+    ${result}=    Get From Dictionary    ${org_dict}    result    default=${NONE}
+    ${valid_status}=    Evaluate    str($status) == '0'
+    ${valid_result}=    Evaluate    hasattr($result, 'get')
+    IF    not $valid_status or not $valid_result
+        Fail    Invalid org_info.json: Salesforce CLI did not return a successful org result. Regenerate it with the Robot authentication command documented in docs/Authentication.md.
+    END
+    ${token}=    Get From Dictionary    ${result}    accessToken    default=${NONE}
+    ${instance}=    Get From Dictionary    ${result}    instanceUrl    default=${NONE}
+    ${api}=    Get From Dictionary    ${result}    apiVersion    default=${NONE}
+    ${alias}=    Get From Dictionary    ${result}    alias    default=${NONE}
+    ${usable_token}=    Evaluate
+    ...    isinstance($token, str) and bool($token.strip()) and not $token.lstrip().startswith('[REDACTED]')
+    ${usable_context}=    Evaluate
+    ...    isinstance($instance, str) and bool($instance.strip()) and isinstance($api, str) and bool($api.strip()) and isinstance($alias, str) and bool($alias.strip())
+    IF    not $usable_token
+        Fail    Invalid org_info.json: accessToken is empty or redacted. Run the Robot authentication command documented in docs/Authentication.md; sf org display output is intentionally redacted.
+    END
+    IF    not $usable_context
+        Fail    Invalid org_info.json: alias, instanceUrl, or apiVersion is missing. Regenerate it with the Robot authentication command documented in docs/Authentication.md.
+    END
 
 Get Salesforce Login Info
     [Documentation]     Reads the Salesforce instance URL and access token from org_info.json, determines the organization domain, constructs the authenticated frontdoor login URL, and returns the URL for browser initialization.
@@ -104,6 +132,115 @@ Send Safe Salesforce GET Request
         RETURN    ${NONE}
     END
     RETURN    ${resp}
+
+Get Salesforce Daily API Limits Via REST
+    [Documentation]     Retrieves DailyApiRequests directly from the authenticated Salesforce REST limits endpoint and returns its maximum and remaining values. This avoids starting a Salesforce CLI subprocess inside parallel Robot workers.
+    [Arguments]
+    ...    ${session_alias}
+    ...    ${request_keyword}=Send Safe Salesforce GET Request
+    ${url}=    Set Variable    /services/data/v${api_version}/limits
+    ${resp}=    Run Keyword
+    ...    ${request_keyword}
+    ...    ${session_alias}
+    ...    ${url}
+    IF    $resp is None
+        Fail    Salesforce REST limits request failed.
+    END
+    ${payload}=    Evaluate    $resp.json()
+    ${daily_limit}=    Get From Dictionary
+    ...    ${payload}
+    ...    DailyApiRequests
+    ...    default=${NONE}
+    IF    $daily_limit is None
+        Fail    DailyApiRequests was not present in the Salesforce REST limits response.
+    END
+    ${maximum}=    Get From Dictionary    ${daily_limit}    Max
+    ${remaining}=    Get From Dictionary    ${daily_limit}    Remaining
+    ${maximum}=    Convert To Integer    ${maximum}
+    ${remaining}=    Convert To Integer    ${remaining}
+    RETURN    ${maximum}    ${remaining}
+
+Estimate Metadata API Requests
+    [Documentation]     Estimates REST requests for batched ContentDocument and optional ContentDocumentLink metadata retrieval.
+    [Arguments]    ${content_id_count}    ${generate_content_document_link_file}
+    ${content_id_count}=    Convert To Integer    ${content_id_count}
+    ${batch_size}=    Convert To Integer    ${METADATA_BATCH_SIZE}
+    Should Be True    ${content_id_count} >= 0    msg=ContentDocument ID count cannot be negative.
+    Should Be True    ${batch_size} > 0    msg=METADATA_BATCH_SIZE must be greater than zero.
+    ${metadata_batches}=    Evaluate    math.ceil($content_id_count / $batch_size)    modules=math
+    ${queries_per_batch}=    Convert To Integer    1
+    IF    '${generate_content_document_link_file.lower()}' == 'yes'
+        ${queries_per_batch}=    Convert To Integer    2
+    END
+    ${estimated_metadata_requests}=    Evaluate    $metadata_batches * $queries_per_batch
+    RETURN    ${metadata_batches}    ${estimated_metadata_requests}
+
+Check Salesforce API Capacity
+    [Documentation]     Reads DailyApiRequests through the authenticated REST session and stops before migration workbook creation when estimated metadata requests, the safety buffer, and the required reserve exceed the remaining allocation.
+    [Arguments]
+    ...    ${content_id_count}
+    ...    ${generate_content_document_link_file}
+    ...    ${session_alias}=${NONE}
+    ...    ${limits_keyword}=Get Salesforce Daily API Limits Via REST
+    IF    not ${ENABLE_API_CAPACITY_CHECK}
+        Log To Console    Salesforce API capacity check is disabled.
+        RETURN
+    END
+    IF    $session_alias is None
+        Fail    Salesforce REST session is required for the API capacity check.
+    END
+    ${daily_max}    ${daily_remaining}=    Run Keyword    ${limits_keyword}    ${session_alias}
+    ${daily_max}=    Convert To Integer    ${daily_max}
+    ${daily_remaining}=    Convert To Integer    ${daily_remaining}
+    ${metadata_batches}    ${estimated_metadata_requests}=
+    ...    Estimate Metadata API Requests
+    ...    ${content_id_count}
+    ...    ${generate_content_document_link_file}
+    ${safety_buffer}=    Convert To Integer    ${API_REQUEST_SAFETY_BUFFER}
+    ${minimum_remaining}=    Convert To Integer    ${MINIMUM_API_REQUESTS_REMAINING}
+    Should Be True    ${safety_buffer} >= 0    msg=API_REQUEST_SAFETY_BUFFER cannot be negative.
+    Should Be True    ${minimum_remaining} >= 0    msg=MINIMUM_API_REQUESTS_REMAINING cannot be negative.
+    ${estimated_tool_requests}=    Evaluate    $estimated_metadata_requests + 1
+    ${projected_remaining}=    Evaluate    $daily_remaining - $estimated_tool_requests
+
+    Log To Console    \n==================================================
+    Log To Console    Salesforce API Capacity Check
+    Log To Console    --------------------------------------------------
+    Log To Console    Org Alias: ${SF_ORG_ALIAS}
+    Log To Console    Daily API Maximum: ${daily_max}
+    Log To Console    Daily API Remaining: ${daily_remaining}
+    Log To Console    ContentDocument IDs: ${content_id_count}
+    Log To Console    Metadata Batch Size: ${METADATA_BATCH_SIZE}
+    Log To Console    Metadata Batches: ${metadata_batches}
+    Log To Console
+    ...    Minimum Estimated Metadata Requests: ${estimated_metadata_requests} (additional pagination requests are covered only by the safety buffer)
+    Log To Console    API Capacity Check Requests: 1
+    Log To Console    Estimated Tool Requests: ${estimated_tool_requests}
+    Log To Console    Safety Buffer: ${safety_buffer}
+    Log To Console    Minimum Remaining Reserve: ${minimum_remaining}
+    Log To Console    Projected API Requests Remaining: ${projected_remaining}
+    Log To Console    ==================================================
+
+    Validate Salesforce API Capacity
+    ...    ${daily_remaining}
+    ...    ${estimated_tool_requests}
+    ...    ${safety_buffer}
+    ...    ${minimum_remaining}
+    Log To Console    Salesforce API capacity check: PASSED
+
+Validate Salesforce API Capacity
+    [Documentation]     Fails when remaining API capacity cannot cover estimated tool requests, the safety buffer, and the required post-run reserve.
+    [Arguments]
+    ...    ${daily_remaining}
+    ...    ${estimated_tool_requests}
+    ...    ${safety_buffer}
+    ...    ${minimum_remaining}
+    ${required_capacity}=    Evaluate
+    ...    int($estimated_tool_requests) + int($safety_buffer) + int($minimum_remaining)
+    IF    int($daily_remaining) < ${required_capacity}
+        Fail
+        ...    Insufficient Salesforce API capacity. Remaining: ${daily_remaining}; estimated tool requests: ${estimated_tool_requests}; safety buffer: ${safety_buffer}; required reserve: ${minimum_remaining}. Reduce the input size or run again after API capacity becomes available.
+    END
 
 Execute SOQL Query
     [Documentation]     Executes a SOQL query through the active Salesforce REST session and follows nextRecordsUrl pagination until all records are retrieved. Fails when a request is unsuccessful, pagination data is incomplete, or the pagination safety limit is exceeded.

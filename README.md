@@ -49,6 +49,7 @@ This project separates metadata retrieval from binary transfer and provides isol
 - Writes a per-batch JSONL execution manifest for programmatic reconciliation and audit
 - Detects expired REST and browser sessions instead of reporting them as generic download failures
 - Creates optional ContentVersion and ContentDocumentLink import workbooks
+- Escapes formula-like ContentVersion titles before writing migration workbooks
 - Supports headless Chrome and Pabot test-level parallel execution
 - Validates Python and Robot code with Ruff, Robocop, and cross-platform CI
 
@@ -58,11 +59,16 @@ This project separates metadata retrieval from binary transfer and provides isol
 git clone https://github.com/b-vamsipunnam/salesforce-files-downloader-tool.git
 cd salesforce-files-downloader-tool
 python -m venv venv
-pip install -r requirements.txt
-sf org login web --alias <org_alias>
+python -m pip install -r requirements.txt
 ```
 
-Follow the [Authentication](docs/Authentication.md) guide to generate `org_info.json`. Then add `ContentDocumentId` values to the first column of `input/Inputfile_1.xlsx` and run:
+Before authenticating, complete the strict [Installation](docs/Installation.md) checks. New installations use the latest Node.js LTS, compatible latest npm, and the stable Salesforce CLI `latest` channel; the guide includes live engine checks so patch releases do not make these instructions stale. Follow [Authentication](docs/Authentication.md) to log in, then securely generate a non-redacted `org_info.json`:
+
+```bash
+robot --variable ORG_ALIAS:<org_alias> --output NONE --log NONE --report NONE src/robot/orchestrator/authenticate.robot
+```
+
+Add `ContentDocumentId` values to the first column of `input/Inputfile_1.xlsx`, then run the downloader:
 
 ```bash
 robot --outputdir results src/robot/orchestrator/download.robot

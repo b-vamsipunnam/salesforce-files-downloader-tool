@@ -3,7 +3,6 @@ robotframework==7.4.2
 robotframework-seleniumlibrary==6.9.0
 robotframework-pabot==2.18.0
 robotframework-requests==0.9.7
-robotframework-pythonlibcore==4.6.0
 
 # Selenium and browser automation
 selenium==4.46.0
@@ -11,10 +10,5 @@ selenium==4.46.0
 # Excel handling
 openpyxl==3.1.5
 
-# Salesforce-specific libraries
-simple-salesforce==1.12.9
-salesforce-bulk==2.2.0
-
-# HTTP and utility libraries
+# HTTP client used by RequestsLibrary
 requests==2.32.3
-PyYAML==6.0.1
