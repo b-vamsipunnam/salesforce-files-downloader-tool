@@ -1,6 +1,6 @@
 # Roadmap
 
-This roadmap records areas for improvement and exploration. It does not commit to delivery dates or final designs.
+These are possible improvements, not commitments to dates or designs.
 
 ## Near-term
 

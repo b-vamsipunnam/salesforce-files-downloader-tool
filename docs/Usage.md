@@ -1,10 +1,8 @@
 # Usage
 
-A successful execution produces isolated download, artifact, and Robot Framework report directories similar to the following:
-
 ## Required preflight
 
-Do not start Robot or Pabot until the environment and Salesforce commands pass independently. On Windows PowerShell:
+Run the environment and Salesforce checks independently before starting Robot or Pabot. On Windows PowerShell:
 
 ```powershell
 node --version
@@ -20,7 +18,7 @@ Node.js and npm must satisfy the live engine declarations documented in [Install
 Refresh and validate `org_info.json`, populate the configured input workbooks with `ContentDocumentId` values, and run all configured batches sequentially:
 
 ```bash
-robot --outputdir results src/robot/orchestrator/download.robot
+robot --outputdir results src/robot/orchestrators/download.robot
 ```
 
 The first column may contain valid 15- or 18-character IDs. The downloader canonicalizes valid IDs to 18 characters before deduplication, so mixed representations of the same document are processed once within a batch.
@@ -28,7 +26,7 @@ The first column may contain valid 15- or 18-character IDs. The downloader canon
 Run one batch while debugging:
 
 ```bash
-robot --test Download_Batch_1 --outputdir results src/robot/orchestrator/download.robot
+robot --test Download_Batch_1 --outputdir results src/robot/orchestrators/download.robot
 ```
 
 ## Parallel execution
@@ -36,20 +34,20 @@ robot --test Download_Batch_1 --outputdir results src/robot/orchestrator/downloa
 Because `download.robot` is one suite, this command creates Pabot infrastructure but leaves its batch tests sequential:
 
 ```bash
-pabot --processes 4 --outputdir results src/robot/orchestrator/download.robot
+pabot --processes 4 --outputdir results src/robot/orchestrators/download.robot
 ```
 
 Add `--testlevelsplit` to execute the configured batch tests concurrently:
 
 ```bash
-pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
+pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrators/download.robot
 ```
 
 Each worker starts its own Robot and Chrome environment and performs its own authenticated REST capacity check. Do not remove the shared `org_info.json` in worker-level teardown; remove it only after the complete Pabot run.
 
-Each non-empty batch reads `org_info.json`, initializes its authenticated REST session, and calls `/services/data/v<version>/limits` before creating migration workbooks or starting Chrome. This retains a fresh per-batch capacity decision without starting Salesforce CLI subprocesses during downloads.
+Each non-empty batch reads `org_info.json`, opens an authenticated REST session, and calls `/services/data/v<version>/limits` before creating migration workbooks or starting Chrome. This gives each batch a current capacity check without starting Salesforce CLI subprocesses during downloads.
 
-REST capacity checks do not reserve requests globally. Salesforce usage reporting can lag, so workers may observe similar remaining values. Treat the console value as a minimum estimate, retain a realistic safety buffer for pagination, and avoid running close to the org limit unless capacity is coordinated outside this tool.
+REST capacity checks do not reserve requests globally. Salesforce usage reporting can lag, so workers may see similar remaining values. Treat the console value as a minimum estimate, leave enough buffer for pagination, and do not run close to the org limit unless another system coordinates capacity.
 
 ## Expected directory structure
 
@@ -72,7 +70,7 @@ results/
 └── report.html
 ```
 
-Every batch run creates new UUID-based download and artifact directories. These directories and Robot reports are retained for audit and recovery; review and remove historical runs according to local retention requirements only after all workers have finished.
+Every batch run creates new UUID-based download and artifact directories. The downloader retains them and the Robot reports for audit and recovery. After all workers finish, review and remove old runs according to local retention requirements.
 
 ## Output files
 

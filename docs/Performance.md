@@ -2,7 +2,7 @@
 
 ## Benchmark results
 
-The following benchmark was performed using 10,000 Salesforce files totaling approximately 6.4 GB across 18 file types on a single machine.
+This benchmark used 10,000 Salesforce files totaling about 6.4 GB across 18 file types on one machine.
 
 | Workers | Runtime     | Speedup | Efficiency |
 |---------|-------------|---------|------------|
@@ -21,19 +21,19 @@ flowchart LR
     W4 --> W8["8 workers<br/>31 minutes"]
 ```
 
-These measurements describe one run configuration, not a throughput guarantee. Results vary with Salesforce response time, network conditions, file-size distribution, CPU, memory, browser behavior, disk performance, permissions, and org configuration.
+These results describe one run configuration, not guaranteed throughput. Salesforce response time, network conditions, file-size distribution, CPU, memory, browser behavior, disk performance, permissions, and org configuration all affect runtime.
 
 ## Parallel execution
 
 Pabot splits batch tests across processes only when `--testlevelsplit` is used. Every process owns a Chrome instance and UUID-based download and artifact directories.
 
 ```bash
-pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
+pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrators/download.robot
 ```
 
 ## Worker scaling
 
-Start with a small worker count and observe CPU, memory, disk latency, network use, Salesforce behavior, and failure rate. Increase `--processes` gradually. Distributing a similar number of IDs across input workbooks generally results in better worker utilization. Startup overhead and result merging can make parallel execution less efficient for very small workloads.
+Start with a few workers and watch CPU, memory, disk latency, network use, Salesforce behavior, and failure rate. Increase `--processes` gradually. Similar-sized input workbooks usually keep workers busier. For very small workloads, startup and result-merging overhead can erase the benefit of parallel execution.
 
 ## Download validation
 
@@ -54,7 +54,7 @@ Only unresolved failures are deduplicated into the batch-specific Excel workbook
 
 ## Benchmark limitations
 
-The benchmark does not isolate Salesforce-side caching, network variability, individual file sizes, workstation specifications, or org-specific limits. Use it to understand observed scaling for the stated dataset, not to predict another environment. Test representative batches before selecting a production worker count.
+The benchmark does not isolate Salesforce caching, network variability, individual file sizes, workstation specifications, or org-specific limits. It shows scaling for this dataset only. Test representative batches before choosing a production worker count.
 
 ---
 

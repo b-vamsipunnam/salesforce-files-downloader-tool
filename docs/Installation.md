@@ -37,7 +37,7 @@ Install the pinned dependencies:
 python -m pip install -r requirements.txt
 ```
 
-This installs Robot Framework, SeleniumLibrary, Pabot, RequestsLibrary, Selenium, OpenPyXL, and the HTTP client used by the project.
+This installs Robot Framework, SeleniumLibrary, Pabot, RequestsLibrary, Selenium, OpenPyXL, and the project's HTTP client.
 
 Contributors should also install the pinned development checks used by CI:
 
@@ -60,7 +60,7 @@ Use supported release channels instead of permanently pinning patch versions:
 - npm: latest stable version compatible with the active Node.js runtime; npm 12.0.2 was current when verified.
 - Salesforce CLI: npm `latest` channel; `@salesforce/cli` 2.147.7 was current when verified and declared `node >=22.0.0`.
 
-Patch versions change frequently. Treat the dated versions above as an audit record, not installation pins. The commands below resolve and verify the current releases. See the [NVM for Windows releases](https://github.com/coreybutler/nvm-windows/releases), [Node.js release schedule](https://nodejs.org/en/about/previous-releases), [npm release guidance](https://docs.npmjs.com/about-npm-versions/), and [Salesforce CLI release notes](https://github.com/forcedotcom/cli/tree/main/releasenotes).
+Patch versions change frequently. The dated versions above record what was verified; they are not installation pins. The commands below resolve and check current releases. See the [NVM for Windows releases](https://github.com/coreybutler/nvm-windows/releases), [Node.js release schedule](https://nodejs.org/en/about/previous-releases), [npm release guidance](https://docs.npmjs.com/about-npm-versions/), and [Salesforce CLI release notes](https://github.com/forcedotcom/cli/tree/main/releasenotes).
 
 ### Strict Windows installation with NVM
 
@@ -117,7 +117,7 @@ sf --version
 
 ## Chrome
 
-Install a current version of Google Chrome and confirm it starts successfully in the execution environment. The project's browser helper configures Chrome for headless downloads, enables automatic downloads, and binds each browser session to its isolated absolute download path. No separate driver setup is documented by this project.
+Install a current Google Chrome release and confirm it starts in the execution environment. The browser helper configures headless and automatic downloads and gives each session an isolated absolute download path. The project does not document a separate driver setup.
 
 ## Verify the environment
 
@@ -132,7 +132,7 @@ sf --version      # Linux or macOS
 
 Do not continue to authentication unless Node.js and npm satisfy the live engine declarations, the CLI version names the active Node runtime, and `sf org display --target-org <org_alias> --json` completes successfully.
 
-Continue with the Authentication guide before running the downloader.
+Complete the [Authentication](Authentication.md) steps before running the downloader.
 
 ---
 

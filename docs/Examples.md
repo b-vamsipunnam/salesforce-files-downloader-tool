@@ -2,7 +2,7 @@
 
 ## Process one workbook
 
-Set the input and worksheet in `src/robot/orchestrator/download.robot`:
+Set the input and worksheet in `src/robot/orchestrators/download.robot`:
 
 ```robot
 ${INPUT_EXCEL_PATH_1}    ${INPUT_FOLDER}${/}Inputfile_1.xlsx
@@ -12,7 +12,7 @@ ${SHEET_NAME}            Input
 Then run only its batch:
 
 ```bash
-robot --test Download_Batch_1 --outputdir results src/robot/orchestrator/download.robot
+robot --test Download_Batch_1 --outputdir results src/robot/orchestrators/download.robot
 ```
 
 ## Download without migration workbooks
@@ -31,10 +31,10 @@ These values are case-insensitive and may contain surrounding whitespace, but th
 Execute the four configured batch tests across up to four parallel worker processes:
 
 ```bash
-pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrator/download.robot
+pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrators/download.robot
 ```
 
-Where practical, distribute a similar number of IDs across input workbooks to improve parallel execution efficiency. A small batch can finish while another worker continues processing a much larger input.
+Keep input workbooks similar in size when practical. Otherwise, a small batch may finish while another worker continues through a much larger input.
 
 ## Retry failures
 
@@ -62,7 +62,7 @@ Each batch counts one authenticated REST limits request plus the minimum expecte
 
 ## Mix 15- and 18-character IDs safely
 
-It is common for exports from different Salesforce tools to contain different representations of the same ID:
+Exports from different Salesforce tools may contain both forms of the same ID:
 
 ```text
 069AAAAAAAAAAAA
@@ -73,7 +73,7 @@ The downloader converts the valid 15-character value to its canonical 18-charact
 
 ## Illustrative enterprise batch
 
-The following numbers are an example only; they are not benchmark results or guaranteed output.
+These numbers are only an example, not benchmark results or guaranteed output.
 
 **Scenario:** A migration team processes one workbook containing 250 unique `ContentDocumentId` values.
 

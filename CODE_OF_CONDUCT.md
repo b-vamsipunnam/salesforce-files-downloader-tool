@@ -59,7 +59,7 @@ It also applies when representing the project in public spaces.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project maintainer.
 
-All reports will be reviewed promptly and handled with discretion and confidentiality.
+The maintainer will review reports promptly and handle them discreetly and confidentially.
 
 **Maintainer:** Bhimeswara Vamsi Punnam  
 **Contact Method:** GitHub private message or repository contact
@@ -68,10 +68,10 @@ No retaliation against reporters will be tolerated.
 
 ### Enforcement Process
 
-* The maintainer will acknowledge receipt of the report.
-* An initial assessment will be conducted.
-* Appropriate corrective action will be determined.
-* The reporter will be informed of the outcome where appropriate.
+* The maintainer acknowledges the report.
+* The maintainer assesses what happened.
+* The maintainer decides on appropriate corrective action.
+* The maintainer informs the reporter of the outcome where appropriate.
 
 ---
 
@@ -81,4 +81,4 @@ This Code of Conduct is adapted from the [Contributor Covenant](https://www.cont
 
 ---
 
-Thank you for helping create a respectful and productive community!
+Help keep project discussions respectful and productive.

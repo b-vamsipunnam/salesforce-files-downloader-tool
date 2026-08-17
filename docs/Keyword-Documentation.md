@@ -1,8 +1,8 @@
 # Keyword documentation
 
-`src/robot/resources/keywords.robot` imports the resource files below. Robot Framework exposes their keywords when that entry point is imported. Most callers should use the orchestration keyword rather than assemble the internal workflow directly.
+`src/robot/resources/keywords.robot` imports the resource files below and exposes their keywords to Robot Framework. Start with the orchestration keyword. Use lower-level keywords only when extending or testing the workflow.
 
-This page covers the keywords that callers and maintainers are most likely to use. In each table, **What it does and when to use it** explains the intended role, while **Important behavior** calls out state changes, assumptions, and limits. Most projects should start with the orchestration keyword and use lower-level keywords only when extending or testing the workflow.
+The tables cover the keywords callers and maintainers are most likely to need. **What it does and when to use it** gives the keyword's role; **Important behavior** records state changes, assumptions, and limits.
 
 ## Salesforce authentication and REST capacity
 
@@ -10,16 +10,16 @@ This page covers the keywords that callers and maintainers are most likely to us
 
 `src/robot/libraries/CredentialGenerator.py` and `src/robot/resources/salesforce_api.robot`
 
-| Keyword                         | What it does and when to use it              | Arguments       | Return value  | Important behavior                                                      |
-|---------------------------------|---------------------------------------------|-----------------|---------------|-------------------------------------------------------------------------|
+| Keyword                                    | What it does and when to use it              | Arguments       | Return value  | Important behavior                                                      |
+|--------------------------------------------|---------------------------------------------|-----------------|---------------|-------------------------------------------------------------------------|
 | `Get Salesforce Daily API Limits Via REST` | Read `DailyApiRequests` before a batch. | Session alias; optional request keyword for tests | Maximum and remaining requests | Calls the authenticated Salesforce REST limits endpoint without starting a CLI subprocess. |
-| `Estimate Metadata API Requests` | Estimate batched metadata calls. | ID count and ContentDocumentLink generation flag | Batch and request counts | Uses `${METADATA_BATCH_SIZE}` and does not predict pagination. |
-| `Check Salesforce API Capacity` | Run the preflight capacity guard. | ID count, ContentDocumentLink generation flag, REST session alias, and optional limits keyword | None | Fails before migration-workbook or download-directory creation when estimated use, buffer, and reserve exceed remaining capacity. |
-| `Validate Salesforce API Capacity` | Validate already-calculated capacity values. | Remaining requests, estimated tool requests, safety buffer, and minimum reserve | None | Pure capacity decision used by the preflight and offline tests. |
-| `Initialize Salesforce Session` | Create an authenticated REST session.       | None            | Session alias | Reads and validates `org_info.json`; uses a unique RequestsLibrary alias. |
-| `Validate Salesforce Org Info` | Reject unsuccessful, incomplete, empty-token, or redacted-token org data without exposing the token. | Org dictionary | None | Fails before REST, workbook, or browser work and directs the user to the credential generator. |
-| `Generate Salesforce Org Info` | Generate the downloader credential file using Salesforce CLI metadata and dedicated access-token commands. | Org alias, output path, optional CLI command | Non-secret confirmation | Used by `orchestrator/authenticate.robot`; validates and atomically replaces the destination without returning the token. |
-| `Get Salesforce Login Info`     | Prepare frontdoor browser authentication.   | None            | Login URL     | Sets `${org_domain}` and reads the token without ordinary log exposure. |
+| `Estimate Metadata API Requests`           | Estimate batched metadata calls. | ID count and ContentDocumentLink generation flag | Batch and request counts | Uses `${METADATA_BATCH_SIZE}` and does not predict pagination. |
+| `Check Salesforce API Capacity`            | Run the preflight capacity guard. | ID count, ContentDocumentLink generation flag, REST session alias, and optional limits keyword | None | Fails before migration-workbook or download-directory creation when estimated use, buffer, and reserve exceed remaining capacity. |
+| `Validate Salesforce API Capacity`         | Validate already-calculated capacity values. | Remaining requests, estimated tool requests, safety buffer, and minimum reserve | None | Pure capacity decision used by the preflight and offline tests. |
+| `Initialize Salesforce Session`            | Create an authenticated REST session.       | None            | Session alias | Reads and validates `org_info.json`; uses a unique RequestsLibrary alias. |
+| `Validate Salesforce Org Info`             | Reject unsuccessful, incomplete, empty-token, or redacted-token org data without exposing the token. | Org dictionary | None | Fails before REST, workbook, or browser work and directs the user to the credential generator. |
+| `Generate Salesforce Org Info`             | Generate the downloader credential file using Salesforce CLI metadata and dedicated access-token commands. | Org alias, output path, optional CLI command | Non-secret confirmation | Used by `orchestrators/authenticate.robot`; validates and atomically replaces the destination without returning the token. |
+| `Get Salesforce Login Info`                | Prepare frontdoor browser authentication.   | None            | Login URL     | Sets `${org_domain}` and reads the token without ordinary log exposure. |
 
 Minimal session example:
 
@@ -140,7 +140,7 @@ Download Files Using Content Document IDs
 
 `src/robot/resources/cleanup.robot`
 
-These keywords are typically executed during suite teardown and normally do not require direct invocation.
+Suite teardown normally calls these keywords; callers rarely need to invoke them directly.
 
 | Keyword                     | What it does and when to use it            | Arguments | Return value | Important behavior                                                  |
 |-----------------------------|--------------------------------------------|-----------|--------------|---------------------------------------------------------------------|

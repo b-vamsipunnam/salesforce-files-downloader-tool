@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Start with the batch JSONL execution manifest and structured failed-ID workbook under `artifacts/`, then use `results/log.html` and `results/pabot_results/` for detailed execution context. Never publish manifests, `org_info.json`, tokens, customer data, or sensitive filenames.
+Start with the batch JSONL manifest and failed-ID workbook under `artifacts/`. Use `results/log.html` and `results/pabot_results/` when you need more detail. Never publish manifests, `org_info.json`, tokens, customer data, or sensitive filenames.
 
 ## Salesforce CLI not found
 
@@ -85,7 +85,7 @@ Recent Salesforce CLI versions hide secrets from `sf org display` by default, or
 
 **Resolution**
 
-First run `sf.cmd org display --target-org <org_alias> --json` without redirection. After it succeeds, run `robot --variable ORG_ALIAS:<org_alias> --output NONE --log NONE --report NONE src/robot/orchestrator/authenticate.robot`. The Robot task uses `sf org auth show-access-token`, validates the result without printing the token, and atomically replaces `org_info.json`. Runtime workers retrieve API limits through their authenticated REST sessions.
+First run `sf.cmd org display --target-org <org_alias> --json` without redirection. After it succeeds, run `robot --variable ORG_ALIAS:<org_alias> --output NONE --log NONE --report NONE src/robot/orchestrators/authenticate.robot`. The Robot task uses `sf org auth show-access-token`, validates the result without printing the token, and atomically replaces `org_info.json`. Runtime workers retrieve API limits through their authenticated REST sessions.
 
 ## Chrome startup or browser compatibility issues
 
@@ -161,7 +161,7 @@ The transfer stalled, local storage is full, browser/network activity was interr
 
 **Resolution**
 
-Use the current project browser helper, check Chrome enterprise download policies, network stability, and free disk space, remove abandoned temporary output after the run, and retry the failed ID. The helper enables automatic downloads and assigns an isolated absolute download path to each browser session.
+Use the project's current browser helper. Check Chrome enterprise download policies, network stability, and free disk space; remove abandoned temporary output after the run; then retry the failed ID. The helper enables automatic downloads and gives each browser session an isolated absolute download path.
 
 The automatic retry starts a fresh download; it does not continue the abandoned temporary file.
 

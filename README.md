@@ -7,7 +7,7 @@
 [![Release](https://img.shields.io/github/v/release/b-vamsipunnam/salesforce-files-downloader-tool.svg?style=flat&color=orange)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/releases/latest)
 [![License](https://img.shields.io/github/license/b-vamsipunnam/salesforce-files-downloader-tool?style=flat)](LICENSE)
 
-Salesforce Files Bulk Downloader uses Robot Framework and Python to download Salesforce Files in bulk from `ContentDocumentId` lists. It is intended for migration, backup, and archival work ranging from small batches to large data sets.
+Salesforce Files Bulk Downloader uses Robot Framework and Python to download Salesforce Files in bulk from `ContentDocumentId` lists. Use it for migration, backup, and archival work, from small batches to large data sets.
 
 **Built with**
 
@@ -20,9 +20,9 @@ Salesforce Files Bulk Downloader uses Robot Framework and Python to download Sal
 
 ## Why this tool exists
 
-Salesforce Files combine a logical file (`ContentDocument`), version and binary metadata (`ContentVersion`), and record associations (`ContentDocumentLink`). Enterprise migration work must preserve these relationships while managing API limits, sessions, binary volume, validation, bounded retry handling, parallel workers, and failure reporting.
+Salesforce Files span a logical file (`ContentDocument`), version and binary metadata (`ContentVersion`), and record associations (`ContentDocumentLink`). A migration must preserve those relationships while handling API limits, sessions, binary volume, validation, retries, parallel workers, and failures.
 
-This project separates metadata retrieval from binary transfer and provides isolated batch outputs, size validation, failed-ID reporting, and optional Data Loader-ready workbooks. See the [Introduction](docs/Introduction.md) for the data model and migration challenges.
+The downloader separates metadata queries from binary transfer. It isolates batch output, validates file sizes, reports failed IDs, and can create Data Loader-ready workbooks. See the [Introduction](docs/Introduction.md) for the data model and migration details.
 
 ## Typical use cases
 
@@ -62,16 +62,16 @@ python -m venv venv
 python -m pip install -r requirements.txt
 ```
 
-Before authenticating, complete the strict [Installation](docs/Installation.md) checks. New installations use the latest Node.js LTS, compatible latest npm, and the stable Salesforce CLI `latest` channel; the guide includes live engine checks so patch releases do not make these instructions stale. Follow [Authentication](docs/Authentication.md) to log in, then securely generate a non-redacted `org_info.json`:
+Before authenticating, complete the [Installation](docs/Installation.md) checks. New installations use the latest Node.js LTS, the latest compatible npm release, and the stable Salesforce CLI `latest` channel. The guide checks the current engine requirements instead of pinning short-lived patch versions. Follow [Authentication](docs/Authentication.md) to log in and generate a non-redacted `org_info.json`:
 
 ```bash
-robot --variable ORG_ALIAS:<org_alias> --output NONE --log NONE --report NONE src/robot/orchestrator/authenticate.robot
+robot --variable ORG_ALIAS:<org_alias> --output NONE --log NONE --report NONE src/robot/orchestrators/authenticate.robot
 ```
 
 Add `ContentDocumentId` values to the first column of `input/Inputfile_1.xlsx`, then run the downloader:
 
 ```bash
-robot --outputdir results src/robot/orchestrator/download.robot
+robot --outputdir results src/robot/orchestrators/download.robot
 ```
 
 Downloaded files appear in `downloads/`, migration and failure workbooks in `artifacts/`, and Robot Framework reports in `results/`.
@@ -80,7 +80,7 @@ Downloaded files appear in `downloads/`, migration and failure workbooks in `art
 
 ![Salesforce Files Bulk Downloader execution architecture](docs/architecture.svg)
 
-The tool uses Salesforce REST APIs for metadata and an authenticated Selenium browser for Shepherd file downloads. Robot Framework coordinates validation and reporting, while Pabot can isolate and run batches in parallel. See the [Architecture](docs/Architecture.md) guide for the complete workflow and detailed component diagram.
+The tool queries metadata through Salesforce REST APIs and downloads binaries from Shepherd through an authenticated Selenium browser. Robot Framework handles validation and reporting; Pabot runs isolated batches in parallel. See [Architecture](docs/Architecture.md) for the full workflow and component diagram.
 
 ## Contents
 
@@ -109,7 +109,7 @@ salesforce-files-downloader-tool/
 ├── src/
 │   └── robot/
 │       ├── libraries/
-│       ├── orchestrator/
+│       ├── orchestrators/
 │       └── resources/
 ├── input/
 ├── downloads/
@@ -125,7 +125,7 @@ salesforce-files-downloader-tool/
 
 - `docs/` contains the project documentation and architecture diagram.
 - `src/robot/libraries/` contains custom Python libraries used by Robot Framework.
-- `src/robot/orchestrator/` defines executable download batches.
+- `src/robot/orchestrators/` defines executable download batches.
 - `src/robot/resources/` contains configuration and reusable workflow keywords.
 - `input/` contains Excel workbooks listing source `ContentDocumentIds`.
 - `downloads/` stores validated file binaries in isolated batch directories.
@@ -136,7 +136,7 @@ salesforce-files-downloader-tool/
 
 ## Contributing
 
-Bug reports, documentation improvements, and code contributions are welcome. Please read the [Contributing](docs/Contributing.md) guide, [Code of Conduct](CODE_OF_CONDUCT.md), and [Security Policy](SECURITY.md) before opening issues or pull requests.
+Before opening an issue or pull request, read the [Contributing](docs/Contributing.md) guide, [Code of Conduct](CODE_OF_CONDUCT.md), and [Security Policy](SECURITY.md).
 
 ## License
 
