@@ -59,13 +59,13 @@ Ruff checks the Python sources. Robocop currently gates error-level Robot issues
 When the change affects the authenticated workflow, also run:
 
 ```bash
-robot --outputdir results src/robot/orchestrator/download.robot
+robot --outputdir results src/robot/orchestrators/download.robot
 ```
 
 This suite requires an authenticated Salesforce CLI alias, a validated non-redacted `org_info.json`, Chrome, and valid input workbooks. Confirm `sf.cmd org display --target-org <org_alias> --json` succeeds independently before starting workers. Runtime API-capacity checks use the authenticated REST session rather than a Salesforce CLI limits subprocess. To exercise worker isolation, use test-level Pabot splitting:
 
 ```bash
-pabot --testlevelsplit --processes 2 --outputdir results src/robot/orchestrator/download.robot
+pabot --testlevelsplit --processes 2 --outputdir results src/robot/orchestrators/download.robot
 ```
 
 Review `output.xml`, `log.html`, and `report.html` before sharing them. Remove customer data, tokens, org identifiers, filenames, and other sensitive values.
@@ -82,7 +82,7 @@ Search existing issues before opening a new one. Include:
 
 ## Suggest an enhancement
 
-Describe the problem first, then the proposed change and a representative use case. Calling out compatibility, migration, security, or performance constraints helps reviewers assess the proposal.
+Describe the problem, the proposed change, and a representative use case. Include any compatibility, migration, security, or performance constraints.
 
 ## Open a pull request
 
@@ -99,7 +99,7 @@ The pull request should explain:
 - How the change was tested
 - Any operational, compatibility, or documentation impact
 
-All required CI checks must pass. A maintainer may request changes before merge.
+All required CI checks must pass before merge. Maintainers may ask for revisions.
 
 ## Code and documentation conventions
 

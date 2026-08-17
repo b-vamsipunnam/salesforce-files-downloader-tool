@@ -1,6 +1,6 @@
 # Configuration
 
-Batch inputs and optional workbook flags are defined in `src/robot/orchestrator/download.robot`. Runtime paths, query size, and timeouts are defined in `src/robot/resources/configuration.robot`.
+Batch inputs and optional workbook flags are defined in `src/robot/orchestrators/download.robot`. Runtime paths, query size, and timeouts are defined in `src/robot/resources/configuration.robot`.
 
 ## Inputs and outputs
 
@@ -17,7 +17,7 @@ Batch inputs and optional workbook flags are defined in `src/robot/orchestrator/
 
 Workbook generation flags accept `Yes` or `No` (case-insensitive, with surrounding whitespace ignored) to enable or disable creation of the corresponding migration workbooks. Any other value fails before input processing or artifact creation. Add, remove, or edit batch test cases in `download.robot` to match the number of input workbooks being processed.
 
-Failing early here is deliberate. A value such as `Yse` or `True` should not quietly disable an output that a migration operator expected to receive.
+A typo such as `Yse` or `True` fails the batch instead of silently disabling an expected output.
 
 ## Processing controls
 
@@ -37,11 +37,11 @@ Failing early here is deliberate. A value such as `Yse` or `True` should not qui
 | `${FAILED_ID_RETRY_COUNT}`     | `2`     | Additional attempts for each retryable ID |
 | `${FAILED_ID_RETRY_DELAY}`     | `5s`    | Delay between additional retry attempts  |
 
-The default metadata batch size of 200 balances SOQL request efficiency with reliable query execution for large migrations.
+The default metadata batch size is 200 IDs per SOQL query group.
 
-The batch output directory and execution manifest are initialized before input reading and API preflight so early failures remain auditable. Each non-empty batch then initializes its authenticated Salesforce REST session and reads `DailyApiRequests` from `/services/data/v<version>/limits` before creating migration workbooks or download directories. Its minimum estimate counts one successful limits request, one `ContentDocument` query per metadata batch, and a second query per batch when ContentDocumentLink output is enabled. Paginated `nextRecordsUrl` requests are not predictable from the input count and are covered only by the configured safety buffer. Retain a buffer that reflects the expected relationship volume instead of treating the default as universally safe.
+The downloader creates the batch output directory and execution manifest before reading input or checking API capacity, so early failures are still recorded. Each non-empty batch opens an authenticated REST session and reads `DailyApiRequests` from `/services/data/v<version>/limits` before creating migration workbooks or download directories. The minimum estimate includes one limits request, one `ContentDocument` query per metadata batch, and another query per batch when ContentDocumentLink output is enabled. Input count cannot predict paginated `nextRecordsUrl` requests; only the safety buffer covers them. Set that buffer for the expected relationship volume rather than assuming the default fits every migration.
 
-Each non-empty batch reads org context from `org_info.json`, creates its own authenticated REST session, and performs its own capacity lookup. This is a conservative per-batch check, not a global reservation across simultaneous workers. Use non-overlapping inputs and increase the buffer when parallel executions approach the org's daily API limit.
+Each non-empty batch reads `org_info.json`, creates its own REST session, and checks capacity independently. The check does not reserve requests across simultaneous workers. Use non-overlapping inputs and increase the buffer when parallel runs approach the org's daily API limit.
 
 Increase timeouts only after checking file access, browser behavior, network throughput, and disk performance. Larger SOQL batches reduce request count but make each query longer.
 

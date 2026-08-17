@@ -20,11 +20,9 @@ flowchart TD
     CD --> CDL2
 ```
 
-`ContentDocument` represents the logical file, `ContentVersion` stores each version and its binary metadata, and `ContentDocumentLink` associates the file with Salesforce records, users, groups, or libraries.
-
 ## Migration challenges
 
-Files may need to move during org consolidation, divestiture, sandbox preparation, platform migration, archival, backup, or disaster-recovery work. Common challenges include:
+Org consolidation, divestiture, sandbox preparation, platform migration, archival, backup, and disaster recovery all require moving files. The same problems recur:
 
 - **Millions of binary files:** transfer time, disk use, and individual failures accumulate at scale.
 - **API limits:** metadata queries consume finite Salesforce API capacity.
@@ -37,9 +35,9 @@ Files may need to move during org consolidation, divestiture, sandbox preparatio
 
 ## Why this project exists
 
-The downloader accepts Excel lists of `ContentDocumentId` values, converts valid 15-character IDs to their canonical 18-character form, and deduplicates the result before querying Salesforce. That detail matters in real migration data: the 15- and 18-character forms of the same record should never trigger two physical downloads.
+The downloader reads `ContentDocumentId` values from Excel, converts valid 15-character IDs to canonical 18-character IDs, and removes duplicates before querying Salesforce. This prevents the two forms of one record from triggering two downloads.
 
-Metadata is retrieved in SOQL batches, including pagination when Salesforce returns `nextRecordsUrl`. Each unique file is downloaded through the authenticated Shepherd flow. The workflow waits for temporary files to disappear, checks stability and `ContentSize`, moves the binary into an ID-specific folder, and commits the requested migration rows as one workbook transaction. If that transaction fails, the moved binary is removed so the filesystem and workbooks do not disagree about what succeeded.
+Metadata is retrieved in SOQL batches, following `nextRecordsUrl` when Salesforce paginates a response. Each unique file is downloaded through the authenticated Shepherd flow. The downloader waits for temporary files to disappear, checks stability and `ContentSize`, moves the binary into an ID-specific folder, and commits the requested migration rows as one transaction. If the transaction fails, it removes the moved binary so the filesystem and workbooks stay consistent.
 
 Eligible failures receive bounded, full-file retry attempts. Invalid IDs and records without required metadata are reported immediately rather than retried, and only unresolved IDs are written to the failure workbook for a later run.
 

@@ -12,7 +12,7 @@ Include the following where available:
 - A proof of concept
 - Suggested mitigations or fixes
 
-The project aims to acknowledge a report within 72 hours and provide updates while it is investigated. Do not exploit the issue beyond what is necessary to demonstrate it.
+The maintainer aims to acknowledge reports within 72 hours and provide updates during the investigation. Do not exploit an issue beyond what is needed to demonstrate it.
 
 ## Protect credentials and data
 
@@ -26,7 +26,7 @@ This tool handles Salesforce access tokens, org identifiers, file metadata, and 
 - Log out unused Salesforce sessions and rotate credentials according to your organization’s policy.
 - Protect `downloads/`, `artifacts/`, and `results/` with appropriate filesystem permissions and retention rules.
 
-Token-bearing operations are normally suppressed from Robot Framework logs. That protection does not remove the need to inspect `output.xml`, `log.html`, `report.html`, screenshots, and console output before sharing them. Unexpected failures or future regressions can expose tokens, customer IDs, filenames, or failure details.
+Robot Framework normally suppresses logs for token-bearing operations. Still inspect `output.xml`, `log.html`, `report.html`, screenshots, and console output before sharing them. Failures or regressions can expose tokens, customer IDs, filenames, or failure details.
 
 If a token appears in a published artifact, remove the artifact where possible and revoke the Salesforce session immediately:
 
@@ -48,7 +48,7 @@ Generate a new `org_info.json` before the next run.
 
 ## Disclosure and updates
 
-After a report is verified, maintainers will assess the impact, develop and test a fix, publish an update, and disclose details when appropriate. Reporter credit is provided with permission. Security releases and advisories are published through GitHub Releases and repository documentation; a CVE may be requested for a qualifying issue.
+After verifying a report, maintainers assess its impact, develop and test a fix, publish an update, and disclose details when appropriate. Reporters receive credit only with their permission. Security releases and advisories are published through GitHub Releases and repository documentation; a qualifying issue may receive a CVE.
 
 ## Warranty
 

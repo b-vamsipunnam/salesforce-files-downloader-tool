@@ -6,7 +6,7 @@ Selenium establishes and manages the authenticated Chrome session required for S
 
 ## Why use Robot Framework?
 
-Robot Framework provides workflow orchestration, logging, reports, reusable keywords, teardown handling, and Pabot integration. Python libraries handle lower-level browser, Excel, filesystem, and validation operations.
+Robot Framework coordinates the workflow, logging, reports, reusable keywords, teardown, and Pabot integration. Python libraries handle lower-level browser, Excel, filesystem, and validation work.
 
 ## Why not use the Bulk API for binary files?
 
@@ -52,7 +52,7 @@ The documentation provides environment commands for Windows, Linux, and macOS. C
 
 ## How many workers should be used?
 
-There is no universal value. Start with a small number of workers and increase gradually while monitoring CPU, memory, disk, network, Salesforce response behavior, and failure rate. Review the [performance guidance](Performance.md) before increasing workers.
+Start with a few workers, then increase the count while watching CPU, memory, disk, network, Salesforce response behavior, and failure rate. Review the [performance guidance](Performance.md) before scaling up.
 
 ---
 
