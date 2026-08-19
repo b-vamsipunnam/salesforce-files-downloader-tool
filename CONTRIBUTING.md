@@ -1,10 +1,10 @@
 # Contributing to Salesforce Files Downloader Tool
 
-Bug reports, documentation fixes, and focused code contributions are welcome. This guide covers the checks and conventions used to keep changes easy to review and safe to merge.
+Bug reports, documentation fixes, and focused code contributions are all welcome. This guide explains how to prepare a change that maintainers can review and merge with confidence.
 
 ## Before you start
 
-For a substantial behavior or architecture change, open an issue first so the approach can be discussed before implementation. Security vulnerabilities must follow the private process in [SECURITY.md](SECURITY.md).
+Before making a substantial behavior or architecture change, open an issue so contributors can agree on the approach. Report security vulnerabilities privately by following [SECURITY.md](SECURITY.md).
 
 ## Set up the project
 
@@ -33,7 +33,7 @@ Create a branch whose name describes the work:
 git checkout -b fix/download-timeout
 ```
 
-Keep the change limited to one concern. Follow the existing Robot Framework and Python patterns, avoid hardcoded paths, and update documentation whenever behavior or configuration changes.
+Keep each change focused on one concern. Follow the existing Robot Framework and Python patterns, avoid hardcoded paths, and update the documentation when behavior or configuration changes.
 
 Use a concise conventional commit subject:
 
@@ -54,7 +54,7 @@ python -m unittest discover -s ci/tests -v
 robot --outputdir results/smoke ci/robot/smoke.robot
 ```
 
-Ruff checks the Python sources. Robocop currently gates error-level Robot issues so the project can improve older style warnings incrementally without weakening correctness checks.
+Ruff checks the Python source. Robocop treats error-level Robot issues as failures, while older style warnings can be improved gradually.
 
 When the change affects the authenticated workflow, also run:
 
@@ -82,7 +82,7 @@ Search existing issues before opening a new one. Include:
 
 ## Suggest an enhancement
 
-Describe the problem, the proposed change, and a representative use case. Include any compatibility, migration, security, or performance constraints.
+Explain the problem, your proposed change, and a representative use case. Note any compatibility, migration, security, or performance constraints.
 
 ## Open a pull request
 

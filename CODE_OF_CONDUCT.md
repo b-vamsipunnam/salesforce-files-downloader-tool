@@ -1,14 +1,12 @@
 # Code of Conduct
 
-## Our Pledge
+## Our pledge
 
-We, as contributors and maintainers of the Salesforce Files Downloader Tool, pledge to make participation in this project a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity and expression, level of experience, education, nationality, personal appearance, race, religion, or sexual identity and orientation.
-
-We are committed to providing a welcoming, inclusive, and professional environment.
+Contributors and maintainers of the Salesforce Files Downloader Tool are committed to a welcoming, inclusive, and professional community. Everyone should be able to participate without harassment, regardless of age, body size, disability, ethnicity, gender identity and expression, level of experience, education, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
 ---
 
-## Our Standards
+## Our standards
 
 Examples of behavior that contributes to a positive environment include:
 
@@ -29,9 +27,9 @@ Examples of unacceptable behavior include:
 
 ---
 
-## Our Responsibilities
+## Maintainer responsibilities
 
-Project maintainers are responsible for:
+Maintainers are responsible for:
 
 - Clarifying and enforcing standards of acceptable behavior
 - Taking appropriate and fair corrective action
@@ -59,19 +57,19 @@ It also applies when representing the project in public spaces.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project maintainer.
 
-The maintainer will review reports promptly and handle them discreetly and confidentially.
+The maintainer will review reports promptly and handle them as discreetly as possible.
 
 **Maintainer:** Bhimeswara Vamsi Punnam  
 **Contact Method:** GitHub private message or repository contact
 
 No retaliation against reporters will be tolerated.
 
-### Enforcement Process
+### Enforcement process
 
-* The maintainer acknowledges the report.
-* The maintainer assesses what happened.
-* The maintainer decides on appropriate corrective action.
-* The maintainer informs the reporter of the outcome where appropriate.
+- The maintainer acknowledges the report.
+- The maintainer assesses what happened.
+- The maintainer decides on appropriate corrective action.
+- The maintainer informs the reporter of the outcome when appropriate.
 
 ---
 

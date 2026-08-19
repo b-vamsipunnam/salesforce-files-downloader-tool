@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Start with the batch JSONL manifest and failed-ID workbook under `artifacts/`. Use `results/log.html` and `results/pabot_results/` when you need more detail. Never publish manifests, `org_info.json`, tokens, customer data, or sensitive filenames.
+Start with the batch manifest and failed-ID workbook under `artifacts/`. For more detail, open `results/log.html` or the worker output in `results/pabot_results/`. These files may contain customer information, so sanitize them before sharing and never publish `org_info.json` or an access token.
 
 ## Salesforce CLI not found
 
@@ -24,11 +24,11 @@ Install Salesforce CLI, restart the shell if needed, and confirm `sf --version` 
 
 **Likely cause**
 
-The active Node.js runtime does not satisfy the installed Salesforce CLI's engine requirement. End-of-life Node versions can also fail while parsing syntax used by current CLI releases.
+The active Node.js runtime does not meet the installed Salesforce CLI's engine requirement. Older Node releases may fail while parsing syntax used by the current CLI.
 
 **Resolution**
 
-On Windows, update NVM for Windows with its latest official installer, activate the latest Node.js LTS, and reinstall global packages for that runtime. Check the live engine declarations instead of copying a historical patch version:
+On Windows, update NVM for Windows, activate the latest Node.js LTS, and reinstall the global packages for that runtime. Check the current engine declarations rather than copying an old patch version:
 
 ```powershell
 nvm version
@@ -43,7 +43,7 @@ npm install --global @salesforce/cli@latest
 sf.cmd --version
 ```
 
-The Node version named by `sf.cmd --version` must match `node --version` and satisfy the displayed engine range. Close and reopen PowerShell and PyCharm if `where.exe node`, `where.exe npm`, or `where.exe sf` still resolves an older installation. See [Installation](Installation.md) for the authoritative version policy and full validation sequence.
+The Node version shown by `sf.cmd --version` must match `node --version` and satisfy the displayed engine range. If `where.exe node`, `where.exe npm`, or `where.exe sf` still finds an older installation, restart PowerShell and PyCharm. The full validation sequence is in [Installation](Installation.md).
 
 ## Invalid org alias
 
@@ -85,7 +85,7 @@ Recent Salesforce CLI versions hide secrets from `sf org display` by default, or
 
 **Resolution**
 
-First run `sf.cmd org display --target-org <org_alias> --json` without redirection. After it succeeds, run `robot --variable ORG_ALIAS:<org_alias> --output NONE --log NONE --report NONE src/robot/orchestrators/authenticate.robot`. The Robot task uses `sf org auth show-access-token`, validates the result without printing the token, and atomically replaces `org_info.json`. Runtime workers retrieve API limits through their authenticated REST sessions.
+Run `sf.cmd org display --target-org <org_alias> --json` without redirecting its output. If it succeeds, follow the Robot command in [Authentication](Authentication.md) to replace `org_info.json` safely.
 
 ## Chrome startup or browser compatibility issues
 
@@ -113,9 +113,9 @@ The browser session is invalid, the user lacks file access, the Shepherd request
 
 **Resolution**
 
-Refresh authentication, verify the same user can access the file, and inspect browser and Robot errors before increasing the timeout.
+Refresh the authentication file, confirm that the same user can open the file in Salesforce, and inspect the browser and Robot errors before increasing the timeout.
 
-When failed-ID retry is enabled, the downloader attempts an eligible ID again after the primary pass. Repeated `RETRY FAILED` messages usually indicate that the problem is not a brief browser delay and needs investigation.
+Repeated `RETRY FAILED` messages usually mean the problem is not a brief browser delay and needs investigation.
 
 ## Insufficient Salesforce API capacity
 
@@ -129,11 +129,11 @@ The org's `DailyApiRequests` allocation cannot accommodate the estimated metadat
 
 **Resolution**
 
-Reduce the input batch, wait for API capacity to reset, or review `${API_REQUEST_SAFETY_BUFFER}` and `${MINIMUM_API_REQUESTS_REMAINING}` with the owners of other org integrations. Do not disable the check unless API consumption is managed externally. Parallel Pabot workers do not share a reservation counter, so use additional buffer when their combined demand approaches the limit.
+Reduce the batch, wait for capacity to reset, or review `${API_REQUEST_SAFETY_BUFFER}` and `${MINIMUM_API_REQUESTS_REMAINING}` with the owners of other integrations. Do not disable the check unless API use is managed elsewhere. Add more buffer when parallel workers may approach the limit together.
 
 If parallel workers appear idle before workbooks are created, inspect `results/pabot_results/*/robot_stderr.out`. Workers retrieve limits through their authenticated REST sessions. An `AUTH_SESSION_EXPIRED` or REST limits failure requires regeneration of `org_info.json`.
 
-The console intentionally says `Minimum Estimated Metadata Requests`. SOQL pagination depends on Salesforce response volume and cannot be predicted from the number of input IDs alone. If a batch has unusually high relationship volume, increase `${API_REQUEST_SAFETY_BUFFER}` rather than treating the estimate as an exact forecast.
+`Minimum Estimated Metadata Requests` is deliberately a lower bound because the input count cannot predict SOQL pagination. Increase `${API_REQUEST_SAFETY_BUFFER}` for batches with many relationships.
 
 ## Salesforce org identity mismatch
 
@@ -161,9 +161,7 @@ The transfer stalled, local storage is full, browser/network activity was interr
 
 **Resolution**
 
-Use the project's current browser helper. Check Chrome enterprise download policies, network stability, and free disk space; remove abandoned temporary output after the run; then retry the failed ID. The helper enables automatic downloads and gives each browser session an isolated absolute download path.
-
-The automatic retry starts a fresh download; it does not continue the abandoned temporary file.
+Check Chrome enterprise download policies, network stability, and free disk space. Remove abandoned temporary output after the run, then retry the failed ID. Every retry starts a new download.
 
 ## Automatic retries do not recover an ID
 
@@ -177,7 +175,7 @@ The underlying issue lasted through every attempt, or the ID was not retryable b
 
 **Resolution**
 
-Use the failure reason in `log.html` to address access, authentication, network, browser, disk, or metadata problems. Regenerate `org_info.json` when the session has expired, then rerun the remaining IDs. Increase retry counts or delays only when failures are genuinely temporary; extra attempts cannot correct invalid IDs or missing permissions.
+Use the failure reason in `log.html` to identify the underlying problem. Regenerate `org_info.json` if the session expired, then rerun the remaining IDs. Increase retries only for genuinely temporary failures; extra attempts cannot fix an invalid ID or missing permission.
 
 ## File validation failure
 

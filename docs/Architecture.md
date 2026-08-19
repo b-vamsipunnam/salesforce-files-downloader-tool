@@ -4,7 +4,7 @@ The downloader gets metadata from Salesforce REST APIs and binaries from Salesfo
 
 ## Architecture diagram
 
-The diagram follows a batch from input validation through metadata queries, download, workbook generation, and failure reporting.
+The diagram traces one batch through validation, metadata queries, downloads, workbook updates, and failure reporting.
 
 <p align="center">
   <img src="architecture.svg" width="1200" alt="Salesforce Files Bulk Downloader architecture">
@@ -14,14 +14,14 @@ The editable source for the detailed diagram is [`architecture.svg`](architectur
 
 ## Component responsibilities
 
-- **Salesforce CLI** authenticates the source org and generates the protected authentication file before execution. Runtime workers read that file and retrieve daily API limits directly from Salesforce REST, so parallel execution does not start CLI subprocesses.
+- **Salesforce CLI** authenticates the source org and creates the protected authentication file used by each worker.
 - **Salesforce REST API** executes paginated SOQL queries for `ContentDocument` and `ContentDocumentLink` metadata.
 - **Selenium and Chrome** establish the Salesforce session through `frontdoor.jsp` and initiate Shepherd downloads.
-- **Robot Framework** coordinates strict configuration validation, per-batch initialization and API preflight, input normalization, metadata mapping, downloads, retry state, reporting, and teardown.
+- **Robot Framework** coordinates configuration, batch setup, API preflight, metadata, downloads, retries, reporting, and cleanup.
 - **Python libraries** provide safe Salesforce CLI JSON parsing, 15-to-18-character ID canonicalization, destination-aware filename handling, Chrome configuration, transactional Excel updates, and filesystem support used by Robot keywords.
 - **Pabot** can split batch tests across processes. UUID-based download and artifact directories separate their output.
 
-Before contacting Salesforce, the downloader normalizes the workbook-generation flags and requires `Yes` or `No`. It then canonicalizes and deduplicates input IDs. Metadata queries follow Salesforce pagination. Because input count does not reveal how many pages Salesforce will return, the preflight reports only a minimum request estimate.
+Before contacting Salesforce, the downloader validates the workbook options, canonicalizes the input IDs, and removes duplicates. Metadata queries follow every page returned by Salesforce, which is why the capacity preflight can provide only a minimum request estimate.
 
 When a download appears, the workflow rejects temporary file suffixes, waits for completion and a stable size, compares the file with Salesforce `ContentSize`, moves it to its `ContentDocumentId` directory, and verifies the destination. It stages and commits migration rows as one transaction. The document succeeds only after that commit. If the commit fails, the downloader removes the moved binary and per-ID directory before reporting the failure.
 
@@ -29,11 +29,11 @@ When a download appears, the workflow rejects temporary file suffixes, waits for
 
 REST and SOQL provide the structured records and relationships needed for metadata processing. Binary transfer uses Salesforce's authenticated Shepherd flow, with Selenium maintaining the required browser session.
 
-This avoids routing large volumes of binary download traffic through REST API requests while preserving Salesforce session behavior. It still consumes API calls for metadata, requires Chrome resources, and remains subject to session expiration, permissions, network conditions, and Salesforce response behavior.
+This keeps high-volume binary traffic out of REST requests while preserving Salesforce's browser-session behavior. Metadata still consumes API calls, and downloads remain subject to permissions, session expiry, network conditions, and available Chrome resources.
 
 ## Why Robot Framework?
 
-Robot Framework coordinates authentication, metadata queries, browser downloads, validation, reporting, and cleanup. Resource files share that workflow across batch tests, while Python libraries handle lower-level operations. Pabot runs the same batch tests in separate processes, so the project does not need another orchestration layer.
+Robot Framework offers a readable way to coordinate the workflow and report what happened. Resource files share that logic across batches, Python libraries handle lower-level operations, and Pabot runs the same batch tests in separate processes.
 
 ## Design principles
 

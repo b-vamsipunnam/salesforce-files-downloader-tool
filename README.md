@@ -7,7 +7,7 @@
 [![Release](https://img.shields.io/github/v/release/b-vamsipunnam/salesforce-files-downloader-tool.svg?style=flat&color=orange)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/releases/latest)
 [![License](https://img.shields.io/github/license/b-vamsipunnam/salesforce-files-downloader-tool?style=flat)](LICENSE)
 
-Salesforce Files Bulk Downloader uses Robot Framework and Python to download Salesforce Files in bulk from `ContentDocumentId` lists. Use it for migration, backup, and archival work, from small batches to large data sets.
+Salesforce Files Bulk Downloader is a Robot Framework and Python tool for downloading files from lists of Salesforce `ContentDocumentId` values. It is built for migrations, backups, and archives of any size.
 
 **Built with**
 
@@ -20,9 +20,9 @@ Salesforce Files Bulk Downloader uses Robot Framework and Python to download Sal
 
 ## Why this tool exists
 
-Salesforce Files span a logical file (`ContentDocument`), version and binary metadata (`ContentVersion`), and record associations (`ContentDocumentLink`). A migration must preserve those relationships while handling API limits, sessions, binary volume, validation, retries, parallel workers, and failures.
+Salesforce stores a file, its versions, and its record associations in separate objects. Moving those files means preserving the relationships while dealing with API limits, expiring sessions, large binaries, and partial failures.
 
-The downloader separates metadata queries from binary transfer. It isolates batch output, validates file sizes, reports failed IDs, and can create Data Loader-ready workbooks. See the [Introduction](docs/Introduction.md) for the data model and migration details.
+This tool separates metadata queries from binary downloads, validates each file, keeps batch output isolated, and records any failures. It can also create Data Loader-ready workbooks. The [Introduction](docs/Introduction.md) explains the Salesforce data model and migration workflow.
 
 ## Typical use cases
 
@@ -40,13 +40,13 @@ The downloader separates metadata queries from binary transfer. It isolates batc
 - Accepts 15- and 18-character `ContentDocumentId` values, canonicalizes them to 18 characters, and removes duplicates
 - Uses Salesforce CLI authentication without storing usernames or passwords
 - Queries `ContentDocument` and all associated `ContentDocumentLink` records in batches
-- Starts the batch audit manifest, then checks Salesforce daily API capacity before creating migration workbooks or download directories
+- Checks Salesforce daily API capacity before starting download work
 - Downloads each physical file once into a ContentDocument-specific directory
 - Isolates download and artifact directories for each batch and worker
 - Checks completion, stability, and final size against Salesforce `ContentSize`
-- Removes the final binary if its migration-workbook transaction cannot be committed
+- Keeps downloaded files and migration-workbook rows consistent if a workbook update fails
 - Automatically retries transient download failures and writes structured failure codes, messages, and attempt counts for unresolved IDs
-- Writes a per-batch JSONL execution manifest for programmatic reconciliation and audit
+- Writes a per-batch JSONL manifest for reconciliation and auditing
 - Detects expired REST and browser sessions instead of reporting them as generic download failures
 - Creates optional ContentVersion and ContentDocumentLink import workbooks
 - Escapes formula-like ContentVersion titles before writing migration workbooks
@@ -62,7 +62,7 @@ python -m venv venv
 python -m pip install -r requirements.txt
 ```
 
-Before authenticating, complete the [Installation](docs/Installation.md) checks. New installations use the latest Node.js LTS, the latest compatible npm release, and the stable Salesforce CLI `latest` channel. The guide checks the current engine requirements instead of pinning short-lived patch versions. Follow [Authentication](docs/Authentication.md) to log in and generate a non-redacted `org_info.json`:
+Complete the [Installation](docs/Installation.md) checks first, then follow [Authentication](docs/Authentication.md) to log in and create `org_info.json`:
 
 ```bash
 robot --variable ORG_ALIAS:<org_alias> --output NONE --log NONE --report NONE src/robot/orchestrators/authenticate.robot
@@ -80,7 +80,7 @@ Downloaded files appear in `downloads/`, migration and failure workbooks in `art
 
 ![Salesforce Files Bulk Downloader execution architecture](docs/architecture.svg)
 
-The tool queries metadata through Salesforce REST APIs and downloads binaries from Shepherd through an authenticated Selenium browser. Robot Framework handles validation and reporting; Pabot runs isolated batches in parallel. See [Architecture](docs/Architecture.md) for the full workflow and component diagram.
+Salesforce REST APIs provide the metadata, and an authenticated Selenium browser downloads the binaries from Shepherd. Robot Framework handles the workflow and reporting, while Pabot can run isolated batches in parallel. See [Architecture](docs/Architecture.md) for details.
 
 ## Contents
 

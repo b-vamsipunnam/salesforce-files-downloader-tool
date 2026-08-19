@@ -37,7 +37,7 @@ Install the pinned dependencies:
 python -m pip install -r requirements.txt
 ```
 
-This installs Robot Framework, SeleniumLibrary, Pabot, RequestsLibrary, Selenium, OpenPyXL, and the project's HTTP client.
+This command installs the runtime libraries used by the project, including Robot Framework, Selenium, Pabot, RequestsLibrary, and OpenPyXL.
 
 Contributors should also install the pinned development checks used by CI:
 
@@ -53,18 +53,18 @@ Runtime users do not need `requirements-dev.txt` unless they want to run the rep
 
 ### Version policy
 
-Use supported release channels instead of permanently pinning patch versions:
+Use supported release channels instead of copying patch versions from this guide:
 
 - NVM for Windows: latest stable release; 1.2.2 was current when this guide was verified on 2026-08-16.
 - Node.js: latest LTS, not the non-LTS Current release; Node.js 24.18.0 was the latest LTS when verified.
 - npm: latest stable version compatible with the active Node.js runtime; npm 12.0.2 was current when verified.
 - Salesforce CLI: npm `latest` channel; `@salesforce/cli` 2.147.7 was current when verified and declared `node >=22.0.0`.
 
-Patch versions change frequently. The dated versions above record what was verified; they are not installation pins. The commands below resolve and check current releases. See the [NVM for Windows releases](https://github.com/coreybutler/nvm-windows/releases), [Node.js release schedule](https://nodejs.org/en/about/previous-releases), [npm release guidance](https://docs.npmjs.com/about-npm-versions/), and [Salesforce CLI release notes](https://github.com/forcedotcom/cli/tree/main/releasenotes).
+Patch versions change often. The versions above simply record the last tested setup; the commands below find and validate current releases. For release details, see [NVM for Windows](https://github.com/coreybutler/nvm-windows/releases), the [Node.js release schedule](https://nodejs.org/en/about/previous-releases), [npm release guidance](https://docs.npmjs.com/about-npm-versions/), and [Salesforce CLI release notes](https://github.com/forcedotcom/cli/tree/main/releasenotes).
 
 ### Strict Windows installation with NVM
 
-Node.js 18 is end-of-life and cannot run current Salesforce CLI releases. Install or update NVM for Windows first, then activate the latest Node.js LTS before updating npm or Salesforce CLI. NVM stores global npm packages separately for each Node version, so switching Node versions requires reinstalling global packages in the newly active runtime.
+Node.js 18 is end-of-life and cannot run current Salesforce CLI releases. Install or update NVM for Windows, then activate the latest Node.js LTS before updating npm or Salesforce CLI. Because NVM keeps global packages separate for each Node version, reinstall those packages after switching runtimes.
 
 Install the latest signed [NVM for Windows release](https://github.com/coreybutler/nvm-windows/releases). To update an existing NVM installation, use the newest official installer and reopen the terminal. In an elevated Command Prompt or PowerShell, run:
 
@@ -117,7 +117,7 @@ sf --version
 
 ## Chrome
 
-Install a current Google Chrome release and confirm it starts in the execution environment. The browser helper configures headless and automatic downloads and gives each session an isolated absolute download path. The project does not document a separate driver setup.
+Install a current Google Chrome release and confirm that it starts in the execution environment. The project configures headless operation and automatic downloads, with a separate absolute download path for each session. No separate driver setup is required.
 
 ## Verify the environment
 

@@ -1,6 +1,6 @@
 # Introduction
 
-Salesforce Files store documents, images, and other binaries together with version and record-association metadata. Three standard Salesforce objects are central to this workflow:
+Salesforce Files keeps documents, images, and other binaries alongside their version history and record links. This project works with three standard objects:
 
 - `ContentDocument` is the logical file record and points to its latest published version.
 - `ContentVersion` represents one version. Its `VersionData` field contains the binary content.
@@ -22,7 +22,7 @@ flowchart TD
 
 ## Migration challenges
 
-Org consolidation, divestiture, sandbox preparation, platform migration, archival, backup, and disaster recovery all require moving files. The same problems recur:
+Whether the job is an org consolidation, a divestiture, a sandbox refresh, or a backup, moving files presents the same practical problems:
 
 - **Millions of binary files:** transfer time, disk use, and individual failures accumulate at scale.
 - **API limits:** metadata queries consume finite Salesforce API capacity.
@@ -35,11 +35,11 @@ Org consolidation, divestiture, sandbox preparation, platform migration, archiva
 
 ## Why this project exists
 
-The downloader reads `ContentDocumentId` values from Excel, converts valid 15-character IDs to canonical 18-character IDs, and removes duplicates before querying Salesforce. This prevents the two forms of one record from triggering two downloads.
+The downloader reads `ContentDocumentId` values from Excel, converts valid 15-character IDs to their canonical 18-character form, and removes duplicates before querying Salesforce. This keeps two versions of the same ID from triggering two downloads.
 
-Metadata is retrieved in SOQL batches, following `nextRecordsUrl` when Salesforce paginates a response. Each unique file is downloaded through the authenticated Shepherd flow. The downloader waits for temporary files to disappear, checks stability and `ContentSize`, moves the binary into an ID-specific folder, and commits the requested migration rows as one transaction. If the transaction fails, it removes the moved binary so the filesystem and workbooks stay consistent.
+Metadata is retrieved in SOQL batches, including any additional pages returned through `nextRecordsUrl`. Each unique file is then downloaded through an authenticated Shepherd request. Before reporting success, the tool checks the file against `ContentSize`, moves it into an ID-specific folder, and commits the requested migration rows. If the workbook update fails, it removes the moved file so the outputs remain consistent.
 
-Eligible failures receive bounded, full-file retry attempts. Invalid IDs and records without required metadata are reported immediately rather than retried, and only unresolved IDs are written to the failure workbook for a later run.
+Temporary download failures can be retried a limited number of times. Invalid IDs and records without the required metadata are reported immediately. The failure workbook contains only the IDs that still need attention.
 
 Optional workbooks provide local paths for inserting `ContentVersion` records and retain source `ContentDocumentLink` relationships for later destination-ID mapping. Pabot can distribute independent input batches across processes.
 

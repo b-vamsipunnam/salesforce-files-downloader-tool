@@ -17,7 +17,7 @@ Batch inputs and optional workbook flags are defined in `src/robot/orchestrators
 
 Workbook generation flags accept `Yes` or `No` (case-insensitive, with surrounding whitespace ignored) to enable or disable creation of the corresponding migration workbooks. Any other value fails before input processing or artifact creation. Add, remove, or edit batch test cases in `download.robot` to match the number of input workbooks being processed.
 
-A typo such as `Yse` or `True` fails the batch instead of silently disabling an expected output.
+A typo such as `Yse` or `True` stops the batch instead of silently changing the output.
 
 ## Processing controls
 
@@ -37,15 +37,13 @@ A typo such as `Yse` or `True` fails the batch instead of silently disabling an 
 | `${FAILED_ID_RETRY_COUNT}`     | `2`     | Additional attempts for each retryable ID |
 | `${FAILED_ID_RETRY_DELAY}`     | `5s`    | Delay between additional retry attempts  |
 
-The default metadata batch size is 200 IDs per SOQL query group.
+The downloader creates the batch artifact directory and execution manifest before reading the input, so even early failures are recorded. For each non-empty batch, it checks `DailyApiRequests` before creating migration workbooks or download directories. The estimate includes the limits request, one `ContentDocument` query per metadata batch, and—when link output is enabled—one `ContentDocumentLink` query per batch. Pagination cannot be predicted from the input count, so choose a safety buffer that reflects the expected number of relationships.
 
-The downloader creates the batch output directory and execution manifest before reading input or checking API capacity, so early failures are still recorded. Each non-empty batch opens an authenticated REST session and reads `DailyApiRequests` from `/services/data/v<version>/limits` before creating migration workbooks or download directories. The minimum estimate includes one limits request, one `ContentDocument` query per metadata batch, and another query per batch when ContentDocumentLink output is enabled. Input count cannot predict paginated `nextRecordsUrl` requests; only the safety buffer covers them. Set that buffer for the expected relationship volume rather than assuming the default fits every migration.
-
-Each non-empty batch reads `org_info.json`, creates its own REST session, and checks capacity independently. The check does not reserve requests across simultaneous workers. Use non-overlapping inputs and increase the buffer when parallel runs approach the org's daily API limit.
+Parallel workers check capacity independently and do not reserve requests for one another. Use non-overlapping inputs and a larger buffer when a parallel run may approach the org's daily limit.
 
 Increase timeouts only after checking file access, browser behavior, network throughput, and disk performance. Larger SOQL batches reduce request count but make each query longer.
 
-Failed-ID retry is intended for temporary download problems, such as a slow browser response or an interrupted transfer. It does not repeat metadata queries, so invalid IDs and IDs without the required ContentDocument or ContentDocumentLink metadata remain failed. Set `${ENABLE_FAILED_ID_RETRY}` to `${FALSE}` to keep the original single-attempt behavior. `${FAILED_ID_RETRY_COUNT}` counts additional attempts after the first download attempt.
+Failed-ID retry is for temporary problems such as a slow browser response or interrupted transfer. It does not repeat metadata queries, so invalid IDs and records without required metadata remain failed. `${FAILED_ID_RETRY_COUNT}` is the number of extra attempts after the first; set `${ENABLE_FAILED_ID_RETRY}` to `${FALSE}` to make only one attempt.
 
 ## Input workbook format
 

@@ -21,7 +21,7 @@ flowchart LR
     W4 --> W8["8 workers<br/>31 minutes"]
 ```
 
-These results describe one run configuration, not guaranteed throughput. Salesforce response time, network conditions, file-size distribution, CPU, memory, browser behavior, disk performance, permissions, and org configuration all affect runtime.
+These figures describe one test run, not guaranteed throughput. Results will vary with Salesforce response times, network and disk performance, file sizes, browser behavior, hardware, permissions, and org configuration.
 
 ## Parallel execution
 
@@ -33,11 +33,11 @@ pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrators
 
 ## Worker scaling
 
-Start with a few workers and watch CPU, memory, disk latency, network use, Salesforce behavior, and failure rate. Increase `--processes` gradually. Similar-sized input workbooks usually keep workers busier. For very small workloads, startup and result-merging overhead can erase the benefit of parallel execution.
+Start with a few workers, watch the system and Salesforce response times, and increase `--processes` gradually. Workbooks of similar size help distribute the load. For small jobs, browser startup and result-merging overhead may make parallel execution slower rather than faster.
 
 ## Download validation
 
-A download succeeds only after the framework detects a non-temporary file, observes completion and stable size, verifies the size against `ContentSize`, moves the file, verifies the destination, and commits the requested migration rows. These checks add filesystem and workbook overhead, but they prevent incomplete transfers or half-recorded migration output from being reported as successful.
+Validation adds some filesystem and workbook overhead. That cost is deliberate: an incomplete transfer or partially updated workbook must not be reported as a success. See [Architecture](Architecture.md#design-principles) for the checks applied to each file.
 
 ## Retry behavior
 
@@ -50,7 +50,7 @@ Appearance, completion, and file stability still use their own bounds on every a
 
 ## Recovery and failure reporting
 
-Only unresolved failures are deduplicated into the batch-specific Excel workbook. IDs recovered by automatic retry are counted as successful and are not included in that workbook. If a migration-workbook transaction fails after a binary move, the binary is removed before the ID is reported as failed. After resolving permission, authentication, capacity, workbook, or network issues, use the remaining IDs in a new run. Successful outputs remain in their isolated directories. Partial binary transfer does not resume at the previous byte offset.
+The batch failure workbook contains only unresolved IDs; successful retries are excluded. After fixing the relevant permission, authentication, capacity, workbook, or network problem, use those IDs in a new run. Existing successful output remains in its isolated directory, but partial downloads always restart from the beginning.
 
 ## Benchmark limitations
 
