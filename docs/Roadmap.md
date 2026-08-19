@@ -1,6 +1,6 @@
 # Roadmap
 
-These are possible improvements, not commitments to dates or designs.
+This roadmap describes ideas under consideration. It does not promise a delivery date or final design.
 
 ## Near-term
 
@@ -14,7 +14,7 @@ These are possible improvements, not commitments to dates or designs.
 
 - Coordinate API-capacity reservations across parallel workers
 - Refresh expired Salesforce sessions during long-running executions
-- Enhanced migration reconciliation
+- Improve migration reconciliation
 - Configurable storage organization and retention workflows
 - Additional browser compatibility research
 - Performance profiling and worker-scaling improvements

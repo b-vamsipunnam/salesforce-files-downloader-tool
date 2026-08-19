@@ -1,8 +1,8 @@
 # Keyword documentation
 
-`src/robot/resources/keywords.robot` imports the resource files below and exposes their keywords to Robot Framework. Start with the orchestration keyword. Use lower-level keywords only when extending or testing the workflow.
+`src/robot/resources/keywords.robot` imports the resource files listed here and exposes their keywords to Robot Framework. Begin with the orchestration keyword; the lower-level keywords are mainly for extensions and tests.
 
-The tables cover the keywords callers and maintainers are most likely to need. **What it does and when to use it** gives the keyword's role; **Important behavior** records state changes, assumptions, and limits.
+The tables focus on the keywords most useful to callers and maintainers. **What it does and when to use it** explains each keyword's role, while **Important behavior** notes state changes, assumptions, and limits.
 
 ## Salesforce authentication and REST capacity
 

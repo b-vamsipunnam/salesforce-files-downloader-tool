@@ -12,11 +12,11 @@ Include the following where available:
 - A proof of concept
 - Suggested mitigations or fixes
 
-The maintainer aims to acknowledge reports within 72 hours and provide updates during the investigation. Do not exploit an issue beyond what is needed to demonstrate it.
+The maintainer aims to acknowledge a report within 72 hours and provide updates while it is investigated. Do not test beyond what is necessary to demonstrate the issue.
 
 ## Protect credentials and data
 
-This tool handles Salesforce access tokens, org identifiers, file metadata, and downloaded customer content. Treat its working directories and generated reports as sensitive.
+This tool handles access tokens, org identifiers, file metadata, and downloaded customer content. Its working directories and reports may therefore contain sensitive data.
 
 - Never commit access tokens, passwords, OAuth secrets, or `org_info.json`.
 - Use least-privilege Salesforce accounts and avoid production administrator credentials where possible.
@@ -48,7 +48,7 @@ Generate a new `org_info.json` before the next run.
 
 ## Disclosure and updates
 
-After verifying a report, maintainers assess its impact, develop and test a fix, publish an update, and disclose details when appropriate. Reporters receive credit only with their permission. Security releases and advisories are published through GitHub Releases and repository documentation; a qualifying issue may receive a CVE.
+After verifying a report, maintainers will assess its impact, develop and test a fix, and publish an update when appropriate. Reporters are credited only with their permission. Security releases and advisories appear in GitHub Releases and the repository documentation; qualifying issues may receive a CVE.
 
 ## Warranty
 

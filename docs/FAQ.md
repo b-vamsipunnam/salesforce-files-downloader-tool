@@ -2,57 +2,55 @@
 
 ## Why use Selenium?
 
-Selenium establishes and manages the authenticated Chrome session required for Salesforce Shepherd downloads. REST remains responsible for structured metadata queries.
+Salesforce Shepherd downloads need an authenticated browser session. Selenium creates and manages that Chrome session, while the REST API handles metadata queries.
 
 ## Why use Robot Framework?
 
-Robot Framework coordinates the workflow, logging, reports, reusable keywords, teardown, and Pabot integration. Python libraries handle lower-level browser, Excel, filesystem, and validation work.
+Robot Framework ties the workflow together and provides readable logs, reports, reusable keywords, cleanup, and Pabot support. Python handles the lower-level browser, Excel, filesystem, and validation work.
 
 ## Why not use the Bulk API for binary files?
 
-This project uses REST and SOQL for metadata and Shepherd for file delivery. Bulk-oriented APIs are useful for record operations, but this workflow requires authenticated binary delivery and local browser-download validation.
+The Bulk API is well suited to record operations, but this project also needs authenticated binary delivery and local download validation. It therefore uses REST and SOQL for metadata and Shepherd for the files themselves.
 
 ## Does the tool consume Salesforce API calls?
 
-Yes. Each batch normally uses one REST limits request for its API-capacity preflight, followed by REST metadata queries. Metadata pagination can add calls; binary transfer uses Shepherd rather than REST binary requests. API consumption therefore depends mainly on input volume, `${METADATA_BATCH_SIZE}`, whether ContentDocumentLink metadata is requested, and query pagination. Download retries reuse the metadata already retrieved for that batch.
+Yes. Each non-empty batch checks the REST limits endpoint and then runs its metadata queries. Pagination may add more calls, but Shepherd delivers the binaries, so retrying a download does not repeat the metadata queries. See [Configuration](Configuration.md#processing-controls) for the full estimate.
 
 ## How are duplicate ContentDocument IDs handled?
 
-Valid 15-character IDs are converted to their canonical 18-character form before duplicates are removed. As a result, a workbook containing both forms of the same Salesforce ID produces one download, not two. Deduplication remains batch-local, so overlapping IDs in separate input workbooks can still be processed by separate workers.
+The tool converts valid 15-character IDs to their canonical 18-character form before removing duplicates. If a workbook contains both versions of the same ID, the file is downloaded once. Deduplication applies within a batch; separate workbooks can still process the same document.
 
 ## How are multiple ContentDocumentLink records handled?
 
-The metadata query retrieves all visible links for each requested document. When link-workbook generation is enabled, one output row is written for every retrieved relationship while the physical file is downloaded once per batch.
+The metadata query collects every link visible to the authenticated user. When link-workbook generation is enabled, each relationship gets its own row, but the file is still downloaded only once per batch.
 
 ## Can interrupted executions be resumed?
 
-An individual failed download can be attempted again automatically during the same run. Downloads always restart from the beginning; partially downloaded files are not resumed. If the whole Robot execution is interrupted, or an ID remains unsuccessful after its configured attempts, rerun the IDs from the generated failure workbook.
+Only within a limited sense. Failed downloads can be retried during the same run, but each attempt starts from the beginning. After an interrupted run—or when retries are exhausted—use the generated failure workbook as the input for a new run.
 
 ## Which failures are retried automatically?
 
-Valid ContentDocument IDs with the required metadata are eligible for another full download attempt. Invalid IDs and IDs missing ContentDocument or required ContentDocumentLink metadata are kept in the failure report without retrying. The retry pass reuses the metadata and authenticated sessions created for the batch; it does not refresh an expired session or repeat the metadata queries.
+Valid IDs with the required metadata are eligible for another download attempt. Invalid IDs and records missing required metadata go straight to the failure report. Retries reuse the batch's metadata and session, so they cannot repair an expired session.
 
 ## How are downloads validated?
 
-The downloader rejects temporary browser extensions, waits for completion and stable size, compares the file with Salesforce `ContentSize`, moves it into its final ID directory, and verifies the destination. If migration workbooks are enabled, their transaction must also commit before the ID is marked successful. A workbook failure removes the moved binary so a rerun starts from a consistent state.
+The tool waits for the browser's temporary file to disappear, checks that the size has stopped changing, and compares it with Salesforce `ContentSize`. It then moves the file to its final directory and verifies the destination. When migration workbooks are enabled, their update must also succeed; otherwise, the moved file is removed so the next run starts cleanly.
 
 ## Are Salesforce access tokens written to logs?
 
-Token-bearing initialization and request operations suppress ordinary Robot logging. The token remains in the local `org_info.json`, which must not be committed or shared. Review generated XML and HTML reports before sharing them because customer IDs, filenames, and diagnostic details may still be sensitive. Revoke the Salesforce session immediately if a token is ever exposed.
-
-Salesforce CLI versions that redact `sf org display` output require the dedicated `sf org auth show-access-token` command. Use the Robot authentication task described in [Authentication](Authentication.md); it combines the token with org metadata, rejects empty or `[REDACTED]` values, and does not print the token.
+Operations that handle the access token suppress normal Robot logging. The token is stored locally in `org_info.json`, so never commit or share that file. Reports may still contain customer IDs, filenames, and diagnostic details; review them before sharing. If a token is exposed, revoke the Salesforce session immediately. The safe credential-generation steps are in [Authentication](Authentication.md).
 
 ## Can files be uploaded directly to S3?
 
-No. This repository writes downloaded files to local storage and does not upload them directly to Amazon S3.
+No. The downloader writes files to local storage. It does not upload directly to S3 or another cloud-storage service.
 
 ## Which operating systems are supported?
 
-The documentation provides environment commands for Windows, Linux, and macOS. Chrome is the primary browser path. CI exercises Python 3.10 and 3.11 on both Ubuntu and Windows, including a real headless-Chrome smoke run on Ubuntu and Robot validation on Windows. Actual compatibility still depends on Python, Chrome, Salesforce CLI, filesystem permissions, and headless-browser support in the deployment environment.
+The setup guide covers Windows, Linux, and macOS, with Chrome as the supported browser path. CI tests Python 3.10 and 3.11 on Ubuntu and Windows. Your environment must still provide compatible Python, Chrome, and Salesforce CLI versions, along with the required filesystem and headless-browser permissions.
 
 ## How many workers should be used?
 
-Start with a few workers, then increase the count while watching CPU, memory, disk, network, Salesforce response behavior, and failure rate. Review the [performance guidance](Performance.md) before scaling up.
+Start small and increase the worker count while watching CPU, memory, disk, network use, Salesforce response times, and failures. The [performance guide](Performance.md) includes a benchmark and scaling advice.
 
 ---
 

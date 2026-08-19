@@ -34,7 +34,7 @@ Execute the four configured batch tests across up to four parallel worker proces
 pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrators/download.robot
 ```
 
-Keep input workbooks similar in size when practical. Otherwise, a small batch may finish while another worker continues through a much larger input.
+When practical, keep the workbooks similar in size so one large batch does not keep the run open after the other workers finish.
 
 ## Retry failures
 
@@ -46,7 +46,7 @@ ${FAILED_ID_RETRY_COUNT}     2
 ${FAILED_ID_RETRY_DELAY}     5s
 ```
 
-Each attempt downloads the complete file again; a partial binary is never resumed. Invalid IDs and IDs missing required metadata are not retryable. If an ID still fails, it is written to `<batch>_FAILED_IDs.xlsx`. Once the underlying access, authentication, network, or storage issue is resolved, copy those remaining IDs into an input workbook and run the batch again.
+Each attempt downloads the whole file again. Invalid IDs and records missing required metadata are not retried. After fixing the underlying issue, use `<batch>_FAILED_IDs.xlsx` as the source for a new run.
 
 ## Configure API capacity protection
 
@@ -58,7 +58,7 @@ ${API_REQUEST_SAFETY_BUFFER}          25
 ${MINIMUM_API_REQUESTS_REMAINING}     100
 ```
 
-Each batch counts one authenticated REST limits request plus the minimum expected metadata requests. Workers query limits independently and do not share a reservation counter. Metadata pagination can consume additional calls, so increase the buffer when operating near the daily limit.
+Each worker checks limits independently; there is no shared reservation counter. Pagination can add metadata requests, so increase the buffer when operating near the daily limit.
 
 ## Mix 15- and 18-character IDs safely
 
@@ -73,7 +73,7 @@ The downloader converts the valid 15-character value to its canonical 18-charact
 
 ## Illustrative enterprise batch
 
-These numbers are only an example, not benchmark results or guaranteed output.
+This is a sample outcome, not a benchmark or guarantee.
 
 **Scenario:** A migration team processes one workbook containing 250 unique `ContentDocumentId` values.
 
