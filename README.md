@@ -103,17 +103,45 @@ robot --test Download_Batch_1 --outputdir results src/robot/orchestrators/downlo
 
 The console prints progress and finishes with a count of successful, failed, and total IDs. The command reports a failed test if any file remains unresolved; that prevents a missing file from looking successful.
 
+## How it works
+
+![Salesforce Files Bulk Downloader architecture](docs/architecture.svg)
+
+Salesforce REST APIs provide the metadata, and an authenticated Selenium browser downloads the binaries from Shepherd. Robot Framework handles the workflow and reporting, while Pabot can run isolated batches in parallel. See [Architecture](docs/Architecture.md) for details.
+
 ## Where results are saved
 
 Each output root uses a new batch directory whose name ends in a unique ID. The download and artifact IDs are generated separately, so their directory names do not necessarily match.
 
-| Result | Location | What it contains |
-|--------|----------|------------------|
-| Downloaded files | `downloads/Download_Batch_1_<uuid>/<ContentDocumentId>/` | The validated binary file—the actual file bytes—stored once for each unique document in that batch |
-| Migration workbooks | `artifacts/Download_Batch_1_<uuid>/` | Optional Excel files for later `ContentVersion` import and `ContentDocumentLink` mapping; Salesforce Data Loader is a separate desktop import/export tool |
-| Failed-ID workbook | `artifacts/Download_Batch_1_<uuid>/Download_Batch_1_FAILED_IDs.xlsx` | Only unresolved IDs, with a failure code, message, and attempt count; this file exists only when failures are recorded |
-| Manifest | `artifacts/Download_Batch_1_<uuid>/Download_Batch_1_execution_manifest.jsonl` | A line-by-line JSON audit log of the batch, its attempts, and committed successes |
-| Robot reports | `results/log.html`, `results/report.html`, and `results/output.xml` | Human-readable details and Robot Framework's machine-readable result file |
+- **Downloaded files**
+
+  Location: `downloads/Download_Batch_1_<uuid>/<ContentDocumentId>/`
+
+  Contains the validated file bytes, stored once for each unique document in the batch.
+
+- **Migration workbooks (optional)**
+
+  Location: `artifacts/Download_Batch_1_<uuid>/`
+
+  Contains Excel files for a later `ContentVersion` import and `ContentDocumentLink` mapping. Salesforce Data Loader is a separate desktop import and export tool.
+
+- **Failed-ID workbook**
+
+  Location: `artifacts/Download_Batch_1_<uuid>/Download_Batch_1_FAILED_IDs.xlsx`
+
+  Lists unresolved IDs with a failure code, message, and attempt count. This workbook is created only when failures are recorded.
+
+- **Manifest**
+
+  Location: `artifacts/Download_Batch_1_<uuid>/Download_Batch_1_execution_manifest.jsonl`
+
+  Provides a line-by-line JSON audit log of the batch, its attempts, and committed successes.
+
+- **Robot reports**
+
+  Location: `results/log.html`, `results/report.html`, and `results/output.xml`
+
+  Provides human-readable details and Robot Framework's machine-readable result file.
 
 A file counts as successful only after the download finishes, its size matches Salesforce `ContentSize`, it is moved to its final folder, and any requested migration rows are saved. A missing, partial, or failed file is not reported as downloaded. One physical file is downloaded per unique `ContentDocumentId` in a batch, while several link records may be written because one file can be attached to several Salesforce records.
 
