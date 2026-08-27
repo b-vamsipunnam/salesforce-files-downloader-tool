@@ -1,143 +1,152 @@
 # Salesforce Files Bulk Downloader
 
-[![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.x-orange?style=flat&logo=robotframework&logoColor=white)](https://robotframework.org/)
+[![Robot Framework](https://img.shields.io/badge/Robot%20Framework-7.4.2-orange?style=flat&logo=robotframework&logoColor=white)](https://robotframework.org/)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![Salesforce CLI](https://img.shields.io/badge/Salesforce-CLI-00A1E0?style=flat&logo=salesforce&logoColor=white)](https://developer.salesforce.com/tools/salesforcecli)
 [![CI](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions/workflows/robot-ci.yml/badge.svg)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/actions)
 [![Release](https://img.shields.io/github/v/release/b-vamsipunnam/salesforce-files-downloader-tool.svg?style=flat&color=orange)](https://github.com/b-vamsipunnam/salesforce-files-downloader-tool/releases/latest)
 [![License](https://img.shields.io/github/license/b-vamsipunnam/salesforce-files-downloader-tool?style=flat)](LICENSE)
 
-Salesforce Files Bulk Downloader is a Robot Framework and Python tool for downloading files from lists of Salesforce `ContentDocumentId` values. It is built for migrations, backups, and archives of any size.
+Downloads the files named by Salesforce `ContentDocumentId` lists and helps developers or migration teams review, archive, or prepare those files for a separate Salesforce migration.
 
-**Built with**
+A Salesforce File has one logical `ContentDocument` record, identified by a `ContentDocumentId`, plus version and record-link data. This tool downloads the current file content to local storage; it does not discover file IDs or upload files to another org.
 
-- Robot Framework
-- Python
-- SeleniumLibrary
-- Salesforce REST API
-- Salesforce CLI
+## What you need
+
+- Git
+- Python 3.10 or later
 - Google Chrome
+- Salesforce CLI (`sf`), which is the command-line tool used to sign in to Salesforce
+- A spreadsheet editor that can save `.xlsx` files
+- A Salesforce user who can use the API, read the requested file records and links, and download the files
+- Enough local disk space for the downloads and generated reports
 
-## Why this tool exists
-
-Salesforce stores a file, its versions, and its record associations in separate objects. Moving those files means preserving the relationships while dealing with API limits, expiring sessions, large binaries, and partial failures.
-
-This tool separates metadata queries from binary downloads, validates each file, keeps batch output isolated, and records any failures. It can also create Data Loader-ready workbooks. The [Introduction](docs/Introduction.md) explains the Salesforce data model and migration workflow.
-
-## Typical use cases
-
-- Enterprise file migration projects
-- Salesforce org consolidation
-- Divestitures and acquisitions
-- Backup and archival
-- Migration validation and reconciliation
-- Large-scale ContentDocument extraction
-- Sandbox preparation
-- Disaster recovery preparation
-
-## Key features
-
-- Accepts 15- and 18-character `ContentDocumentId` values, canonicalizes them to 18 characters, and removes duplicates
-- Uses Salesforce CLI authentication without storing usernames or passwords
-- Queries `ContentDocument` and all associated `ContentDocumentLink` records in batches
-- Checks Salesforce daily API capacity before starting download work
-- Downloads each physical file once into a ContentDocument-specific directory
-- Isolates download and artifact directories for each batch and worker
-- Checks completion, stability, and final size against Salesforce `ContentSize`
-- Keeps downloaded files and migration-workbook rows consistent if a workbook update fails
-- Automatically retries transient download failures and writes structured failure codes, messages, and attempt counts for unresolved IDs
-- Writes a per-batch JSONL manifest for reconciliation and auditing
-- Detects expired REST and browser sessions instead of reporting them as generic download failures
-- Creates optional ContentVersion and ContentDocumentLink import workbooks
-- Escapes formula-like ContentVersion titles before writing migration workbooks
-- Supports headless Chrome and Pabot test-level parallel execution
-- Validates Python and Robot code with Ruff, Robocop, and cross-platform CI
+See [Installation](docs/Installation.md) for platform-specific setup notes.
 
 ## Quick start
+
+### 1. Download and install the project
 
 ```bash
 git clone https://github.com/b-vamsipunnam/salesforce-files-downloader-tool.git
 cd salesforce-files-downloader-tool
 python -m venv venv
+```
+
+Activate the virtual environment on Windows PowerShell:
+
+```powershell
+venv\Scripts\Activate.ps1
+```
+
+On Linux or macOS:
+
+```bash
+source venv/bin/activate
+```
+
+Install the required Python packages:
+
+```bash
 python -m pip install -r requirements.txt
 ```
 
-Complete the [Installation](docs/Installation.md) checks first, then follow [Authentication](docs/Authentication.md) to log in and create `org_info.json`:
+This installs Robot Framework, the task runner behind the `robot` command, along with the browser and Excel libraries used by the downloader.
+
+### 2. Sign in to Salesforce
+
+Choose a short local name for the source org. This name is an **org alias**; `source-org` is used below as an example.
 
 ```bash
-robot --variable ORG_ALIAS:<org_alias> --output NONE --log NONE --report NONE src/robot/orchestrators/authenticate.robot
+sf org login web --alias source-org
+sf org display --target-org source-org --json
 ```
 
-Add `ContentDocumentId` values to the first column of `input/Inputfile_1.xlsx`, then run the downloader:
+The first command opens a browser for sign-in. The second should return a JSON result with status `0`. On Windows, use `sf.cmd` instead of `sf` if PowerShell blocks `sf.ps1`.
+
+Create the session file used by the downloader:
 
 ```bash
-robot --outputdir results src/robot/orchestrators/download.robot
+robot --variable ORG_ALIAS:source-org --output NONE --log NONE --report NONE src/robot/orchestrators/authenticate.robot
 ```
 
-Downloaded files appear in `downloads/`, migration and failure workbooks in `artifacts/`, and Robot Framework reports in `results/`.
-
-## Architecture
-
-![Salesforce Files Bulk Downloader execution architecture](docs/architecture.svg)
-
-Salesforce REST APIs provide the metadata, and an authenticated Selenium browser downloads the binaries from Shepherd. Robot Framework handles the workflow and reporting, while Pabot can run isolated batches in parallel. See [Architecture](docs/Architecture.md) for details.
-
-## Contents
-
-| Documentation                                          | Description                                                                          |
-|--------------------------------------------------------|--------------------------------------------------------------------------------------|
-| [Introduction](docs/Introduction.md)                   | Salesforce Files concepts, enterprise migration challenges, and why this tool exists |
-| [Installation](docs/Installation.md)                   | Prerequisites and environment setup                                                  |
-| [Authentication](docs/Authentication.md)               | Salesforce CLI authentication and session handling                                   |
-| [Configuration](docs/Configuration.md)                 | Runtime variables, paths, timeouts, and execution settings                           |
-| [Usage](docs/Usage.md)                                 | Sequential and parallel execution instructions                                       |
-| [Examples](docs/Examples.md)                           | Common execution scenarios                                                           |
-| [Architecture](docs/Architecture.md)                   | End-to-end system design and component responsibilities                              |
-| [Performance](docs/Performance.md)                     | Benchmark results, worker scaling, retries, and validation                           |
-| [Keyword Documentation](docs/Keyword-Documentation.md) | Robot Framework keywords grouped by responsibility                                   |
-| [Troubleshooting](docs/Troubleshooting.md)             | Common errors and recommended resolutions                                            |
-| [FAQ](docs/FAQ.md)                                     | Frequently asked technical and usage questions                                       |
-| [Limitations](docs/Limitations.md)                     | Current constraints and unsupported scenarios                                        |
-| [Roadmap](docs/Roadmap.md)                             | Planned improvements and future direction                                            |
-| [Contributing](docs/Contributing.md)                   | Development workflow and contribution guidelines                                     |
-
-## Repository structure
+Expect this confirmation and a new `org_info.json` file in the repository root:
 
 ```text
-salesforce-files-downloader-tool/
-├── docs/
-├── src/
-│   └── robot/
-│       ├── libraries/
-│       ├── orchestrators/
-│       └── resources/
-├── input/
-├── downloads/
-├── artifacts/
-├── results/
-├── requirements.txt
-├── LICENSE
-├── README.md
-├── CODE_OF_CONDUCT.md
-└── SECURITY.md
-
+Generated a validated org_info.json for alias 'source-org'.
 ```
 
-- `docs/` contains the project documentation and architecture diagram.
-- `src/robot/libraries/` contains custom Python libraries used by Robot Framework.
-- `src/robot/orchestrators/` defines executable download batches.
-- `src/robot/resources/` contains configuration and reusable workflow keywords.
-- `input/` contains Excel workbooks listing source `ContentDocumentIds`.
-- `downloads/` stores validated file binaries in isolated batch directories.
-- `artifacts/` stores JSONL execution manifests, migration workbooks, and structured failed-ID workbooks.
-- `results/` receives Robot Framework and Pabot execution reports.
-- `requirements.txt` pins the Python dependencies used by the project.
-- `requirements-dev.txt` pins the Ruff and Robocop versions used by contributors and CI.
+`org_info.json` contains an access token. It is ignored by Git, but you must not commit, print, or share it. See [Authentication](docs/Authentication.md) for sandbox login, permissions, and session-expiry guidance.
 
-## Contributing
+### 3. Prepare the input workbook
 
-Before opening an issue or pull request, read the [Contributing](docs/Contributing.md) guide, [Code of Conduct](CODE_OF_CONDUCT.md), and [Security Policy](SECURITY.md).
+Open `input/Inputfile_1.xlsx` and select the worksheet named `Input`.
 
-## License
+Leave the existing `ContentDocumentID` header in cell A1. Header matching is case-insensitive; this guide uses Salesforce's usual `ContentDocumentId` spelling. Starting in A2, paste one Salesforce file ID per row in the first column:
 
-Licensed under the [MIT License](LICENSE).
+| ContentDocumentId |
+|-------------------|
+| `069...`          |
+| `069...`          |
+
+A `ContentDocumentId` is the Salesforce record ID for a logical file. Valid IDs start with `069` and contain 15 or 18 alphanumeric characters. You can obtain them through your approved Salesforce query or export process; the downloader does not search the org for files.
+
+Save the workbook as `.xlsx` and close it before running the tool. Blank cells are ignored. Duplicate forms of the same valid ID are processed once within this batch.
+
+### 4. Run the first batch
+
+A **batch** is one input workbook processed by one Robot Framework test. Run only the first configured batch:
+
+```bash
+robot --test Download_Batch_1 --outputdir results src/robot/orchestrators/download.robot
+```
+
+The console prints progress and finishes with a count of successful, failed, and total IDs. The command reports a failed test if any file remains unresolved; that prevents a missing file from looking successful.
+
+## Where results are saved
+
+Each output root uses a new batch directory whose name ends in a unique ID. The download and artifact IDs are generated separately, so their directory names do not necessarily match.
+
+| Result | Location | What it contains |
+|--------|----------|------------------|
+| Downloaded files | `downloads/Download_Batch_1_<uuid>/<ContentDocumentId>/` | The validated binary file—the actual file bytes—stored once for each unique document in that batch |
+| Migration workbooks | `artifacts/Download_Batch_1_<uuid>/` | Optional Excel files for later `ContentVersion` import and `ContentDocumentLink` mapping; Salesforce Data Loader is a separate desktop import/export tool |
+| Failed-ID workbook | `artifacts/Download_Batch_1_<uuid>/Download_Batch_1_FAILED_IDs.xlsx` | Only unresolved IDs, with a failure code, message, and attempt count; this file exists only when failures are recorded |
+| Manifest | `artifacts/Download_Batch_1_<uuid>/Download_Batch_1_execution_manifest.jsonl` | A line-by-line JSON audit log of the batch, its attempts, and committed successes |
+| Robot reports | `results/log.html`, `results/report.html`, and `results/output.xml` | Human-readable details and Robot Framework's machine-readable result file |
+
+A file counts as successful only after the download finishes, its size matches Salesforce `ContentSize`, it is moved to its final folder, and any requested migration rows are saved. A missing, partial, or failed file is not reported as downloaded. One physical file is downloaded per unique `ContentDocumentId` in a batch, while several link records may be written because one file can be attached to several Salesforce records.
+
+All of these outputs can contain sensitive Salesforce IDs, metadata (descriptive record data), filenames, and local paths. Store and share them as migration data.
+
+## If a download fails
+
+1. Open the failed-ID workbook and `results/log.html`.
+2. Use `FailureCode` and `FailureMessage` to find the cause in [Troubleshooting](docs/Troubleshooting.md).
+3. Fix the cause. If the Salesforce session expired, sign in again if needed and regenerate `org_info.json`.
+4. Copy the failed workbook's `ContentDocumentId` column into the `Input` worksheet of an input template, then rerun that batch.
+
+Automatic retry applies only to failure types marked as transient by the tool. It does not repair invalid IDs, missing metadata, permissions, or expired sessions, and each retried download starts from the beginning.
+
+## Documentation
+
+| Guide | Responsibility |
+|-------|----------------|
+| [Introduction](docs/Introduction.md) | Salesforce Files concepts and when to use the tool |
+| [Installation](docs/Installation.md) | Prerequisites and local setup |
+| [Authentication](docs/Authentication.md) | Salesforce login, org aliases, sessions, and permissions |
+| [Configuration](docs/Configuration.md) | Paths, batches, timeouts, API checks, and retries |
+| [Usage](docs/Usage.md) | Input preparation, sequential and parallel runs, and result review |
+| [Examples](docs/Examples.md) | A few practical migration scenarios |
+| [Architecture](docs/Architecture.md) | Advanced design overview |
+| [Performance](docs/Performance.md) | Recorded benchmark and its limits |
+| [Keyword documentation](docs/Keyword-Documentation.md) | Robot Framework keyword reference |
+| [Troubleshooting](docs/Troubleshooting.md) | Exact checks and fixes for common failures |
+| [FAQ](docs/FAQ.md) | Questions not covered by the workflow guides |
+| [Limitations](docs/Limitations.md) | Supported behavior and recovery boundaries |
+| [Roadmap](docs/Roadmap.md) | Possible future work |
+| [Contributing](CONTRIBUTING.md) | Development setup and contribution process |
+
+Please follow the [Code of Conduct](CODE_OF_CONDUCT.md) and report security issues through the [Security Policy](SECURITY.md).
+
+This project is licensed under the [MIT License](LICENSE).

@@ -1,27 +1,27 @@
 # Roadmap
 
-This roadmap describes ideas under consideration. It does not promise a delivery date or final design.
+The items below are ideas for future work. They have no committed release date or final design and must not be treated as current capability.
 
-## Near-term
+## Reliability and recovery ideas
 
-- Improve resumable batch execution
-- Add checksum reporting
-- Add more execution examples
-- Add focused tests for browser retry recovery and exhausted retry paths
-- Add coverage reporting without making local development cumbersome
+- Resumable batch state across separate runs
+- Checksum generation and reconciliation
+- Coordinated API-capacity reservations across parallel workers
+- Salesforce session refresh for long-running work
+- More focused tests for browser retry and exhausted-retry paths
 
-## Future exploration
+## Storage and migration ideas
 
-- Coordinate API-capacity reservations across parallel workers
-- Refresh expired Salesforce sessions during long-running executions
-- Improve migration reconciliation
-- Configurable storage organization and retention workflows
-- Additional browser compatibility research
-- Performance profiling and worker-scaling improvements
+- Configurable storage layout and retention workflows
+- Improved migration reconciliation
 - Additional validation and reporting options
 
----
+## Engineering research
 
-[← Previous](Limitations.md) | [Next →](Contributing.md)
+- Other browser compatibility
+- Performance profiling and worker-scaling studies
+- Coverage reporting that remains practical for local development
+
+Until an item is implemented, tested, and moved into the relevant user guide, rely on the boundaries in [Limitations](Limitations.md).
 
 [Back to README](../README.md)
