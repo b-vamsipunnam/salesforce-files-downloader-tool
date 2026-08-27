@@ -1,17 +1,24 @@
 # Installation
 
+This page covers local setup only. Complete [Authentication](Authentication.md) after these checks pass.
+
 ## Prerequisites
 
+Install:
+
+- [Git](https://git-scm.com/downloads)
 - Python 3.10 or later
-- Robot Framework (installed by `requirements.txt`)
-- Latest stable Salesforce CLI (`sf`)
-- Google Chrome
-- Latest supported Node.js LTS release satisfying the Salesforce CLI and npm engine requirements
-- Read access to the requested Salesforce files and metadata
+- [Google Chrome](https://www.google.com/chrome/)
+- [Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_install_cli.htm), which provides the `sf` command
+- A spreadsheet editor that can save `.xlsx` files
 
-## Environment preparation
+Use a current supported Salesforce CLI release. The official installers include their required runtime. Node.js is needed only if you choose the npm installation method; in that case, use a Node.js version allowed by the current `@salesforce/cli` package instead of relying on a version copied from this guide.
 
-Clone the repository and create an isolated Python environment:
+ChromeDriver does not need to be installed separately. Selenium is the browser automation library used by the project; its Selenium Manager resolves a driver for the installed Chrome version when the browser starts.
+
+## Set up the Python environment
+
+Clone the repository and create a virtual environment:
 
 ```bash
 git clone https://github.com/b-vamsipunnam/salesforce-files-downloader-tool.git
@@ -19,10 +26,16 @@ cd salesforce-files-downloader-tool
 python -m venv venv
 ```
 
-Activate it on Windows:
+Activate it on Windows PowerShell:
 
 ```powershell
-venv\Scripts\activate
+venv\Scripts\Activate.ps1
+```
+
+If PowerShell prevents script activation, use Command Prompt instead:
+
+```batch
+venv\Scripts\activate.bat
 ```
 
 Activate it on Linux or macOS:
@@ -31,111 +44,30 @@ Activate it on Linux or macOS:
 source venv/bin/activate
 ```
 
-Install the pinned dependencies:
+Install the pinned runtime packages:
 
 ```bash
 python -m pip install -r requirements.txt
+python -m pip check
 ```
 
-This command installs the runtime libraries used by the project, including Robot Framework, Selenium, Pabot, RequestsLibrary, and OpenPyXL.
+`pip check` should finish with `No broken requirements found.`
 
-Contributors should also install the pinned development checks used by CI:
+The installation also provides Robot Framework, the task runner behind `robot`, and Pabot, its optional parallel runner.
 
-```bash
-python -m pip install -r requirements-dev.txt
-ruff --version
-robocop --version
-```
-
-Runtime users do not need `requirements-dev.txt` unless they want to run the repository's static-analysis checks locally.
-
-## Salesforce CLI
-
-### Version policy
-
-Use supported release channels instead of copying patch versions from this guide:
-
-- NVM for Windows: latest stable release; 1.2.2 was current when this guide was verified on 2026-08-16.
-- Node.js: latest LTS, not the non-LTS Current release; Node.js 24.18.0 was the latest LTS when verified.
-- npm: latest stable version compatible with the active Node.js runtime; npm 12.0.2 was current when verified.
-- Salesforce CLI: npm `latest` channel; `@salesforce/cli` 2.147.7 was current when verified and declared `node >=22.0.0`.
-
-Patch versions change often. The versions above simply record the last tested setup; the commands below find and validate current releases. For release details, see [NVM for Windows](https://github.com/coreybutler/nvm-windows/releases), the [Node.js release schedule](https://nodejs.org/en/about/previous-releases), [npm release guidance](https://docs.npmjs.com/about-npm-versions/), and [Salesforce CLI release notes](https://github.com/forcedotcom/cli/tree/main/releasenotes).
-
-### Strict Windows installation with NVM
-
-Node.js 18 is end-of-life and cannot run current Salesforce CLI releases. Install or update NVM for Windows, then activate the latest Node.js LTS before updating npm or Salesforce CLI. Because NVM keeps global packages separate for each Node version, reinstall those packages after switching runtimes.
-
-Install the latest signed [NVM for Windows release](https://github.com/coreybutler/nvm-windows/releases). To update an existing NVM installation, use the newest official installer and reopen the terminal. In an elevated Command Prompt or PowerShell, run:
-
-```powershell
-nvm version
-nvm install lts
-nvm use lts
-nvm current
-where.exe node
-node --version
-npm --version
-```
-
-Confirm that `node --version` reports the current LTS line. Check the live npm compatibility declaration before updating npm, then install its latest compatible stable release:
-
-```powershell
-npm view npm@latest version engines --json
-npm install --global npm@latest
-npm --version
-```
-
-Check the live Salesforce CLI version and Node.js requirement before installing it:
-
-```powershell
-npm view @salesforce/cli@latest version engines --json
-npm install --global @salesforce/cli@latest
-where.exe sf
-sf.cmd --version
-```
-
-The Node version printed by `sf.cmd --version` must match the active `node --version` and satisfy the engine range returned by `npm view`. The output has this form, with versions resolved at installation time:
-
-```text
-@salesforce/cli/<current-version> win32-x64 node-v<active-LTS-version>
-```
-
-If `where.exe node`, `where.exe npm`, or `where.exe sf` shows unexpected installations before the active NVM path, correct `PATH` and reopen PowerShell and PyCharm. On Windows, use `sf.cmd` for direct validation commands; this avoids PowerShell choosing `sf.ps1` under a restrictive execution policy.
-
-### Other platforms and installation methods
-
-Install the latest Node.js LTS release, then install Salesforce CLI with an official Salesforce installer or npm. When using npm, verify both live engine declarations before upgrading:
-
-```bash
-npm view npm@latest version engines --json
-npm install --global npm@latest
-npm view @salesforce/cli@latest version engines --json
-npm install --global @salesforce/cli@latest
-sf --version
-```
-
-## Chrome
-
-Install a current Google Chrome release and confirm that it starts in the execution environment. The project configures headless operation and automatic downloads, with a separate absolute download path for each session. No separate driver setup is required.
-
-## Verify the environment
+## Verify the installation
 
 ```bash
 python --version
 robot --version
 pabot --version
-node --version
-sf.cmd --version  # Windows
-sf --version      # Linux or macOS
+sf --version
 ```
 
-Do not continue to authentication unless Node.js and npm satisfy the live engine declarations, the CLI version names the active Node runtime, and `sf org display --target-org <org_alias> --json` completes successfully.
+Python must report 3.10 or later. The other commands should print version information without an error. On Windows, run `sf.cmd --version` if PowerShell blocks the `sf.ps1` wrapper.
 
-Complete the [Authentication](Authentication.md) steps before running the downloader.
+Start Chrome once in the same desktop environment where the downloader will run. If the machine uses a proxy, endpoint security, or browser-management policy, make sure it permits Selenium Manager and automatic downloads.
 
----
-
-[← Previous](Introduction.md) | [Next →](Authentication.md)
+Contributors also need the development packages and checks described in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 [Back to README](../README.md)

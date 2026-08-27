@@ -1,297 +1,199 @@
 # Troubleshooting
 
-Start with the batch manifest and failed-ID workbook under `artifacts/`. For more detail, open `results/log.html` or the worker output in `results/pabot_results/`. These files may contain customer information, so sanitize them before sharing and never publish `org_info.json` or an access token.
+Start with the batch's failed-ID workbook and manifest, then open `results/log.html`. The output layout is described in [Usage](Usage.md#review-the-results). Pabot worker errors can also appear under `results/pabot_results/`.
 
-## Salesforce CLI not found
+These files can contain Salesforce IDs, metadata, filenames, and local paths. Remove customer data before sharing them. Never share `org_info.json` or an access token.
 
-**Symptoms**
+## `sf` is not found
 
-The suite reports that `sf` is missing or the shell does not recognize the command.
+**Symptoms:** The shell does not recognize `sf`, or authentication says Salesforce CLI is missing.
 
-**Likely cause**
+**Likely cause:** Salesforce CLI is not installed, or its executable is not on `PATH`.
 
-Salesforce CLI is not installed or its executable is absent from `PATH`.
-
-**Resolution**
-
-Install Salesforce CLI, restart the shell if needed, and confirm `sf --version` succeeds.
-
-## `Invalid regular expression flags` from every Salesforce CLI command
-
-**Symptoms**
-
-`sf.cmd --version`, `sf org display`, or `sf org list limits` fails immediately with `SyntaxError: Invalid regular expression flags`.
-
-**Likely cause**
-
-The active Node.js runtime does not meet the installed Salesforce CLI's engine requirement. Older Node releases may fail while parsing syntax used by the current CLI.
-
-**Resolution**
-
-On Windows, update NVM for Windows, activate the latest Node.js LTS, and reinstall the global packages for that runtime. Check the current engine declarations rather than copying an old patch version:
-
-```powershell
-nvm version
-nvm install lts
-nvm use lts
-nvm current
-node --version
-npm view npm@latest version engines --json
-npm install --global npm@latest
-npm view @salesforce/cli@latest version engines --json
-npm install --global @salesforce/cli@latest
-sf.cmd --version
-```
-
-The Node version shown by `sf.cmd --version` must match `node --version` and satisfy the displayed engine range. If `where.exe node`, `where.exe npm`, or `where.exe sf` still finds an older installation, restart PowerShell and PyCharm. The full validation sequence is in [Installation](Installation.md).
-
-## Invalid org alias
-
-**Symptoms**
-
-The API-capacity lookup reports that the alias is not authenticated or accessible, or later Salesforce requests fail authentication.
-
-**Likely cause**
-
-The alias is misspelled, belongs to another CLI environment, or its authorization is no longer valid.
-
-**Resolution**
-
-Run `sf org login web --alias <org_alias>`, verify `sf org display --target-org <org_alias>`, and regenerate `org_info.json`.
-
-## Expired Salesforce session
-
-**Symptoms**
-
-REST requests or frontdoor browser authentication fail after authentication previously worked.
-
-**Likely cause**
-
-The access token in `org_info.json` expired or was revoked.
-
-**Resolution**
-
-Regenerate `org_info.json` from the authenticated alias and rerun failed IDs. The tool does not refresh a token during execution.
-
-## Redacted or empty access token in `org_info.json`
-
-**Symptoms**
-
-Salesforce CLI authentication succeeds, but downloader REST or browser authentication fails immediately. `result.accessToken` in `org_info.json` is empty or begins with `[REDACTED]`.
-
-**Likely cause**
-
-Recent Salesforce CLI versions hide secrets from `sf org display` by default, or a failing CLI command was redirected and replaced a valid file with empty output.
-
-**Resolution**
-
-Run `sf.cmd org display --target-org <org_alias> --json` without redirecting its output. If it succeeds, follow the Robot command in [Authentication](Authentication.md) to replace `org_info.json` safely.
-
-## Chrome startup or browser compatibility issues
-
-**Symptoms**
-
-Chrome fails during browser creation with a driver or session compatibility error.
-
-**Likely cause**
-
-Chrome is outdated, browser management cannot resolve a compatible driver, or the environment restricts browser startup.
-
-**Resolution**
-
-Update Chrome, verify headless Chrome can run, check proxy/network restrictions affecting driver management, and review the Selenium error in `log.html`.
-
-## Browser download does not start
-
-**Symptoms**
-
-No file appears before `${DOWNLOAD_APPEAR_TIMEOUT}`.
-
-**Likely cause**
-
-The browser session is invalid, the user lacks file access, the Shepherd request is blocked, or the network is unavailable.
-
-**Resolution**
-
-Refresh the authentication file, confirm that the same user can open the file in Salesforce, and inspect the browser and Robot errors before increasing the timeout.
-
-Repeated `RETRY FAILED` messages usually mean the problem is not a brief browser delay and needs investigation.
-
-## Insufficient Salesforce API capacity
-
-**Symptoms**
-
-The batch stops before creating download or artifact directories and reports the remaining, estimated, buffered, and reserved API request counts.
-
-**Likely cause**
-
-The org's `DailyApiRequests` allocation cannot accommodate the estimated metadata calls while retaining the configured safety buffer and minimum reserve.
-
-**Resolution**
-
-Reduce the batch, wait for capacity to reset, or review `${API_REQUEST_SAFETY_BUFFER}` and `${MINIMUM_API_REQUESTS_REMAINING}` with the owners of other integrations. Do not disable the check unless API use is managed elsewhere. Add more buffer when parallel workers may approach the limit together.
-
-If parallel workers appear idle before workbooks are created, inspect `results/pabot_results/*/robot_stderr.out`. Workers retrieve limits through their authenticated REST sessions. An `AUTH_SESSION_EXPIRED` or REST limits failure requires regeneration of `org_info.json`.
-
-`Minimum Estimated Metadata Requests` is deliberately a lower bound because the input count cannot predict SOQL pagination. Increase `${API_REQUEST_SAFETY_BUFFER}` for batches with many relationships.
-
-## Salesforce org identity mismatch
-
-**Symptoms**
-
-The alias, org ID, username, or instance URL in `org_info.json` does not match the intended source org.
-
-**Likely cause**
-
-The alias was reassigned, the authentication file is stale, or multiple local aliases were confused. Different aliases are safe when they resolve to the same Salesforce org ID.
-
-**Resolution**
-
-Before starting Robot or Pabot, compare `result.id`, `result.username`, and `result.instanceUrl` from `sf org display --target-org <alias> --json`. Regenerate `org_info.json` from the intended org before rerunning the downloader. Download workers use the generated file and do not repeat this CLI call.
-
-## Temporary download never completes
-
-**Symptoms**
-
-A `.crdownload`, `.tmp`, or `.part` file remains until the completion timeout.
-
-**Likely cause**
-
-The transfer stalled, local storage is full, browser/network activity was interrupted, or an enterprise browser policy overrode automatic-download behavior.
-
-**Resolution**
-
-Check Chrome enterprise download policies, network stability, and free disk space. Remove abandoned temporary output after the run, then retry the failed ID. Every retry starts a new download.
-
-## Automatic retries do not recover an ID
-
-**Symptoms**
-
-The log shows `PERMANENT FAILURE`, or an ID appears in the failed-ID workbook after multiple attempts.
-
-**Likely cause**
-
-The underlying issue lasted through every attempt, or the ID was not retryable because it was invalid or lacked required metadata. An expired Salesforce session also remains expired because the retry pass uses the existing session.
-
-**Resolution**
-
-Use the failure reason in `log.html` to identify the underlying problem. Regenerate `org_info.json` if the session expired, then rerun the remaining IDs. Increase retries only for genuinely temporary failures; extra attempts cannot fix an invalid ID or missing permission.
-
-## File validation failure
-
-**Symptoms**
-
-The downloaded size does not match `ContentSize`, the size does not stabilize, or destination verification fails.
-
-**Likely cause**
-
-The transfer is incomplete, source metadata changed during processing, or a filesystem operation failed.
-
-**Resolution**
-
-Treat the download as failed. Verify the source metadata, local storage, and network conditions before rerunning the affected ID.
-
-## Missing ContentDocumentLink metadata
-
-**Symptoms**
-
-A document is marked failed because link metadata is missing when ContentDocumentLink workbook generation is enabled.
-
-**Likely cause**
-
-No visible link was returned, permissions hide the relationship, or the relationship changed during the run.
-
-**Resolution**
-
-Confirm the source record links and querying user's visibility. Disable link-workbook generation only when relationship export is intentionally unnecessary.
-
-## Permission-related errors
-
-**Symptoms**
-
-Metadata queries omit records, return authorization errors, or Shepherd downloads fail for selected IDs.
-
-**Likely cause**
-
-The authenticated user lacks object, record, file, or linked-entity access.
-
-**Resolution**
-
-Review the user's Salesforce permissions and sharing visibility. Use a least-privilege migration user with access to the required source data.
-
-## Excel file locked
-
-**Symptoms**
-
-Input workbooks cannot be read or output workbooks cannot be saved or moved.
-
-**Likely cause**
-
-The file is open in Excel, indexed by another process, or blocked by antivirus or filesystem permissions.
-
-**Resolution**
-
-Close the workbook, verify directory permissions, and retry after the locking process releases it.
-
-Migration workbook updates are staged and committed together. If the log reports an incomplete rollback, preserve the named `*_rollback_recovery_*.xlsx` file and use it to restore the affected workbook before rerunning the ID.
-
-If a workbook transaction fails after the binary has moved, the downloader removes that binary and the per-ID directory before recording the failure. This cleanup is intentional: keeping a final binary without its migration rows would make the next run ambiguous. Use the failed-ID workbook to rerun the document after the workbook problem is resolved.
-
-## Insufficient disk space
-
-**Symptoms**
-
-Downloads stop, files remain incomplete, or workbook/report writes fail.
-
-**Likely cause**
-
-The local volume lacks space for binaries, temporary browser files, and runtime output.
-
-**Resolution**
-
-Free space or move the configured output roots to a larger volume. Allow capacity above the expected source size for temporary files and reports.
-
-## Pabot worker collision
-
-**Symptoms**
-
-Multiple workers process the same ContentDocumentId or shared runtime files disappear unexpectedly.
-
-**Likely cause**
-
-Input workbooks overlap, custom output paths are shared, or a custom worker teardown removes `org_info.json` before all workers finish.
-
-**Resolution**
-
-Use non-overlapping input batches, retain UUID-based output paths, and remove the shared authentication file only after the complete Pabot run. Current workers read org context directly from `org_info.json` and use independent authenticated REST capacity checks.
-
-## GitHub Actions smoke-test failure
-
-**Symptoms**
-
-The CI smoke workflow fails even though no Salesforce connection is expected.
-
-**Likely cause**
-
-A dependency, Robot resource import, headless Chrome startup, SeleniumLibrary integration, or custom Excel operation regressed.
-
-**Resolution**
-
-Install both runtime and development dependencies, then reproduce the same checks locally:
+**Check:**
 
 ```bash
-python -m pip install -r requirements.txt
-python -m pip install -r requirements-dev.txt
-ruff check src ci
-robocop check src ci
-python -m unittest discover -s ci/tests -v
-robot --outputdir results/smoke ci/robot/smoke.robot
+sf --version
 ```
 
-The smoke suite uses mocked Salesforce responses for API-capacity, retry, pagination, metadata, and ID-validation scenarios. It does not require org credentials or download customer files.
+On Windows, also try:
 
----
+```powershell
+sf.cmd --version
+where.exe sf
+```
 
-[← Previous](Keyword-Documentation.md) | [Next →](FAQ.md)
+**Fix:** Install or repair Salesforce CLI using [Installation](Installation.md), reopen the terminal, and repeat the version check. If `sf.cmd` works but `sf` does not, use `sf.cmd` in PowerShell.
+
+## Every Salesforce CLI command fails with a JavaScript syntax error
+
+**Symptoms:** Even `sf --version` fails with a Node.js parsing message such as `Invalid regular expression flags`.
+
+**Likely cause:** An npm-installed Salesforce CLI is running on a Node.js version outside the package's supported engine range, or `PATH` points to an older runtime.
+
+**Check:**
+
+```bash
+node --version
+npm view @salesforce/cli@latest engines --json
+```
+
+On Windows, use `where.exe node`, `where.exe npm`, and `where.exe sf` to find conflicting installations.
+
+**Fix:** Use the official Salesforce CLI installer, or activate a Node.js version allowed by the displayed engine range and reinstall `@salesforce/cli`. Reopen the terminal and confirm `sf --version` before retrying authentication.
+
+## The input ID is invalid
+
+**Symptoms:** The failed-ID workbook reports `INVALID_CONTENT_DOCUMENT_ID`.
+
+**Likely cause:** The value is not a 15- or 18-character Salesforce `ContentDocumentId` beginning with `069`. A `ContentVersion` ID begins with `068` and is not accepted as input.
+
+**Check:** Remove spaces and verify the value exported from `ContentDocument.Id`.
+
+**Fix:** Replace the value with the correct `ContentDocumentId`. Automatic retry does not change or repair an invalid ID.
+
+## The org alias is missing, stale, or points to the wrong org
+
+**Symptoms:** `sf org display` fails, the authentication task fails, or the returned username, org ID, or instance URL is not the intended source.
+
+**Likely cause:** The alias is misspelled, was reassigned, belongs to another local CLI setup, or is no longer authorized.
+
+**Check:**
+
+```bash
+sf org display --target-org source-org --json
+```
+
+Inspect `result.username`, `result.id`, and `result.instanceUrl`. On Windows, use `sf.cmd` if needed.
+
+**Fix:** Log in with the intended alias and then regenerate the session file:
+
+```bash
+sf org login web --alias source-org
+robot --variable ORG_ALIAS:source-org --output NONE --log NONE --report NONE src/robot/orchestrators/authenticate.robot
+```
+
+## `org_info.json` has an empty or redacted token
+
+**Symptoms:** CLI org display works, but the downloader rejects `org_info.json` or REST/browser authentication fails immediately.
+
+**Likely cause:** `sf org display --json` was redirected into the file. Current CLI output can intentionally redact its token.
+
+**Check:** Open only enough of `org_info.json` locally to confirm whether `result.accessToken` is absent, empty, or starts with `[REDACTED]`. Do not print the value or attach the file.
+
+**Fix:** Run `sf org display --target-org source-org --json` without redirection. If it succeeds, use the Robot authentication command above to replace `org_info.json` safely.
+
+## The Salesforce session expired
+
+**Symptoms:** The manifest or failed-ID workbook reports `AUTH_SESSION_EXPIRED`; REST returns an invalid-session response; Chrome redirects to a Salesforce login page; or Salesforce returns HTML instead of the requested file.
+
+**Likely cause:** The access token was revoked or expired under the org's session policy.
+
+**Check:**
+
+```bash
+sf org display --target-org source-org --json
+```
+
+**Fix:** Re-authenticate the alias if that check fails, regenerate `org_info.json`, and rerun the affected IDs. The current batch cannot refresh either its REST or browser session, and automatic download retry cannot recover it.
+
+## File or link metadata is missing
+
+**Symptoms:** A failure reports `CONTENT_DOCUMENT_NOT_FOUND` or `CONTENT_DOCUMENT_LINK_NOT_FOUND`.
+
+**Likely cause:** The record does not exist, the authenticated user cannot see it, no visible link was returned, or the relationship changed during the run.
+
+**Check:** Sign in to Salesforce as the same user and try to open the file and its linked record. Confirm that the ID is a `ContentDocumentId`, not a version ID. If link output is enabled, confirm that at least one required link is visible to that user.
+
+**Fix:** Correct the ID or grant the appropriate source-org access through your Salesforce administrator. Disable `ContentDocumentLink` workbook generation only when relationship export is intentionally outside the job. Missing metadata is not retried automatically.
+
+## The API-capacity check stops the batch
+
+**Symptoms:** The log reports insufficient Salesforce API capacity. The artifact directory and manifest exist, but migration workbooks and the download directory might not have been created.
+
+**Likely cause:** Remaining `DailyApiRequests` cannot cover the estimated metadata calls, safety buffer, and required reserve.
+
+**Check:** Read the logged values for remaining requests, estimated tool requests, safety buffer, and minimum reserve. The estimate is a lower bound because SOQL pagination cannot be predicted from workbook row count.
+
+**Fix:** Reduce the input batch, wait for API capacity to reset, or agree on different buffer and reserve values with the owners of other integrations. Parallel workers check separately and do not reserve capacity for each other. Do not disable the check unless API use is controlled by another documented process.
+
+## Chrome does not start
+
+**Symptoms:** Browser creation fails with a driver, session, policy, or startup error.
+
+**Likely cause:** Chrome is unavailable or outdated, Selenium Manager cannot resolve a driver, or proxy, endpoint-security, filesystem, or headless-browser policy blocks startup.
+
+**Check:** Start Chrome manually in the same environment. Review the first Selenium error in `results/log.html` and check whether the machine can reach the resources required by Selenium Manager.
+
+**Fix:** Update or repair Chrome, allow the required browser/driver process through the local policy, and retry a small batch. Do not install an arbitrary ChromeDriver version; the project uses Selenium Manager.
+
+## A browser download does not appear or finish
+
+**Symptoms:** The failure code is `DOWNLOAD_NAVIGATION_FAILED`, `DOWNLOAD_APPEAR_TIMEOUT`, or `DOWNLOAD_COMPLETION_TIMEOUT`; a `.crdownload`, `.tmp`, or `.part` file remains.
+
+**Likely cause:** File access is denied, the session is no longer valid, Salesforce or the network did not deliver the file, disk space is exhausted, or Chrome download policy blocked it.
+
+**Check:**
+
+- Confirm the same Salesforce user can open and download that file interactively.
+- Check for `AUTH_SESSION_EXPIRED` elsewhere in the batch.
+- Check free disk space and Chrome automatic-download policy.
+- Inspect the manifest attempt and the matching section of `results/log.html`.
+
+**Fix:** Correct authentication, permissions, network, disk, or browser policy first. Increase the configured download timeout only when a valid transfer is simply slower than the current bound. Every retry starts a new download.
+
+## File-size or final validation fails
+
+**Symptoms:** The failure code is `CONTENT_SIZE_MISMATCH`, `FILE_NOT_STABLE`, `MULTIPLE_FILES_NO_SIZE_MATCH`, or `FINAL_FILE_VALIDATION_FAILED`.
+
+**Likely cause:** The transfer is incomplete, source metadata changed during processing, more than one unexpected file appeared, or a local filesystem operation failed.
+
+**Check:** Compare the expected and actual sizes in the log, confirm the source file did not change, and inspect disk and network errors.
+
+**Fix:** Treat the file as failed. Remove no validated output manually during an active run; let the batch cleanup finish. Correct the underlying issue and rerun the ID from the beginning. Never count a mismatched or missing file as successful.
+
+## An Excel workbook is locked or a transaction fails
+
+**Symptoms:** An input workbook cannot be read, an output workbook cannot be saved, or the failure code is `WORKBOOK_TRANSACTION_FAILED`.
+
+**Likely cause:** Excel or another process has the file open, antivirus or indexing holds a lock, the output path is not writable, or a staged workbook replacement failed.
+
+**Check:** Close all input and output workbooks, confirm the output directory is writable, and read the complete transaction error in `results/log.html`.
+
+**Fix:** Release the lock or correct the filesystem permission, then rerun the failed ID. If the log names a `*_rollback_recovery_*.xlsx` file, preserve it. The repository cannot decide automatically whether that recovery copy or the target workbook is authoritative; compare them before restoring or rerunning.
+
+When a requested workbook commit fails, the downloader attempts to remove the moved binary and its per-ID directory. That cleanup is intentional: the file must not remain as a false success without its migration rows.
+
+## A failed-ID workbook was not created
+
+**Symptoms:** Robot reports a failed batch, but no `*_FAILED_IDs.xlsx` file is present.
+
+**Likely cause:** Processing failed before IDs were loaded, or the failure report itself could not be written because of a lock, disk, or permission error.
+
+**Check:** Read `results/log.html` for `Failed-ID report could not be created`, then inspect the batch manifest and original input workbook.
+
+**Fix:** Correct the input or output problem. Use explicit `DOCUMENT_SUCCEEDED` manifest events to separate committed successes from IDs that need review; do not assume that the absence of a failure workbook means success.
+
+## Parallel workers overlap, stall, or fail capacity checks
+
+**Symptoms:** The same file is downloaded more than once, workers appear idle, or workers fail independently before download work begins.
+
+**Likely cause:** Input workbooks overlap, one batch is much larger, machine resources are exhausted, or independent API checks see insufficient capacity.
+
+**Check:** Compare the first columns of all active input workbooks. Review the combined Robot report and files such as `results/pabot_results/*/robot_stderr.out`.
+
+**Fix:** Remove overlapping IDs, rebalance the workbooks, reduce `--processes`, and leave more API safety capacity. Keep UUID-based output paths and do not remove the shared `org_info.json` until all workers finish.
+
+## Local storage is full
+
+**Symptoms:** Downloads remain partial, file moves fail, or workbooks and reports cannot be saved.
+
+**Likely cause:** The volume lacks room for the completed binaries, active browser temporary files, migration workbooks, manifests, and reports.
+
+**Check:** Compare available disk space with the expected source data plus temporary working space.
+
+**Fix:** Free space or point the configured output roots to a larger writable volume. The tool retains old run directories and does not remove them automatically.
+
+For failures in contributor-only checks, use the validation commands in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 [Back to README](../README.md)

@@ -1,9 +1,7 @@
 # Contributing
 
-See the repository-level [CONTRIBUTING.md](../CONTRIBUTING.md) for the development workflow, verification commands, conventions, and pull-request checklist. Report security issues privately as described in [SECURITY.md](../SECURITY.md).
+The repository-level [CONTRIBUTING.md](../CONTRIBUTING.md) is the single guide for development setup, validation commands, change conventions, bug reports, and pull requests.
 
----
-
-[← Previous](Roadmap.md)
+This short page is retained so existing documentation links do not break. Report security issues privately through [SECURITY.md](../SECURITY.md).
 
 [Back to README](../README.md)

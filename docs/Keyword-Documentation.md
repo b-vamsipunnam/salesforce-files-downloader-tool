@@ -1,8 +1,8 @@
-# Keyword documentation
+# Keyword reference
 
-`src/robot/resources/keywords.robot` imports the resource files listed here and exposes their keywords to Robot Framework. Begin with the orchestration keyword; the lower-level keywords are mainly for extensions and tests.
+This is contributor reference material for the Robot Framework resources and Python libraries. To run the downloader, use [Usage](Usage.md) instead.
 
-The tables focus on the keywords most useful to callers and maintainers. **What it does and when to use it** explains each keyword's role, while **Important behavior** notes state changes, assumptions, and limits.
+`src/robot/resources/keywords.robot` is the public resource entry point. In normal extensions, call `Download Files Using Content Document IDs`; use lower-level keywords only when their narrower contract is required. The tables document the keywords most relevant to maintenance and tests, not every internal statement.
 
 ## Salesforce authentication and REST capacity
 
@@ -21,7 +21,7 @@ The tables focus on the keywords most useful to callers and maintainers. **What 
 | `Generate Salesforce Org Info`             | Generate the downloader credential file using Salesforce CLI metadata and dedicated access-token commands. | Org alias, output path, optional CLI command | Non-secret confirmation | Used by `orchestrators/authenticate.robot`; validates and atomically replaces the destination without returning the token. |
 | `Get Salesforce Login Info`                | Prepare frontdoor browser authentication.   | None            | Login URL     | Sets `${org_domain}` and reads the token without ordinary log exposure. |
 
-Minimal session example:
+Minimal direct session call:
 
 ```robot
 ${session}=    Initialize Salesforce Session
@@ -32,6 +32,8 @@ ${session}=    Initialize Salesforce Session
 **Source**
 
 `src/robot/resources/salesforce_api.robot`
+
+SOQL is Salesforce Object Query Language, the query language used to read Salesforce records.
 
 | Keyword                                | What it does and when to use it               | Arguments                                         | Return value                      | Important behavior                                                         |
 |----------------------------------------|----------------------------------------------|---------------------------------------------------|-----------------------------------|----------------------------------------------------------------------------|
@@ -53,6 +55,8 @@ ${documents}=    Get ContentDocument Metadata Map    ${content_ids}    200
 **Source**
 
 `src/robot/resources/excel_operations.robot` and `src/robot/libraries/ExcelLibrary.py`
+
+Salesforce Data Loader is a separate desktop tool for record import and export. The keywords below create local workbook schemas; they do not run an import.
 
 | Keyword                                 | What it does and when to use it | Arguments                                                 | Return value            | Important behavior                                             |
 |-----------------------------------------|---------------------------------|-----------------------------------------------------------|-------------------------|----------------------------------------------------------------|
@@ -105,7 +109,7 @@ ${content_ids}=    Read Content IDs From Excel Sheet    ${INPUT_EXCEL_PATH_1}   
 
 `src/robot/resources/download_workflow.robot`
 
-Unless otherwise noted, call `Download Files Using Content Document IDs` rather than assembling the lower-level workflow.
+Call `Download Files Using Content Document IDs` instead of assembling the lower-level workflow unless an extension has a specific reason not to.
 
 | Keyword                                     | What it does and when to use it   | Arguments                                                                                                                                        | Return value                                                | Important behavior                                                                                                  |
 |---------------------------------------------|-----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
@@ -146,9 +150,5 @@ Suite teardown normally calls these keywords; callers rarely need to invoke them
 |-----------------------------|--------------------------------------------|-----------|--------------|---------------------------------------------------------------------|
 | `Cleanup Runtime Artifacts` | Remove recognized temporary runtime files. | None      | None         | Removes only strictly named downloader temporary files from `${EXECDIR}` and preserves shared `org_info.json`. |
 | `Cleanup Download Suite`    | Perform suite teardown.                    | None      | None         | Closes browsers and cleans runtime artifacts.                       |
-
----
-
-[← Previous](Performance.md) | [Next →](Troubleshooting.md)
 
 [Back to README](../README.md)

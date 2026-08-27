@@ -1,12 +1,12 @@
-# Contributing to Salesforce Files Downloader Tool
+# Contributing
 
-Bug reports, documentation fixes, and focused code contributions are all welcome. This guide explains how to prepare a change that maintainers can review and merge with confidence.
+Bug reports, documentation fixes, tests, and focused code changes are welcome. Keep each contribution limited to one clear problem.
 
-## Before you start
+Report vulnerabilities privately through [SECURITY.md](SECURITY.md). Follow the [Code of Conduct](CODE_OF_CONDUCT.md) in all project interactions.
 
-Before making a substantial behavior or architecture change, open an issue so contributors can agree on the approach. Report security vulnerabilities privately by following [SECURITY.md](SECURITY.md).
+## Development setup
 
-## Set up the project
+For a substantial behavior or architecture change, open an issue before implementation so the approach can be discussed.
 
 Fork the repository, clone your fork, and create a virtual environment:
 
@@ -16,36 +16,25 @@ cd salesforce-files-downloader-tool
 python -m venv venv
 ```
 
-Activate the environment and install the pinned dependencies:
+Activate the environment as described in [Installation](docs/Installation.md), then install runtime and development dependencies:
 
 ```bash
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
+python -m pip check
 ```
 
-Python 3.10 or later is required. Authenticated download runs also require Google Chrome, the latest supported Node.js LTS, compatible npm, and the latest stable Salesforce CLI. Complete the live compatibility checks in [Installation](docs/Installation.md) and [Authentication](docs/Authentication.md); do not duplicate patch-version pins here.
+Python 3.10 or later is required. Authenticated end-to-end runs also require Chrome, Salesforce CLI, source-org access, and the session setup in [Authentication](docs/Authentication.md). Offline unit and smoke checks do not require Salesforce credentials.
 
-## Make a focused change
-
-Create a branch whose name describes the work:
+Create a focused branch:
 
 ```bash
 git checkout -b fix/download-timeout
 ```
 
-Keep each change focused on one concern. Follow the existing Robot Framework and Python patterns, avoid hardcoded paths, and update the documentation when behavior or configuration changes.
+## Validation
 
-Use a concise conventional commit subject:
-
-```bash
-git commit -m "fix: handle invalid ContentDocumentId"
-```
-
-Common types include `fix`, `feat`, `docs`, `test`, and `refactor`.
-
-## Verify the change
-
-Run the offline unit and smoke suites before opening a pull request:
+Run the same static analysis and offline tests used by the repository:
 
 ```bash
 ruff check src ci
@@ -54,70 +43,66 @@ python -m unittest discover -s ci/tests -v
 robot --outputdir results/smoke ci/robot/smoke.robot
 ```
 
-Ruff checks the Python source. Robocop treats error-level Robot issues as failures, while older style warnings can be improved gradually.
+Ruff checks Python. Robocop checks Robot Framework files using `robocop.toml`. The unit and smoke tests use local fixtures and mocked Salesforce responses; they must not require an access token or customer files.
 
-When the change affects the authenticated workflow, also run:
+If a change affects authentication, metadata requests, Chrome downloads, workbook output, retries, or worker isolation, also run the smallest relevant authenticated batch in a suitable test org:
 
 ```bash
-robot --outputdir results src/robot/orchestrators/download.robot
+robot --test Download_Batch_1 --outputdir results src/robot/orchestrators/download.robot
 ```
 
-This suite requires an authenticated Salesforce CLI alias, a validated non-redacted `org_info.json`, Chrome, and valid input workbooks. Confirm `sf.cmd org display --target-org <org_alias> --json` succeeds independently before starting workers. Runtime API-capacity checks use the authenticated REST session rather than a Salesforce CLI limits subprocess. To exercise worker isolation, use test-level Pabot splitting:
+For parallel behavior, use non-sensitive, non-overlapping inputs:
 
 ```bash
 pabot --testlevelsplit --processes 2 --outputdir results src/robot/orchestrators/download.robot
 ```
 
-Review `output.xml`, `log.html`, and `report.html` before sharing them. Remove customer data, tokens, org identifiers, filenames, and other sensitive values.
+Review generated workbooks, manifests, `output.xml`, `log.html`, and `report.html` before sharing them. Remove Salesforce tokens, org details, record IDs, filenames, and other customer data.
 
-## Report a bug
+## Change guidelines
 
-Search existing issues before opening a new one. Include:
+For Robot Framework and Python changes:
 
-- A concise description of the observed and expected behavior
-- Minimal steps to reproduce the problem
-- Python, Robot Framework, Salesforce CLI, Chrome, and operating-system versions
-- Sanitized logs or screenshots
-- A small sample input when it can be shared safely
+- Keep reusable behavior in resource files or Python libraries.
+- Use descriptive keyword names and explicit arguments.
+- Avoid hard-coded local paths and sensitive logging.
+- Preserve per-worker output isolation.
+- Preserve the rule that a file is successful only after validation and any requested workbook commit.
+- Keep test seams for mocked CLI and REST responses from weakening production defaults.
+- Update [Keyword documentation](docs/Keyword-Documentation.md) when a public keyword contract changes.
 
-## Suggest an enhancement
+For documentation changes:
 
-Explain the problem, your proposed change, and a representative use case. Note any compatibility, migration, security, or performance constraints.
+- Use short, direct explanations and copy-paste-ready commands.
+- Verify commands, paths, settings, and output names against the implementation.
+- Put each explanation on its canonical page and link to it elsewhere.
+- Do not present roadmap work as current behavior.
 
 ## Open a pull request
 
-Push your branch and open a pull request against the repository:
+Use a concise commit subject, for example:
+
+```bash
+git commit -m "fix: handle invalid ContentDocumentId"
+```
+
+Push the branch to your fork:
 
 ```bash
 git push origin fix/download-timeout
 ```
 
-The pull request should explain:
+The pull request should state:
 
-- What changed and why
-- Which issue it addresses, if applicable
-- How the change was tested
-- Any operational, compatibility, or documentation impact
+- the problem and the change;
+- the related issue, if any;
+- the validation commands and results; and
+- any compatibility, security, performance, migration, or documentation impact.
 
-All required CI checks must pass before merge. Maintainers may ask for revisions.
+All required CI checks must pass. Maintainers may request revisions before merge.
 
-## Code and documentation conventions
+## Report a bug
 
-For Robot Framework changes:
+Search existing issues first. Include a minimal reproduction, expected and actual behavior, relevant version information, and sanitized diagnostics. A small synthetic input is preferable to customer data.
 
-- Use descriptive keyword names and explicit arguments.
-- Keep reusable behavior in resource files or Python libraries.
-- Prefer return values for expected states; reserve assertions for actual failures.
-- Avoid exposing authentication data through logs.
-- Preserve per-worker directory and workbook isolation.
-- Keep final binaries and migration rows consistent when changing success or rollback behavior.
-- Preserve the optional test seams used to mock Salesforce CLI and REST responses without weakening production defaults.
-
-For documentation changes:
-
-- Use short, practical explanations and sentence-case headings.
-- Keep examples aligned with the current commands and configuration.
-- Link to the detailed guide instead of repeating the same explanation.
-- Update [Keyword documentation](docs/Keyword-Documentation.md) when a public keyword changes.
-
-Please follow the [Code of Conduct](CODE_OF_CONDUCT.md) in all project interactions.
+For an enhancement, describe the problem, a representative use case, the proposed behavior, and important compatibility or migration constraints.

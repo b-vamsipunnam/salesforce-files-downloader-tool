@@ -1,99 +1,55 @@
 # Examples
 
-## Process one workbook
+These scenarios assume installation and authentication are complete. Use [Usage](Usage.md) for the full commands and output review.
 
-Set the input and worksheet in `src/robot/orchestrators/download.robot`:
+## Check access with a small sample
 
-```robot
-${INPUT_EXCEL_PATH_1}    ${INPUT_FOLDER}${/}Inputfile_1.xlsx
-${SHEET_NAME}            Input
-```
+Before a large extraction, put a few representative IDs in `input/Inputfile_1.xlsx`. Include files owned by different teams or linked to different record types, if those are in scope.
 
-Then run only its batch:
+Run `Download_Batch_1` only. Review every success in the manifest and confirm that each saved binary opens normally. Resolve permissions, link visibility, browser policy, and disk issues before adding more IDs.
 
-```bash
-robot --test Download_Batch_1 --outputdir results src/robot/orchestrators/download.robot
-```
+This test is more useful than increasing timeouts immediately: it checks that the chosen Salesforce user can read both the file metadata and the actual files.
 
-## Download without migration workbooks
+## Create a download-only archive
 
-Keep failed-ID reporting and downloaded binaries while disabling optional import files:
-
-```robot
-${GENERATE_CONTENT_VERSION_FILE}          No
-${GENERATE_CONTENT_DOCUMENT_LINK_FILE}    No
-```
-
-These values are case-insensitive and may contain surrounding whitespace, but they must resolve to `Yes` or `No`. A typo fails at the start of the batch rather than silently changing the requested output.
-
-## Run four batch workers
-
-Execute the four configured batch tests across up to four parallel worker processes:
+If the job needs local files but not destination-org import workbooks, disable both optional workbook flags for the run:
 
 ```bash
-pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrators/download.robot
+robot --test Download_Batch_1 --variable GENERATE_CONTENT_VERSION_FILE:No --variable GENERATE_CONTENT_DOCUMENT_LINK_FILE:No --outputdir results src/robot/orchestrators/download.robot
 ```
 
-When practical, keep the workbooks similar in size so one large batch does not keep the run open after the other workers finish.
+The run still produces validated binaries, a manifest, Robot reports, and a failed-ID workbook when failures remain. Link metadata is not queried when `ContentDocumentLink` output is disabled.
 
-## Retry failures
+## Split a migration across four workers
 
-Retries are enabled by default. After the normal download pass, each eligible failed ID receives up to two additional attempts with a five-second delay between retry attempts:
+Suppose a migration has four non-overlapping groups of file IDs. Put one group in each supplied input workbook and balance the groups by expected data size when that information is available.
 
-```robot
-${ENABLE_FAILED_ID_RETRY}    ${TRUE}
-${FAILED_ID_RETRY_COUNT}     2
-${FAILED_ID_RETRY_DELAY}     5s
-```
+Use the test-level Pabot command in [Parallel downloads](Usage.md#run-parallel-downloads). Each worker gets its own Chrome process and UUID-based directories. The four workers still share the Salesforce session file and independently check API capacity.
 
-Each attempt downloads the whole file again. Invalid IDs and records missing required metadata are not retried. After fixing the underlying issue, use `<batch>_FAILED_IDs.xlsx` as the source for a new run.
+Do not put the same `ContentDocumentId` in two workbooks. Deduplication is per batch, so overlapping workbooks can download the same physical file twice and create duplicate migration output.
 
-## Configure API capacity protection
+## Recover a failed subset
 
-The capacity preflight is enabled by default. This example retains 100 requests for other integrations and adds a 25-request estimation buffer:
+After a mixed-result run:
 
-```robot
-${ENABLE_API_CAPACITY_CHECK}          ${TRUE}
-${API_REQUEST_SAFETY_BUFFER}          25
-${MINIMUM_API_REQUESTS_REMAINING}     100
-```
+1. Read `FailureCode` and `FailureMessage` in the batch's failed-ID workbook.
+2. Correct the underlying problem. For an expired session, complete the re-authentication steps in [Authentication](Authentication.md#session-lifetime-and-safety).
+3. Copy only the `ContentDocumentId` column into the `Input` worksheet of a clean input template.
+4. Run that batch again.
 
-Each worker checks limits independently; there is no shared reservation counter. Pagination can add metadata requests, so increase the buffer when operating near the daily limit.
+Do not use the generated failed-ID workbook unchanged unless you also configure its actual worksheet name. Its default sheet is not named `Input`.
 
-## Mix 15- and 18-character IDs safely
+## Prepare files for a destination migration
 
-Exports from different Salesforce tools may contain both forms of the same ID:
+Keep both migration flags set to `Yes`. A successful document produces one row in the `ContentVersion` workbook and one or more rows in the `ContentDocumentLink` workbook.
 
-```text
-069AAAAAAAAAAAA
-069AAAAAAAAAAAAY55
-```
+Importing is a separate process:
 
-The downloader converts the valid 15-character value to its canonical 18-character form before deduplication. Within one workbook, this pair is processed as one ContentDocument.
+1. Use the `ContentVersion` workbook and downloaded paths in the approved destination-org import process.
+2. Capture the new destination `ContentDocumentId` for every inserted file.
+3. Replace each source ID in the link workbook with its corresponding destination ID.
+4. Import the remapped links.
 
-## Illustrative enterprise batch
-
-This is a sample outcome, not a benchmark or guarantee.
-
-**Scenario:** A migration team processes one workbook containing 250 unique `ContentDocumentId` values.
-
-**Illustrative output:**
-
-- 247 files downloaded and validated
-- 247 ContentVersion workbook rows
-- 412 ContentDocumentLink workbook rows because some files have multiple links
-- 3 IDs still failed after automatic retries and were written to the failure workbook
-- Every downloaded file passed validation
-
-## Prepare migration workbooks
-
-1. Import the generated ContentVersion workbook into the destination org.
-2. Obtain the destination `ContentDocumentId` for every inserted file.
-3. Map source IDs in the generated ContentDocumentLink workbook to those destination IDs.
-4. Import the remapped link rows.
-
----
-
-[← Previous](Usage.md) | [Next →](Architecture.md)
+The downloader does not perform these imports or build the source-to-destination ID map. Preserve the manifest and migration workbooks together for reconciliation.
 
 [Back to README](../README.md)

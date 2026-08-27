@@ -1,63 +1,34 @@
 # Performance
 
-## Benchmark results
+## Recorded benchmark method
 
-This benchmark used 10,000 Salesforce files totaling about 6.4 GB across 18 file types on one machine.
+The repository records one benchmark dataset:
 
-| Workers | Runtime     | Speedup | Efficiency |
-|---------|-------------|---------|------------|
-| 1       | 240 minutes | 1.00×   | 100.00%    |
-| 2       | 121 minutes | 1.98×   | 99.17%     |
-| 4       | 61 minutes  | 3.93×   | 98.36%     |
-| 8       | 31 minutes  | 7.74×   | 96.75%     |
+- 10,000 Salesforce files
+- about 6.4 GB total
+- 18 file types
+- one execution machine
+- runs using 1, 2, 4, and 8 workers
 
+No raw benchmark log or script is included. The record does not identify the machine specifications, network connection, Salesforce org conditions, batch distribution, run date, number of repetitions, file-size distribution, or retry and failure counts. The results therefore describe an observed run but are not independently reproducible from this repository alone.
 
-### Runtime scaling
+## Measured results
 
-```mermaid
-flowchart LR
-    W1["1 worker<br/>240 minutes"] --> W2["2 workers<br/>121 minutes"]
-    W2 --> W4["4 workers<br/>61 minutes"]
-    W4 --> W8["8 workers<br/>31 minutes"]
-```
+| Workers | Runtime | Reported speedup | Reported efficiency |
+|---------|---------|------------------|---------------------|
+| 1 | 240 minutes | 1.00× | 100.00% |
+| 2 | 121 minutes | 1.98× | 99.17% |
+| 4 | 61 minutes | 3.93× | 98.36% |
+| 8 | 31 minutes | 7.74× | 96.75% |
 
-These figures describe one test run, not guaranteed throughput. Results will vary with Salesforce response times, network and disk performance, file sizes, browser behavior, hardware, permissions, and org configuration.
+These are the figures recorded by the project; they are not a throughput guarantee.
 
-## Parallel execution
+## Interpretation
 
-Pabot splits batch tests across processes only when `--testlevelsplit` is used. Every process owns a Chrome instance and UUID-based download and artifact directories.
+The recorded workload scaled close to linearly through eight workers on that machine. Another run can differ substantially because every worker adds a Chrome process and because Salesforce response time, network throughput, disk performance, file sizes, permissions, API capacity, session expiry, and retries all affect elapsed time.
 
-```bash
-pabot --testlevelsplit --processes 4 --outputdir results src/robot/orchestrators/download.robot
-```
+Parallel startup and result merging can make a small job slower. A few large files can also leave one worker active after the others finish, even when workbook row counts are equal.
 
-## Worker scaling
-
-Start with a few workers, watch the system and Salesforce response times, and increase `--processes` gradually. Workbooks of similar size help distribute the load. For small jobs, browser startup and result-merging overhead may make parallel execution slower rather than faster.
-
-## Download validation
-
-Validation adds some filesystem and workbook overhead. That cost is deliberate: an incomplete transfer or partially updated workbook must not be reported as a success. See [Architecture](Architecture.md#design-principles) for the checks applied to each file.
-
-## Retry behavior
-
-The downloader has two retry layers:
-
-- File movement retries temporary filesystem locks until `${FILE_MOVE_TIMEOUT}` expires, waiting `${FILE_MOVE_RETRY_INTERVAL}` between attempts.
-- After the primary batch pass, failed downloads receive up to `${FAILED_ID_RETRY_COUNT}` additional full-download attempts when `${ENABLE_FAILED_ID_RETRY}` is enabled. `${FAILED_ID_RETRY_DELAY}` is applied between those additional attempts.
-
-Appearance, completion, and file stability still use their own bounds on every attempt. Automatic retries increase total runtime when Salesforce, the browser, the network, or local storage is unreliable, so include that extra time when estimating a large migration.
-
-## Recovery and failure reporting
-
-The batch failure workbook contains only unresolved IDs; successful retries are excluded. After fixing the relevant permission, authentication, capacity, workbook, or network problem, use those IDs in a new run. Existing successful output remains in its isolated directory, but partial downloads always restart from the beginning.
-
-## Benchmark limitations
-
-The benchmark does not isolate Salesforce caching, network variability, individual file sizes, workstation specifications, or org-specific limits. It shows scaling for this dataset only. Test representative batches before choosing a production worker count.
-
----
-
-[← Previous](Architecture.md) | [Next →](Keyword-Documentation.md)
+Choose a worker count from representative tests in the actual environment. Start with a small number, observe CPU, memory, disk, network, Salesforce response time, and failure rate, then increase only while the run remains stable. The exact parallel command and isolation requirements are in [Usage](Usage.md#run-parallel-downloads); retry and timeout settings are in [Configuration](Configuration.md).
 
 [Back to README](../README.md)

@@ -1,47 +1,69 @@
 # Authentication
 
-Finish the compatibility checks in [Installation](Installation.md) before signing in. Use `sf.cmd` on Windows and `sf` on Linux or macOS.
+The downloader uses Salesforce CLI to sign in, then creates a local session file for REST metadata requests and an authenticated Chrome download session. Salesforce CLI is the `sf` command-line application installed in [Installation](Installation.md).
 
-Authenticate through Salesforce CLI and assign an alias:
+## 1. Log in and assign an org alias
 
-```powershell
-sf.cmd org login web --alias <org_alias>
+An **org alias** is a short name stored by Salesforce CLI for an authenticated org. Choose a name that makes the source clear; this guide uses `source-org`.
+
+```bash
+sf org login web --alias source-org
 ```
 
-Verify that the authenticated alias returns JSON successfully before generating credentials or starting Robot:
+The command opens a browser. Sign in as the Salesforce user who will run the extraction, then return to the terminal.
 
-```powershell
-sf.cmd org display --target-org <org_alias> --json
+If the org requires a specific login or My Domain URL, add `--instance-url <login-url>`. See the Salesforce CLI reference for [`sf org login web`](https://developer.salesforce.com/docs/platform/salesforce-cli-reference/guide/cli_reference_org_login_web.html).
+
+On Windows, replace `sf` with `sf.cmd` if PowerShell blocks `sf.ps1`.
+
+## 2. Verify the alias and org
+
+```bash
+sf org display --target-org source-org --json
 ```
 
-The downloader retrieves `DailyApiRequests` through its authenticated REST session during each non-empty batch, so `sf org list limits` is not a required authentication step.
+Check that the JSON result has status `0` and names the intended username, org ID, and instance URL. Stop if it points to the wrong org.
 
-Create `org_info.json` in the repository root shortly before each run. Because current Salesforce CLI versions redact the access token from `sf org display`, do not redirect that command into the file.
+Current Salesforce CLI versions can hide the access token in this output. Do not redirect `sf org display` into `org_info.json`.
 
-Instead, use the Robot authentication task below. It combines the org metadata with the token, validates both responses, and safely replaces `org_info.json`. Result files are disabled so the authentication step does not create reports:
+## 3. Create the downloader session file
 
-```powershell
-robot --variable ORG_ALIAS:<org_alias> --output NONE --log NONE --report NONE src/robot/orchestrators/authenticate.robot
+From the repository root, run:
+
+```bash
+robot --variable ORG_ALIAS:source-org --output NONE --log NONE --report NONE src/robot/orchestrators/authenticate.robot
 ```
 
-The task prints only this non-secret confirmation:
+The task combines the org details with a token obtained through Salesforce CLI, validates the result, and safely writes `org_info.json` in the repository root. It prints only:
 
 ```text
-Generated a validated org_info.json for alias '<org_alias>'.
+Generated a validated org_info.json for alias 'source-org'.
 ```
 
-The task writes to a temporary file first. If either CLI command or validation fails, the existing `org_info.json` is left untouched.
+If either CLI call fails, the task does not replace an existing valid file.
 
-`org_info.json` provides the instance URL, access token, API version, org ID, and authenticated alias used during execution. Pabot workers read this context directly instead of running concurrent `sf org display` commands.
+## Required Salesforce access
 
-> **Security:** `org_info.json` contains an access token. It is excluded by `.gitignore`; never commit, publish, attach, print, or include it in logs. The Robot task captures the CLI output internally and does not return or print the token. Regenerate the file whenever the Salesforce session expires or a new access token is required. Prefer a dedicated user with only the permissions required for the migration.
+The authenticated user must be allowed to:
 
-The downloader does not remove `org_info.json` during suite teardown because parallel workers share it. Delete it manually only after the complete Robot or Pabot execution has finished.
+- use the Salesforce API for the limits and metadata requests made by the tool;
+- read each requested `ContentDocument` and the metadata fields queried by the downloader;
+- see the relevant `ContentDocumentLink` records when link-workbook generation is enabled; and
+- download each requested file through Salesforce.
 
-Salesforce CLI handles the sign-in, so the downloader never stores a Salesforce username or password. It also cannot refresh an expired session. Token lifetime depends on the org's session settings; if authentication expires, regenerate `org_info.json` and rerun the failed IDs.
+Salesforce profiles, permission sets, sharing rules, and file visibility vary by org, so this repository cannot prescribe one permission set. Before a large run, test a small set of IDs with the same user and confirm that the user can open those files in Salesforce.
 
----
+## Session lifetime and safety
 
-[← Previous](Installation.md) | [Next →](Configuration.md)
+`org_info.json` contains an access token plus the instance URL, API version, org ID, and alias used by the workers. It is excluded by `.gitignore`, but it must never be committed, printed, attached to an issue, or shared.
+
+The downloader cannot refresh an expired REST or browser session. If a run reports `AUTH_SESSION_EXPIRED`:
+
+1. Run `sf org display --target-org source-org --json`.
+2. If the alias is no longer authorized, run `sf org login web --alias source-org` again.
+3. Rerun the Robot authentication task to replace `org_info.json`.
+4. Rerun the affected IDs; any partial binary download starts from the beginning.
+
+Parallel workers share `org_info.json`. Keep it until the entire Robot or Pabot run has finished, then delete it according to your local security process.
 
 [Back to README](../README.md)
